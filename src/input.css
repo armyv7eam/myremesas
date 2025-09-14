@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .historical-status-btn { @apply border-2 border-transparent transition-all duration-200 ease-in-out; }
+  .historical-status-btn:not(.active)[data-status="Todos"] { @apply bg-gray-200 text-gray-700; }
+  .historical-status-btn:not(.active)[data-status="Pendiente de pago"] { @apply bg-amber-100 text-amber-800 border-amber-400; }
+  .historical-status-btn:not(.active)[data-status="Pagado"] { @apply bg-green-100 text-green-800 border-green-400; }
+  .historical-status-btn:not(.active)[data-status="Cancelado"] { @apply bg-red-100 text-red-800 border-red-400; }
+  .historical-status-btn[data-status].active { @apply bg-blue-500 text-white border-blue-500 scale-105 shadow-md; }
+}
