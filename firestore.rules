@@ -19,7 +19,10 @@ service cloud.firestore {
     }
 
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow read, create, update, delete: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
     }
 
     match /config/pricing {

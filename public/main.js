@@ -1,23 +1,25 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, onSnapshot, collection, query, collectionGroup, serverTimestamp, setLogLevel, deleteDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-// Establecer nivel de log para depuraciÃ³n de Firestore
+// Establecer nivel de log para depuración de Firestore
 setLogLevel('Debug');
 
-// --- CONFIGURACIÃ“N DE SEGURIDAD ---
+// --- CONFIGURACIÓN DE SEGURIDAD ---
 // Lista de User IDs de administradores autorizados para ver el panel.
 // Se obtiene de las variables de entorno de Vercel para mayor seguridad y flexibilidad.
-const ADMIN_UIDS_PLACEHOLDER = "VERCEL_INJECTED_ADMIN_UIDS";
+const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2";
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
 
 // Variables Globales de Firebase (provistas por el entorno)
-const appId = "VERCEL_INJECTED_APP_ID";
-const firebaseConfig = "VERCEL_INJECTED_FIREBASE_CONFIG";
-const initialAuthToken = null; // No estamos usando este mÃ©todo por ahora.
+const appId = "1:775892034675:web:98ed2724bcaff2ed427606";
+const firebaseConfig = {"apiKey":"AIzaSyCnXU8XU7ZzA_12CDaYaY9W2rWBmkGLB-g","authDomain":"studio-7601782447-44d81.firebaseapp.com","projectId":"studio-7601782447-44d81","storageBucket":"studio-7601782447-44d81.firebasestorage.app","messagingSenderId":"775892034675","appId":"1:775892034675:web:98ed2724bcaff2ed427606","measurementId":"YOUR_FIREBASE_MEASUREMENT_ID"};
+const initialAuthToken = null; // No estamos usando este método por ahora.
 
 let db;
 let auth;
+let storage;
 let userId = null;
 let isAuthReady = false; // Esta variable debe ser global o pasada como argumento si se usa fuera de initializeFirebase
 
@@ -33,7 +35,7 @@ let liveRates = {
 // Cuentas de destino del administrador
 let adminAccounts = []; 
 
-// ConfiguraciÃ³n de mÃ¡rgenes (se puede sobrescribir desde Firestore)
+// Configuración de márgenes (se puede sobrescribir desde Firestore)
 const DEFAULT_MARGIN_CONFIG = {
     discountWldClp: 0.14,
     discountClpVes: 0.06,
@@ -44,8 +46,13 @@ const MARGIN_CONFIG_DOC_ID = 'pricing';
 let marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 let marginConfigUnsubscribe = null;
 
-// --- DECLARACIÃ“N DE VARIABLES DEL DOM (INICIALIZACIÃ“N MOVIDA A initializeDOM) ---
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel;
+// --- DECLARACIÓN DE VARIABLES DEL DOM (INICIALIZACIÓN MOVIDA A initializeDOM) ---
+let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminTransactionsList;
+
+let currentTransactionId = null;
+let currentTransactionPath = null;
+let isCurrentUserAdmin = false;
+let adminTransactionsUnsubscribe = null;
 
 /**
  * Inicializa todas las referencias a los elementos del DOM.
@@ -99,8 +106,13 @@ function initializeDOM() {
     marginWldClpLabel = document.getElementById('margin-wld-clp-label');
     marginClpVesLabel = document.getElementById('margin-clp-ves-label');
     marginUsdtClpLabel = document.getElementById('margin-usdt-clp-label');
+    receiptUploadInput = document.getElementById('receipt-upload');
+    uploadReceiptButton = document.getElementById('upload-receipt-button');
+    receiptUploadStatus = document.getElementById('receipt-upload-status');
+    adminTransactionsSection = document.getElementById('admin-transactions-section');
+    adminTransactionsList = document.getElementById('admin-transactions-list');
 
-    // **CORRECCIÃ“N**: Evita que el botÃ³n de pago envÃ­e el formulario por defecto.
+    // **CORRECCIÓN**: Evita que el botón de pago envíe el formulario por defecto.
     if (paymentButton) paymentButton.type = 'button';
 
     applyMarginConfigToUI();
@@ -111,13 +123,14 @@ function initializeDOM() {
 async function initializeFirebase() {
     try {
         if (!firebaseConfig) {
-            authStatus.textContent = "Error: ConfiguraciÃ³n de Firebase no disponible.";
+            authStatus.textContent = "Error: Configuración de Firebase no disponible.";
             return;
         }
 
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
+        storage = getStorage(app);
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -128,12 +141,18 @@ async function initializeFirebase() {
                 isAuthReady = true;
 
                 const isAdminUser = ADMIN_UIDS.includes(userId);
+                isCurrentUserAdmin = isAdminUser;
                 if (isAdminUser) {
                     setupMarginConfigListener();
                     adminToggleContainer.classList.remove('hidden');
+                    setupAdminTransactionsListener();
                 } else {
                     marginConfig = { ...DEFAULT_MARGIN_CONFIG };
                     applyMarginConfigToUI();
+                    if (adminTransactionsSection) {
+                        adminTransactionsSection.classList.add('hidden');
+                        adminTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Debes iniciar sesi??n como administrador para ver esta informaci??n.</p>';
+                    }
                 }
                 
                 setupTransactionListener();
@@ -163,8 +182,8 @@ async function authenticateUser() {
              await signInAnonymously(auth);
          }
      } catch (error) {
-         console.error("Error de autenticaciÃ³n:", error);
-         authStatus.textContent = `Error de AutenticaciÃ³n: ${error.message}`;
+         console.error("Error de autenticación:", error);
+         authStatus.textContent = `Error de Autenticación: ${error.message}`;
      }
 }
 
@@ -185,7 +204,7 @@ function formatCurrency(value, currencyCode) {
 }
 
  /**
- * **NUEVA FUNCIÃ“N**: Copia texto al portapapeles y muestra feedback.
+ * **NUEVA FUNCIÓN**: Copia texto al portapapeles y muestra feedback.
  */
 function copyToClipboard(text, element) {
     // Usamos document.execCommand para mayor compatibilidad en iframes
@@ -204,6 +223,39 @@ function copyToClipboard(text, element) {
                 feedback.style.transform = 'translateX(-50%)';
             }, 1500);
         }
+function createCopyRow(label, value, options = {}) {
+    if (!value) return '';
+    const displayValue = options.mask ? '������' : value;
+    const valueClasses = options.monospace ? 'font-mono text-gray-900 break-all' : 'text-gray-900 break-words';
+    return `
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 text-xs md:text-sm text-gray-600">
+            <span class="w-24 font-medium text-gray-700">${label}:</span>
+            <div class="flex-1 flex items-center gap-2">
+                <span class="${valueClasses}">${displayValue}</span>
+                <button class="copy-btn p-1 text-cyan-600 hover:bg-cyan-100 rounded" data-copy="${value}" aria-label="Copiar ${label}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span class="copy-feedback">�Copiado!</span>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function buildAccountDetailsMarkup(account) {
+    const rows = [];
+    rows.push(createCopyRow('Titular', account.accountHolder));
+    rows.push(createCopyRow('RUT', account.rut, { monospace: true }));
+    rows.push(createCopyRow('N� Cuenta', account.accountNumber, { monospace: true }));
+    rows.push(createCopyRow('Tipo', account.accountType));
+    rows.push(createCopyRow('Banco', account.bankName));
+    if (account.email && account.email !== 'N/A') {
+        rows.push(createCopyRow('Email', account.email));
+    }
+    return rows.join('');
+}
+
     } catch (err) {
         console.error('Error al copiar texto: ', err);
     }
@@ -302,7 +354,7 @@ function readPercentInput(inputElement, label, fallbackDecimal) {
 
     const numeric = parseFloat(raw);
     if (!Number.isFinite(numeric)) {
-        throw new Error(`Ingrese un valor numérico válido para ${label}.`);
+        throw new Error(`Ingrese un valor num�rico v�lido para ${label}.`);
     }
     if (numeric < 0 || numeric > 100) {
         throw new Error(`${label} debe estar entre 0% y 100%.`);
@@ -313,11 +365,11 @@ function readPercentInput(inputElement, label, fallbackDecimal) {
 async function saveMarginConfig(event) {
     if (event) event.preventDefault();
     if (!isAuthReady || !db) {
-        showMarginStatus('Error: conexión no lista.', true);
+        showMarginStatus('Error: conexi�n no lista.', true);
         return;
     }
     if (!ADMIN_UIDS.includes(userId)) {
-        showMarginStatus('No autorizado para actualizar márgenes.', true);
+        showMarginStatus('No autorizado para actualizar m�rgenes.', true);
         return;
     }
 
@@ -342,7 +394,7 @@ async function saveMarginConfig(event) {
     const configDocRef = doc(db, MARGIN_CONFIG_COLLECTION, MARGIN_CONFIG_DOC_ID);
 
     try {
-        showMarginStatus('Guardando márgenes...');
+        showMarginStatus('Guardando m�rgenes...');
         if (saveMarginsButton) {
             saveMarginsButton.disabled = true;
             saveMarginsButton.textContent = 'Guardando...';
@@ -358,23 +410,23 @@ async function saveMarginConfig(event) {
         marginConfig = { discountWldClp, discountClpVes, marginUsdtClp };
         applyMarginConfigToUI();
         calculateExchange(false);
-        showMarginStatus('Márgenes guardados correctamente.');
+        showMarginStatus('M�rgenes guardados correctamente.');
         setTimeout(() => hideMarginStatus(), 3000);
     } catch (error) {
-        console.error('Error al guardar márgenes:', error);
-        showMarginStatus(`Error al guardar márgenes: ${error.message}`, true);
+        console.error('Error al guardar m�rgenes:', error);
+        showMarginStatus(`Error al guardar m�rgenes: ${error.message}`, true);
     } finally {
         if (saveMarginsButton) {
             saveMarginsButton.disabled = false;
-            saveMarginsButton.textContent = 'Guardar Márgenes';
+            saveMarginsButton.textContent = 'Guardar M�rgenes';
         }
     }
 }
-// --- LÃ³gica de AdministraciÃ³n de Cuentas ---
+// --- Lógica de Administración de Cuentas ---
 
 async function saveAdminAccounts() {
     if (!isAuthReady || !db) {
-        accountStatus.textContent = "Error: ConexiÃ³n no lista.";
+        accountStatus.textContent = "Error: Conexión no lista.";
         return;
     }
 
@@ -386,7 +438,7 @@ async function saveAdminAccounts() {
     const email = adminEmailInput.value.trim();
 
     if (!bankName || !accountHolder || !accountNumber || !rut || !accountType) {
-        accountStatus.textContent = "Error: Complete todos los campos requeridos (Banco, Titular, NÃºmero, RUT, Tipo).";
+        accountStatus.textContent = "Error: Complete todos los campos requeridos (Banco, Titular, Número, RUT, Tipo).";
         return;
     }
     
@@ -407,13 +459,13 @@ async function saveAdminAccounts() {
         });
         
         adminBankNameInput.value = '';
-        adminAccountHolderInput.value = 'Ender Javier PiÃ±a Rojas';
+        adminAccountHolderInput.value = 'Ender Javier Piña Rojas';
         adminAccountNumberInput.value = '';
         adminRutInput.value = '26728535-7';
         adminAccountTypeInput.value = '';
         adminEmailInput.value = '';
 
-        accountStatus.textContent = "Â¡Cuenta guardada correctamente!";
+        accountStatus.textContent = "¡Cuenta guardada correctamente!";
     } catch (error) {
         console.error("Error al guardar cuentas:", error);
         accountStatus.textContent = "Error al guardar cuentas: " + error.message;
@@ -425,8 +477,8 @@ async function saveAdminAccounts() {
 
 async function deleteAdminAccount(docId, accountName) {
     if (!isAuthReady || !db) {
-        console.error("Error: ConexiÃ³n a Firebase no lista.");
-        accountStatus.textContent = "Error: ConexiÃ³n no lista.";
+        console.error("Error: Conexión a Firebase no lista.");
+        accountStatus.textContent = "Error: Conexión no lista.";
         return;
     }
     
@@ -471,34 +523,31 @@ function renderAdminAccountsList() {
         savedAccountsList.innerHTML = '<p class="text-sm text-gray-500 p-2">No hay cuentas configuradas.</p>';
         return;
     }
-    
-    adminAccounts.forEach(account => {
+
+    adminAccounts.forEach((account) => {
         const item = document.createElement('div');
-        item.className = 'p-3 bg-white border border-yellow-300 rounded-lg flex justify-between items-center text-xs';
+        item.className = 'p-4 bg-white border border-yellow-200 rounded-lg space-y-3 text-sm text-left shadow-sm';
+        item.setAttribute('data-account-id', account.id);
+        item.setAttribute('data-account-name', `${account.bankName} (${account.accountType})`);
         item.innerHTML = `
-            <div>
-                <p class="font-bold text-gray-800">${account.bankName} (${account.accountType})</p>
-                <p class="text-gray-600">NÂ° ${account.accountNumber} | RUT: ${account.rut}</p>
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">${account.bankName}</p>
+                    <p class="text-xs text-gray-500">${account.accountType}</p>
+                </div>
+                <button data-account-id="${account.id}" data-account-name="${account.bankName} (${account.accountType})" class="delete-account-btn text-xs text-red-600 hover:text-red-700 px-2 py-1 rounded-md border border-red-200 bg-red-50">
+                    Eliminar
+                </button>
             </div>
-            <button data-id="${account.id}" data-name="${account.bankName} (${account.accountType})" class="delete-account-btn text-red-500 hover:text-red-700 ml-2 p-1 rounded-full bg-red-100 transition duration-150">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-            </button>
+            <div class="space-y-2">
+                ${buildAccountDetailsMarkup(account)}
+            </div>
         `;
         savedAccountsList.appendChild(item);
     });
-    
-    savedAccountsList.querySelectorAll('.delete-account-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const docId = e.currentTarget.getAttribute('data-id');
-            const accountName = e.currentTarget.getAttribute('data-name');
-            deleteAdminAccount(docId, accountName);
-        });
-    });
 }
 
-// --- LÃ³gica de Tasas DinÃ¡micas ---
+// --- Lógica de Tasas Dinámicas ---
 
 async function fetchDynamicRates() {
     rateFetchStatus.textContent = 'Conectando con API de Vercel...';
@@ -511,7 +560,7 @@ async function fetchDynamicRates() {
         }
         const data = await response.json();
         
-        // Ajusta la lÃ³gica para usar la respuesta de tu API de Vercel
+        // Ajusta la lógica para usar la respuesta de tu API de Vercel
         if (data?.success) {
             liveRates.USDT_to_CLP = data.USDT_to_CLP_P2P;
             liveRates.USDT_to_VES = data.VES_per_USDT_SELL; // Usamos la nueva tasa de venta
@@ -527,20 +576,20 @@ async function fetchDynamicRates() {
             throw new Error("Respuesta de la API de Vercel con formato inesperado o error.");
         }
     } catch (error) {
-        console.warn("Fallo en la conexiÃ³n con la API de Vercel. Usando tasas de referencia fijas.", error);
+        console.warn("Fallo en la conexión con la API de Vercel. Usando tasas de referencia fijas.", error);
         wldUsdtDisplay.textContent = `WLD/USDT: ${liveRates.WLD_to_USDT.toFixed(4)} (Fijo)`;
         clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP (Fijo)`;
         usdtClpP2pWldDisplay.textContent = `USDT/CLP: ${liveRates.USDT_to_CLP.toFixed(2)} CLP / USDT (Fijo)`;
         vesUsdtP2pDisplay.textContent = `USDT/VES: 1 USDT = ${liveRates.USDT_to_VES.toFixed(2)} VES (Fijo)`;
-        rateFetchStatus.textContent = 'Fallo de conexiÃ³n. Usando tasas de Referencia Fijas.';
+        rateFetchStatus.textContent = 'Fallo de conexión. Usando tasas de Referencia Fijas.';
     }
 
-    // **CORRECCIÃ“N**: Llama al cÃ¡lculo inicial pero sin habilitar el botÃ³n de pago.
+    // **CORRECCIÓN**: Llama al cálculo inicial pero sin habilitar el botón de pago.
     calculateExchange(false);
 }
 
 
-// --- LÃ³gica de Intercambio (CÃ¡lculo) ---
+// --- Lógica de Intercambio (Cálculo) ---
 
 function calculateFullRatesInternal() {
     const fullRates = {};
@@ -615,14 +664,14 @@ function calculateExchange(enablePaymentButton = true) {
                     (rates.USDT_to_CLP !== null || rates.CLP_to_USDT !== null);
 
     if (!isReady) {
-        rateDisplay.textContent = "Cargando tasas de cambio dinámicas...";
+        rateDisplay.textContent = "Cargando tasas de cambio din�micas...";
         paymentButton.disabled = true;
         return;
     }
 
     if (isNaN(amountSend) || amountSend <= 0) {
         amountReceiveDisplay.textContent = formatCurrency(0, currencyReceive);
-        rateDisplay.textContent = "Ingrese un monto válido.";
+        rateDisplay.textContent = "Ingrese un monto v�lido.";
         paymentButton.disabled = true;
         errorMessage.classList.add('hidden');
         return;
@@ -636,7 +685,7 @@ function calculateExchange(enablePaymentButton = true) {
         rateDisplay.textContent = `Intercambio ${currencySend} a ${currencyReceive} no disponible.`;
         paymentButton.disabled = true;
         errorMessage.classList.remove('hidden');
-        errorMessage.textContent = `Error: El intercambio de ${currencySend} a ${currencyReceive} no es una ruta de remesa válida.`;
+        errorMessage.textContent = `Error: El intercambio de ${currencySend} a ${currencyReceive} no es una ruta de remesa v�lida.`;
         return;
     }
 
@@ -675,29 +724,36 @@ function swapCurrencies() {
     calculateExchange();
 }
 
-// --- LÃ³gica de Transacciones y Modal de Pago ---
+// --- Lógica de Transacciones y Modal de Pago ---
 
 async function recordTransaction(amountSend, currencySend, amountReceive, currencyReceive) {
-    if (!isAuthReady || !db) {
-        console.error("Error: Firebase o autenticaciÃ³n no lista para registrar.");
-        return;
+    if (!isAuthReady || !db || !userId) {
+        console.error('Error: Firebase o autenticaci�n no lista para registrar.');
+        return null;
     }
+
+    const safeAmountSend = Number.isFinite(amountSend) ? amountSend : 0;
     const transactionData = {
-        amountSend: amountSend,
-        currencySend: currencySend,
-        amountReceive: amountReceive,
-        currencyReceive: currencyReceive,
-        rateApplied: amountReceive / amountSend,
+        amountSend: safeAmountSend,
+        currencySend,
+        amountReceive,
+        currencyReceive,
+        rateApplied: safeAmountSend > 0 ? amountReceive / safeAmountSend : null,
         timestamp: serverTimestamp(),
-        userId: userId,
-        status: 'Pendiente'
+        userId,
+        status: 'Sin comprobante',
+        userReceiptUrl: null,
+        adminReceiptUrl: null
     };
+
     try {
         const collectionPath = `artifacts/${appId}/users/${userId}/transactions`;
-        await addDoc(collection(db, collectionPath), transactionData);
-        console.log("TransacciÃ³n registrada con Ã©xito.");
+        const docRef = await addDoc(collection(db, collectionPath), transactionData);
+        console.log('Transacci�n registrada con �xito.');
+        return { id: docRef.id, path: `${collectionPath}/${docRef.id}` };
     } catch (error) {
-        console.error("Error al registrar transacciÃ³n:", error);
+        console.error('Error al registrar transacci�n:', error);
+        return null;
     }
 }
 
@@ -726,7 +782,7 @@ function setupTransactionListener() {
 function renderTransactionHistory(transactions) {
     historyContainer.innerHTML = '';
     if (transactions.length === 0) {
-        historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">AÃºn no hay transacciones.</p>';
+        historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Aún no hay transacciones.</p>';
         return;
     }
 
@@ -737,7 +793,7 @@ function renderTransactionHistory(transactions) {
         const item = document.createElement('div');
         item.className = 'p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm';
         item.innerHTML = `
-            <p class="font-bold text-gray-800">${formatCurrency(tx.amountSend, tx.currencySend)} â†’ ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
+            <p class="font-bold text-gray-800">${formatCurrency(tx.amountSend, tx.currencySend)} → ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
             <p class="text-xs text-gray-500 mt-1">
                 Tasa: ${tx.rateApplied ? tx.rateApplied.toFixed(tx.currencySend === 'CLP' ? 8 : 4) : 'N/A'}
                 | Fecha: ${date} ${time}
@@ -748,40 +804,54 @@ function renderTransactionHistory(transactions) {
     });
 }
 
-function showPaymentModal() {
+async function showPaymentModal() {
     const amountSend = parseFloat(amountSendInput.value);
     const currencySend = currencySendSelect.value;
     const currencyReceive = currencyReceiveSelect.value;
     const amountReceiveText = amountReceiveDisplay.textContent;
-    
+
     modalAmountSend.textContent = formatCurrency(amountSend, currencySend);
     modalAmountReceive.textContent = amountReceiveText;
-    
+
+    if (receiptUploadStatus) {
+        receiptUploadStatus.textContent = '';
+        receiptUploadStatus.classList.add('hidden');
+    }
+    if (receiptUploadInput) {
+        receiptUploadInput.value = '';
+    }
+
+    const rates = calculateFullRatesInternal();
+    const rate = rates[`${currencySend}_to_${currencyReceive}`] || 0;
+    const transactionRecord = await recordTransaction(amountSend, currencySend, amountSend * rate, currencyReceive);
+    if (!transactionRecord) {
+        console.error('No se pudo registrar la transacci�n para esta orden.');
+        return;
+    }
+
+    currentTransactionId = transactionRecord.id;
+    currentTransactionPath = transactionRecord.path;
+
     if (currencySend === 'CLP') {
         modalCryptoWarning.classList.add('hidden');
         modalTransferCurrency.textContent = 'CLP';
 
         adminAccountDetailsContainer.innerHTML = '';
-        const clpAccounts = adminAccounts.filter(acc => acc.accountType.includes('Cuenta') || acc.bankName === 'Mercado Pago' || acc.bankName === 'Global66');
+        const clpAccounts = adminAccounts.filter((acc) => acc.accountType?.includes('Cuenta') || acc.bankName === 'Mercado Pago' || acc.bankName === 'Global66');
 
         if (clpAccounts.length > 0) {
             noAccountsMessage.classList.add('hidden');
-            clpAccounts.forEach(account => {
+            clpAccounts.forEach((account) => {
                 const accountDiv = document.createElement('div');
-                accountDiv.className = 'p-3 bg-white border border-cyan-300 rounded-lg shadow-sm';
-                // **MEJORA UX**: Se agrega un botÃ³n para copiar el nÃºmero de cuenta
+                accountDiv.className = 'p-4 bg-white border border-cyan-300 rounded-lg shadow-sm space-y-2 text-sm';
                 accountDiv.innerHTML = `
-                    <p class="font-bold text-cyan-700">${account.bankName} (${account.accountType})</p>
-                    <p class="text-sm text-gray-700">Titular: ${account.accountHolder}</p>
-                    <p class="text-sm text-gray-700">RUT: ${account.rut}</p>
-                    <div class="flex justify-between items-center mt-1 relative">
-                        <p class="text-sm text-gray-700">NÂ° Cuenta: <span class="font-mono">${account.accountNumber}</span></p>
-                        <button class="copy-btn p-1 rounded hover:bg-teal-100" data-copy="${account.accountNumber}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                            <span class="copy-feedback">Â¡Copiado!</span>
-                        </button>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-800">${account.bankName}</p>
+                        <p class="text-xs text-gray-500">${account.accountType}</p>
                     </div>
-                    ${account.email && account.email !== 'N/A' ? `<p class="text-sm text-gray-700 mt-1">Email: ${account.email}</p>` : ''}
+                    <div class="space-y-2">
+                        ${buildAccountDetailsMarkup(account)}
+                    </div>
                 `;
                 adminAccountDetailsContainer.appendChild(accountDiv);
             });
@@ -792,21 +862,326 @@ function showPaymentModal() {
     } else if (currencySend === 'WLD' || currencySend === 'USDT') {
         modalCryptoWarning.classList.remove('hidden');
         modalTransferCurrency.textContent = currencySend;
-        adminAccountDetailsContainer.innerHTML = '<p class="text-center text-gray-600 p-4">La direcciÃ³n de la Wallet serÃ¡ proporcionada por el administrador una vez que confirme su intenciÃ³n de enviar criptomonedas.</p>';
+        adminAccountDetailsContainer.innerHTML = '<p class="text-center text-gray-600 p-4">La direcci�n de la Wallet ser� proporcionada por el administrador una vez que confirme su intenci�n de enviar criptomonedas.</p>';
     } else {
         modalCryptoWarning.classList.remove('hidden');
-        modalCryptoWarning.textContent = `Aviso: El mÃ©todo de transferencia para ${currencySend} debe ser coordinado con el administrador.`;
+        modalCryptoWarning.textContent = `Aviso: El m�todo de transferencia para ${currencySend} debe ser coordinado con el administrador.`;
         adminAccountDetailsContainer.innerHTML = '';
     }
-    
-    const rates = calculateFullRatesInternal();
-    const rate = rates[`${currencySend}_to_${currencyReceive}`] || 0;
-    recordTransaction(amountSend, currencySend, amountSend * rate, currencyReceive);
 
     paymentModal.classList.remove('hidden');
 }
 
-// --- InicializaciÃ³n y Listeners ---
+
+function handleSavedAccountsListClick(event) {
+    const deleteButton = event.target.closest('.delete-account-btn');
+    if (deleteButton) {
+        const docId = deleteButton.getAttribute('data-account-id');
+        const accountName = deleteButton.getAttribute('data-account-name');
+        deleteAdminAccount(docId, accountName);
+        return;
+    }
+
+    const copyButton = event.target.closest('.copy-btn');
+    if (copyButton) {
+        const textToCopy = copyButton.dataset.copy;
+        copyToClipboard(textToCopy, copyButton);
+    }
+}
+
+async function handleUserReceiptUpload(event) {
+    event.preventDefault();
+    if (!uploadReceiptButton) return;
+
+    if (!currentTransactionPath || !currentTransactionId) {
+        if (receiptUploadStatus) {
+            receiptUploadStatus.textContent = 'Primero genera una orden antes de subir el comprobante.';
+            receiptUploadStatus.classList.remove('hidden');
+            receiptUploadStatus.classList.remove('text-gray-500');
+            receiptUploadStatus.classList.remove('text-green-600');
+            receiptUploadStatus.classList.add('text-red-600');
+        }
+        return;
+    }
+
+    const file = receiptUploadInput?.files?.[0];
+    if (!file) {
+        if (receiptUploadStatus) {
+            receiptUploadStatus.textContent = 'Selecciona un archivo antes de subir.';
+            receiptUploadStatus.classList.remove('hidden');
+            receiptUploadStatus.classList.remove('text-gray-500');
+            receiptUploadStatus.classList.remove('text-green-600');
+            receiptUploadStatus.classList.add('text-red-600');
+        }
+        return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+        if (receiptUploadStatus) {
+            receiptUploadStatus.textContent = 'El archivo supera los 8 MB permitidos.';
+            receiptUploadStatus.classList.remove('hidden');
+            receiptUploadStatus.classList.remove('text-gray-500');
+            receiptUploadStatus.classList.remove('text-green-600');
+            receiptUploadStatus.classList.add('text-red-600');
+        }
+        return;
+    }
+
+    try {
+        uploadReceiptButton.disabled = true;
+        if (receiptUploadStatus) {
+            receiptUploadStatus.textContent = 'Subiendo comprobante...';
+            receiptUploadStatus.classList.remove('hidden');
+            receiptUploadStatus.classList.remove('text-red-600');
+            receiptUploadStatus.classList.remove('text-green-600');
+            receiptUploadStatus.classList.add('text-gray-500');
+        }
+
+        const storagePath = `${currentTransactionPath}/receipts/user/${Date.now()}-${file.name}`;
+        const fileRef = storageRef(storage, storagePath);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+
+        await updateDoc(doc(db, currentTransactionPath), {
+            userReceiptUrl: downloadUrl,
+            status: 'Pendiente',
+            userReceiptUploadedAt: serverTimestamp(),
+        });
+
+        if (receiptUploadStatus) {
+            receiptUploadStatus.textContent = 'Comprobante subido correctamente. Tu orden est� pendiente de revisi�n.';
+            receiptUploadStatus.classList.remove('text-red-600');
+            receiptUploadStatus.classList.remove('text-gray-500');
+            receiptUploadStatus.classList.add('text-green-600');
+        }
+    } catch (error) {
+        console.error('Error al subir comprobante del usuario:', error);
+        if (receiptUploadStatus) {
+            receiptUploadStatus.textContent = `Error al subir el comprobante: ${error.message}`;
+            receiptUploadStatus.classList.remove('hidden');
+            receiptUploadStatus.classList.remove('text-green-600');
+            receiptUploadStatus.classList.remove('text-gray-500');
+            receiptUploadStatus.classList.add('text-red-600');
+        }
+    } finally {
+        uploadReceiptButton.disabled = false;
+        if (receiptUploadInput) {
+            receiptUploadInput.value = '';
+        }
+    }
+}
+
+function handleAdminTransactionsListClick(event) {
+    if (!isCurrentUserAdmin) return;
+
+    const copyButton = event.target.closest('.copy-btn');
+    if (copyButton) {
+        copyToClipboard(copyButton.dataset.copy, copyButton);
+        return;
+    }
+
+    const uploadButton = event.target.closest('.admin-upload-btn');
+    if (!uploadButton) return;
+
+    const card = uploadButton.closest('.admin-transaction-card');
+    if (!card) return;
+
+    const fileInput = card.querySelector('.admin-receipt-input');
+    const statusElement = card.querySelector('.admin-upload-status');
+    const file = fileInput?.files?.[0];
+    if (!file) {
+        if (statusElement) {
+            statusElement.textContent = 'Selecciona un archivo antes de subir.';
+            statusElement.classList.remove('hidden');
+            statusElement.classList.remove('text-gray-500');
+            statusElement.classList.remove('text-green-600');
+            statusElement.classList.add('text-red-600');
+        }
+        return;
+    }
+
+    if (file.size > 12 * 1024 * 1024) {
+        if (statusElement) {
+            statusElement.textContent = 'El archivo supera los 12 MB permitidos.';
+            statusElement.classList.remove('hidden');
+            statusElement.classList.remove('text-gray-500');
+            statusElement.classList.remove('text-green-600');
+            statusElement.classList.add('text-red-600');
+        }
+        return;
+    }
+
+    const transactionPath = card.getAttribute('data-transaction-path');
+    if (!transactionPath) return;
+
+    uploadButton.disabled = true;
+    if (statusElement) {
+        statusElement.textContent = 'Subiendo comprobante de destino...';
+        statusElement.classList.remove('hidden');
+        statusElement.classList.remove('text-red-600');
+        statusElement.classList.remove('text-green-600');
+        statusElement.classList.add('text-gray-500');
+    }
+
+    uploadAdminReceipt(transactionPath, file)
+        .then(() => {
+            if (statusElement) {
+                statusElement.textContent = 'Comprobante de destino subido. La orden qued� como completada.';
+                statusElement.classList.remove('text-gray-500');
+                statusElement.classList.remove('text-red-600');
+                statusElement.classList.add('text-green-600');
+            }
+        })
+        .catch((error) => {
+            console.error('Error al subir comprobante de destino:', error);
+            if (statusElement) {
+                statusElement.textContent = `Error al subir el comprobante: ${error.message}`;
+                statusElement.classList.remove('text-gray-500');
+                statusElement.classList.remove('text-green-600');
+                statusElement.classList.add('text-red-600');
+            }
+        })
+        .finally(() => {
+            uploadButton.disabled = false;
+            if (fileInput) fileInput.value = '';
+        });
+}
+
+async function uploadAdminReceipt(transactionPath, file) {
+    if (!storage || !db) {
+        throw new Error('Firebase Storage no est� inicializado.');
+    }
+
+    const storagePath = `${transactionPath}/receipts/admin/${Date.now()}-${file.name}`;
+    const fileRef = storageRef(storage, storagePath);
+    await uploadBytes(fileRef, file);
+    const downloadUrl = await getDownloadURL(fileRef);
+
+    await updateDoc(doc(db, transactionPath), {
+        adminReceiptUrl: downloadUrl,
+        status: 'Completado',
+        adminReceiptUploadedAt: serverTimestamp(),
+        completedAt: serverTimestamp(),
+    });
+}
+
+function setupAdminTransactionsListener() {
+    if (!db || !isCurrentUserAdmin || !adminTransactionsList) {
+        return;
+    }
+
+    if (adminTransactionsUnsubscribe) {
+        adminTransactionsUnsubscribe();
+    }
+
+    const transactionsQuery = collectionGroup(db, 'transactions');
+    adminTransactionsUnsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+        const transactions = [];
+        snapshot.forEach((docSnap) => {
+            const docPath = docSnap.ref.path;
+            if (!docPath.includes(`artifacts/${appId}/`)) {
+                return;
+            }
+            const data = docSnap.data();
+            transactions.push({
+                id: docSnap.id,
+                path: docPath,
+                ...data,
+            });
+        });
+
+        transactions.sort((a, b) => {
+            const aTime = a.timestamp?.seconds || 0;
+            const bTime = b.timestamp?.seconds || 0;
+            return bTime - aTime;
+        });
+
+        renderAdminTransactions(transactions);
+    }, (error) => {
+        console.error('Error al escuchar transacciones (admin):', error);
+        if (adminTransactionsList) {
+            adminTransactionsList.innerHTML = '<p class="text-sm text-red-600">Error al cargar las �rdenes.</p>';
+        }
+    });
+}
+
+function renderAdminTransactions(transactions) {
+    if (!adminTransactionsList) return;
+
+    if (!transactions.length) {
+        adminTransactionsList.innerHTML = '<p class="text-sm text-gray-500">No hay �rdenes registradas todav�a.</p>';
+        if (adminTransactionsSection) {
+            adminTransactionsSection.classList.remove('hidden');
+        }
+        return;
+    }
+
+    adminTransactionsList.innerHTML = '';
+
+    transactions.forEach((tx) => {
+        const amountSendText = formatCurrency(tx.amountSend || 0, tx.currencySend || 'CLP');
+        const amountReceiveText = formatCurrency(tx.amountReceive || 0, tx.currencyReceive || 'CLP');
+        const badgeClass = tx.status === 'Completado'
+            ? 'bg-green-100 text-green-700'
+            : tx.status === 'Pendiente'
+                ? 'bg-orange-100 text-orange-700'
+                : 'bg-gray-200 text-gray-600';
+
+        const card = document.createElement('div');
+        card.className = 'admin-transaction-card border border-yellow-200 bg-white rounded-lg p-4 space-y-3 shadow-sm';
+        card.setAttribute('data-transaction-id', tx.id);
+        card.setAttribute('data-transaction-path', tx.path);
+
+        const rateRow = tx.rateApplied
+            ? createCopyRow('Tasa aplicada', tx.rateApplied.toFixed(tx.currencyReceive === 'CLP' ? 2 : 4))
+            : '';
+
+        const userReceiptSection = tx.userReceiptUrl
+            ? `<a href="${tx.userReceiptUrl}" target="_blank" rel="noopener" class="text-cyan-700 hover:underline text-xs md:text-sm">Ver comprobante del cliente</a>`
+            : '<span class="text-xs text-orange-600">Comprobante del cliente pendiente</span>';
+
+        const adminReceiptSection = tx.adminReceiptUrl
+            ? `<a href="${tx.adminReceiptUrl}" target="_blank" rel="noopener" class="text-cyan-700 hover:underline text-xs md:text-sm">Ver comprobante de destino</a>`
+            : '<span class="text-xs text-gray-500">Comprobante de destino no cargado</span>';
+
+        card.innerHTML = `
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+                <div>
+                    <p class="text-sm font-semibold text-gray-800">Orden ${tx.id.slice(0, 8).toUpperCase()}</p>
+                    <p class="text-xs text-gray-500">Usuario: ${tx.userId || 'N/A'}</p>
+                </div>
+                <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">${tx.status || 'Sin comprobante'}</span>
+            </div>
+            <div class="space-y-2">
+                ${createCopyRow('Monto enviado', amountSendText)}
+                ${createCopyRow('Monto destino', amountReceiveText)}
+                ${rateRow}
+            </div>
+            <div class="space-y-1 text-xs text-gray-600">
+                ${userReceiptSection}<br>
+                ${adminReceiptSection}
+            </div>
+            <div class="mt-2 border-t border-gray-200 pt-3">
+                <label class="block text-xs font-semibold text-gray-700 mb-2">Subir comprobante de destino</label>
+                <div class="flex flex-col md:flex-row gap-3">
+                    <input type="file" class="admin-receipt-input flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-500" accept="image/*,.pdf">
+                    <button class="admin-upload-btn px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
+                        Marcar como completada
+                    </button>
+                </div>
+                <p class="admin-upload-status text-xs text-gray-500 mt-2 hidden"></p>
+            </div>
+        `;
+
+        adminTransactionsList.appendChild(card);
+    });
+
+    if (adminTransactionsSection) {
+        adminTransactionsSection.classList.remove('hidden');
+    }
+}
+
+// --- Inicialización y Listeners ---
 
 window.onload = function () {
     initializeDOM();
@@ -814,47 +1189,40 @@ window.onload = function () {
 
     setTimeout(() => {
         fetchDynamicRates();
-    }, 500); 
+    }, 500);
 
-    amountSendInput.addEventListener('input', calculateExchange);
-    currencySendSelect.addEventListener('change', calculateExchange);
-    currencyReceiveSelect.addEventListener('change', calculateExchange);
-    swapButton.addEventListener('click', swapCurrencies);
+    if (amountSendInput) amountSendInput.addEventListener('input', calculateExchange);
+    if (currencySendSelect) currencySendSelect.addEventListener('change', calculateExchange);
+    if (currencyReceiveSelect) currencyReceiveSelect.addEventListener('change', calculateExchange);
+    if (swapButton) swapButton.addEventListener('click', swapCurrencies);
 
-    toggleAdminButton.addEventListener('click', () => {
-        adminPanel.classList.toggle('hidden');
-        toggleAdminButton.textContent = adminPanel.classList.contains('hidden') ? 'Mostrar Panel de AdministraciÃ³n' : 'Ocultar Panel de AdministraciÃ³n';
-    });
-    
-    saveAccountsButton.addEventListener('click', saveAdminAccounts);
-    if (saveMarginsButton) {
-        saveMarginsButton.addEventListener('click', saveMarginConfig);
+    if (toggleAdminButton) {
+        toggleAdminButton.addEventListener('click', () => {
+            adminPanel.classList.toggle('hidden');
+            toggleAdminButton.textContent = adminPanel.classList.contains('hidden') ? 'Mostrar Panel de Administraci�n' : 'Ocultar Panel de Administraci�n';
+        });
     }
-    
-    paymentButton.addEventListener('click', showPaymentModal);
-    closeModalButton.addEventListener('click', () => {
-        paymentModal.classList.add('hidden');
-    });
 
-    // **NUEVO LISTENER**: DelegaciÃ³n de eventos para los botones de copiado
-    adminAccountDetailsContainer.addEventListener('click', function(event) {
-        const button = event.target.closest('.copy-btn');
-        if (button) {
-            const textToCopy = button.dataset.copy;
-            copyToClipboard(textToCopy, button);
-        }
-    });
+    if (saveAccountsButton) saveAccountsButton.addEventListener('click', saveAdminAccounts);
+    if (saveMarginsButton) saveMarginsButton.addEventListener('click', saveMarginConfig);
+    if (uploadReceiptButton) uploadReceiptButton.addEventListener('click', handleUserReceiptUpload);
+    if (savedAccountsList) savedAccountsList.addEventListener('click', handleSavedAccountsListClick);
+    if (adminTransactionsList) adminTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
+
+    if (paymentButton) paymentButton.addEventListener('click', showPaymentModal);
+    if (closeModalButton) {
+        closeModalButton.addEventListener('click', () => {
+            paymentModal.classList.add('hidden');
+        });
+    }
+
+    if (adminAccountDetailsContainer) {
+        adminAccountDetailsContainer.addEventListener('click', (event) => {
+            const button = event.target.closest('.copy-btn');
+            if (button) {
+                const textToCopy = button.dataset.copy;
+                copyToClipboard(textToCopy, button);
+            }
+        });
+    }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-

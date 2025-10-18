@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local firebase config (contains secrets)
+local.firebase.config.json
+
 # vercel
 .vercel
 
