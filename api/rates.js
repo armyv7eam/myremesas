@@ -21,7 +21,11 @@ const BYBIT_SPOT_TICKER_ENDPOINT = 'https://api.bybit.com/v5/market/tickers';
  * pero mantener el header ayuda a depurar accesos.
  */
 function buildHeaders(extra = {}) {
-    const headers = { ...extra };
+    const headers = {
+        'User-Agent': 'Mozilla/5.0 (compatible; myremesas/1.0; +https://myremesas.vercel.app)',
+        'Accept': 'application/json',
+        ...extra,
+    };
     if (BINANCE_API_KEY) {
         headers['X-MBX-APIKEY'] = BINANCE_API_KEY;
     }
@@ -31,7 +35,7 @@ function buildHeaders(extra = {}) {
 /**
  * Obtiene el precio spot de WLD/USDT usando la API oficial.
  */
-async function getBinanceSpotRate() {
+async function getBinanceSpotRate(errorBucket = []) {
     const attempts = [
         {
             url: BINANCE_AVG_PRICE_ENDPOINT,
@@ -66,19 +70,31 @@ async function getBinanceSpotRate() {
                 return { price, source: attempt.source };
             }
         } catch (error) {
-            console.warn(`Fallo consulta spot (${attempt.source}):`, error.message);
+            const message = error.response
+                ? `HTTP ${error.response.status} - ${error.response.statusText}`
+                : error.message;
+            console.warn(`Fallo consulta spot (${attempt.source}):`, message);
+            errorBucket.push({
+                exchange: 'binance',
+                source: attempt.source,
+                message,
+            });
         }
     }
 
     return null;
 }
 
-async function getBybitSpotRate() {
+async function getBybitSpotRate(errorBucket = []) {
     try {
         const { data } = await axios.get(BYBIT_SPOT_TICKER_ENDPOINT, {
             params: {
                 category: 'spot',
                 symbol: 'WLDUSDT',
+            },
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (compatible; myremesas/1.0; +https://myremesas.vercel.app)',
+                'Accept': 'application/json',
             },
             timeout: 5000,
         });
@@ -89,22 +105,42 @@ async function getBybitSpotRate() {
             return { price, source: 'bybit_spot' };
         }
         console.warn('Respuesta de Bybit sin precio válido para WLD/USDT.');
+        errorBucket.push({
+            exchange: 'bybit',
+            source: 'bybit_spot',
+            message: 'Respuesta sin precio válido',
+        });
         return null;
     } catch (error) {
-        console.warn('Fallo consulta spot (bybit_spot):', error.message);
+        const message = error.response
+            ? `HTTP ${error.response.status} - ${error.response.statusText}`
+            : error.message;
+        console.warn('Fallo consulta spot (bybit_spot):', message);
+        errorBucket.push({
+            exchange: 'bybit',
+            source: 'bybit_spot',
+            message,
+        });
         return null;
     }
 }
 
 async function getSpotRate() {
-    const binanceSpot = await getBinanceSpotRate();
-    if (binanceSpot) return binanceSpot;
+    const spotErrors = [];
+    const binanceSpot = await getBinanceSpotRate(spotErrors);
+    if (binanceSpot) {
+        binanceSpot.errors = spotErrors;
+        return binanceSpot;
+    }
 
-    const bybitSpot = await getBybitSpotRate();
-    if (bybitSpot) return bybitSpot;
+    const bybitSpot = await getBybitSpotRate(spotErrors);
+    if (bybitSpot) {
+        bybitSpot.errors = spotErrors;
+        return bybitSpot;
+    }
 
     console.error('No se pudo obtener precio spot WLD/USDT desde Binance ni Bybit.');
-    return null;
+    return { price: null, source: 'fallback', errors: spotErrors };
 }
 
 /**
@@ -189,6 +225,8 @@ module.exports = async (req, res) => {
         return res.status(200).end();
     }
 
+    let spotErrors = [];
+
     try {
         const [spotResult, clpBuyPrices, vesSellPrices] = await Promise.all([
             getSpotRate(),
@@ -196,6 +234,7 @@ module.exports = async (req, res) => {
             getP2PRates({ fiat: 'VES', tradeType: 'SELL' }),
         ]);
 
+        spotErrors = Array.isArray(spotResult?.errors) ? spotResult.errors : [];
         const spotPrice = spotResult?.price ?? null;
         const spotSource = spotResult?.source ?? 'fallback';
         const clpBuyRate = pickOffer(clpBuyPrices, { average: 3 }) || FALLBACK_RATES.USDT_to_CLP_P2P;
@@ -212,6 +251,7 @@ module.exports = async (req, res) => {
                 clpOffers: clpBuyPrices.length,
                 vesOffers: vesSellPrices.length,
                 apiKeyAttached: Boolean(BINANCE_API_KEY && BINANCE_API_SECRET),
+                spotErrors,
             },
         });
     } catch (error) {
@@ -220,6 +260,11 @@ module.exports = async (req, res) => {
             success: false,
             message: 'Error al procesar tasas, usando valores de referencia.',
             ...FALLBACK_RATES,
+            meta: {
+                spotSource: 'fallback',
+                spotErrors,
+                apiKeyAttached: Boolean(BINANCE_API_KEY && BINANCE_API_SECRET),
+            },
         });
     }
 };
