@@ -125,6 +125,29 @@ async function getBybitSpotRate(errorBucket = []) {
     }
 }
 
+async function getCoingeckoSpotRate(errorBucket = []) {
+    try {
+        const { data } = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
+            params: {
+                ids: 'worldcoin-wld',
+                vs_currencies: 'usd'
+            },
+            timeout: 5000,
+        });
+        const price = parseFloat(data?.['worldcoin-wld']?.usd);
+        if (Number.isFinite(price) && price > 0) {
+            return { price, source: 'coingecko_spot' };
+        }
+        errorBucket.push({ exchange: 'coingecko', source: 'simple_price', message: 'Respuesta sin precio válido' });
+        return null;
+    } catch (error) {
+        const message = error.response ? `HTTP ${error.response.status} - ${error.response.statusText}` : error.message;
+        console.warn('Fallo consulta spot (coingecko_spot):', message);
+        errorBucket.push({ exchange: 'coingecko', source: 'simple_price', message });
+        return null;
+    }
+}
+
 async function getSpotRate() {
     const spotErrors = [];
     const binanceSpot = await getBinanceSpotRate(spotErrors);
