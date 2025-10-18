@@ -9,12 +9,12 @@ setLogLevel('Debug');
 // --- CONFIGURACIÓN DE SEGURIDAD ---
 // Lista de User IDs de administradores autorizados para ver el panel.
 // Se obtiene de las variables de entorno de Vercel para mayor seguridad y flexibilidad.
-const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2";
+const ADMIN_UIDS_PLACEHOLDER = "VERCEL_INJECTED_ADMIN_UIDS";
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
 
 // Variables Globales de Firebase (provistas por el entorno)
-const appId = "1:775892034675:web:98ed2724bcaff2ed427606";
-const firebaseConfig = {"apiKey":"AIzaSyCnXU8XU7ZzA_12CDaYaY9W2rWBmkGLB-g","authDomain":"studio-7601782447-44d81.firebaseapp.com","projectId":"studio-7601782447-44d81","storageBucket":"studio-7601782447-44d81.firebasestorage.app","messagingSenderId":"775892034675","appId":"1:775892034675:web:98ed2724bcaff2ed427606","measurementId":"YOUR_FIREBASE_MEASUREMENT_ID"};
+const appId = "VERCEL_INJECTED_APP_ID";
+const firebaseConfig = "VERCEL_INJECTED_FIREBASE_CONFIG";
 const initialAuthToken = null; // No estamos usando este método por ahora.
 
 let db;
