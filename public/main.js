@@ -20,7 +20,7 @@ setLogLevel('Debug');
 
 // Se obtiene de las variables de entorno de Vercel para mayor seguridad y flexibilidad.
 
-const ADMIN_UIDS_PLACEHOLDER = "VERCEL_INJECTED_ADMIN_UIDS";
+const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2";
 
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
 
@@ -28,9 +28,9 @@ const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !=
 
 // Variables Globales de Firebase (provistas por el entorno)
 
-const appId = "VERCEL_INJECTED_APP_ID";
+const appId = "1:775892034675:web:98ed2724bcaff2ed427606";
 
-const firebaseConfig = "VERCEL_INJECTED_FIREBASE_CONFIG";
+const firebaseConfig = {"apiKey":"AIzaSyCnXU8XU7ZzA_12CDaYaY9W2rWBmkGLB-g","authDomain":"studio-7601782447-44d81.firebaseapp.com","projectId":"studio-7601782447-44d81","storageBucket":"studio-7601782447-44d81.firebasestorage.app","messagingSenderId":"775892034675","appId":"1:775892034675:web:98ed2724bcaff2ed427606"};
 
 const initialAuthToken = null; // No estamos usando este mtodo por ahora.
 
@@ -1347,35 +1347,16 @@ function calculateExchange(enablePaymentButton = true) {
 
     let rateText;
 
-
-
     if (currencySend === currencyReceive) {
-
-        rateText = "Intercambio 1:1";
-
-    } else if (currencySend === 'CLP' && currencyReceive === 'VES') {
-
-        rateText = `Tasa de Intercambio CLP/VES (Desc. ${discountClpVesPercent}%): 1 CLP = ${rateFixed} VES`;
-
-    } else if (currencySend === 'WLD' && currencyReceive === 'CLP') {
-
-        rateText = `Tasa de Intercambio WLD/CLP (Desc. ${discountWldClpPercent}%): 1 WLD = ${rateFixed} CLP`;
-
-    } else if (currencySend === 'USDT' && currencyReceive === 'CLP') {
-
-        rateText = `Tasa de Intercambio USDT/CLP (Margen +${marginUsdtClpPercent}%): 1 USDT = ${rateFixed} CLP`;
-
+        rateText = 'Intercambio 1:1';
     } else {
-
-        rateText = `Tasa de Cambio: 1 ${currencySend} = ${rateFixed} ${currencyReceive}`;
-
+        rateText = `Tasa de Intercambio: 1 ${currencySend} = ${rateFixed} ${currencyReceive}`;
     }
 
-
-
     amountReceiveDisplay.textContent = formatCurrency(amountReceive, currencyReceive);
-
     rateDisplay.textContent = rateText;
+    rateDisplay.style.fontSize = '130%';
+    rateDisplay.style.fontWeight = '600';
 
 }
 
