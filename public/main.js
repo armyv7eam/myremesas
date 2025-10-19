@@ -20,7 +20,7 @@ setLogLevel('Debug');
 
 // Se obtiene de las variables de entorno de Vercel para mayor seguridad y flexibilidad.
 
-const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2";
+const ADMIN_UIDS_PLACEHOLDER = "VERCEL_INJECTED_ADMIN_UIDS";
 
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
 
@@ -28,9 +28,9 @@ const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !=
 
 // Variables Globales de Firebase (provistas por el entorno)
 
-const appId = "1:775892034675:web:98ed2724bcaff2ed427606";
+const appId = "VERCEL_INJECTED_APP_ID";
 
-const firebaseConfig = {"apiKey":"AIzaSyCnXU8XU7ZzA_12CDaYaY9W2rWBmkGLB-g","authDomain":"studio-7601782447-44d81.firebaseapp.com","projectId":"studio-7601782447-44d81","storageBucket":"studio-7601782447-44d81.firebasestorage.app","messagingSenderId":"775892034675","appId":"1:775892034675:web:98ed2724bcaff2ed427606"};
+const firebaseConfig = "VERCEL_INJECTED_FIREBASE_CONFIG";
 
 const initialAuthToken = null; // No estamos usando este mtodo por ahora.
 
@@ -415,113 +415,58 @@ function formatCurrency(value, currencyCode) {
  */
 
 function copyToClipboard(text, element) {
-
-    // Usamos document.execCommand para mayor compatibilidad en iframes
-
     const textArea = document.createElement('textarea');
-
     textArea.value = text;
-
     document.body.appendChild(textArea);
-
     textArea.select();
-
     try {
-
         document.execCommand('copy');
-
         const feedback = element.querySelector('.copy-feedback');
-
         if (feedback) {
-
             feedback.style.opacity = '1';
-
             feedback.style.transform = 'translateX(-50%) translateY(-5px)';
-
             setTimeout(() => {
-
                 feedback.style.opacity = '0';
-
                 feedback.style.transform = 'translateX(-50%)';
-
             }, 1500);
-
         }
+    } catch (err) {
+        console.error('Error al copiar texto: ', err);
+    }
+    document.body.removeChild(textArea);
+}
 
 function createCopyRow(label, value, options = {}) {
-
     if (!value) return '';
-
-    const displayValue = options.mask ? '' : value;
-
+    const displayValue = options.mask ? '******' : value;
     const valueClasses = options.monospace ? 'font-mono text-gray-900 break-all' : 'text-gray-900 break-words';
-
     return `
-
         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 text-xs md:text-sm text-gray-600">
-
             <span class="w-24 font-medium text-gray-700">${label}:</span>
-
             <div class="flex-1 flex items-center gap-2">
-
                 <span class="${valueClasses}">${displayValue}</span>
-
                 <button class="copy-btn p-1 text-cyan-600 hover:bg-cyan-100 rounded" data-copy="${value}" aria-label="Copiar ${label}">
-
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-
                     </svg>
-
-                    <span class="copy-feedback">Copiado!</span>
-
+                    <span class="copy-feedback">Copiado</span>
                 </button>
-
             </div>
-
         </div>
-
     `;
-
 }
-
-
 
 function buildAccountDetailsMarkup(account) {
-
     const rows = [];
-
     rows.push(createCopyRow('Titular', account.accountHolder));
-
     rows.push(createCopyRow('RUT', account.rut, { monospace: true }));
-
-    rows.push(createCopyRow('N Cuenta', account.accountNumber, { monospace: true }));
-
+    rows.push(createCopyRow('Numero de cuenta', account.accountNumber, { monospace: true }));
     rows.push(createCopyRow('Tipo', account.accountType));
-
     rows.push(createCopyRow('Banco', account.bankName));
-
     if (account.email && account.email !== 'N/A') {
-
         rows.push(createCopyRow('Email', account.email));
-
     }
-
     return rows.join('');
-
-}
-
-
-
-    } catch (err) {
-
-        console.error('Error al copiar texto: ', err);
-
-    }
-
-    document.body.removeChild(textArea);
-
 }
 
 function getMarginValue(key) {
