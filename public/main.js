@@ -19,7 +19,7 @@ setLogLevel('debug');
 // Lista de User IDs de administradores autorizados para ver el panel.
 
 // UIDs de administradores. Se pueden añadir más separados por comas.
-const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2,R3QU4xRLmSQFiArCWWRwGBMEOhc2";
+const ADMIN_UIDS_PLACEHOLDER = "R3QU4xRLmSQFiArCWWRwGBMEOhc2,R3QU4xRLmSQFiArCWWRwGBMEOhc2,71YiNOk9MOc6mNjxnnKBLST1Clh2";
 
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
 
@@ -95,7 +95,7 @@ let marginConfigUnsubscribe = null;
 
 // --- DECLARACIÓN DE VARIABLES DEL DOM (INICIALIZACIÓN MOVIDA A initializeDOM) ---
 
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput;
+let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle;
 
 
 
@@ -109,7 +109,6 @@ let adminTransactionsUnsubscribe = null;
 // Nuevas variables para autenticación por email
 let authContainer, appContainer, authFormsSection, registerForm, loginForm, logoutButton, showRegisterButton, showLoginButton;
 let registerStatus, loginStatus;
-
 let usdtDestinationSaveTimeout = null;
 
 
@@ -258,6 +257,10 @@ function initializeDOM() {
     loginStatus = document.getElementById('login-status');
     showRegisterButton = document.getElementById('show-register-form');
     showLoginButton = document.getElementById('show-login-form');
+    imageViewerModal = document.getElementById('image-viewer-modal');
+    closeImageViewerButton = document.getElementById('close-image-viewer-button');
+    imageViewerImg = document.getElementById('image-viewer-img');
+    imageViewerTitle = document.getElementById('image-viewer-title');
 }
 
 
@@ -897,6 +900,49 @@ async function handleLogout() {
         authStatus.textContent = `Error al cerrar sesión: ${error.message}`;
     }
 }
+
+/**
+ * Abre el modal visor de imágenes con la URL y el título especificados.
+ * @param {string} url La URL de la imagen a mostrar.
+ * @param {string} title El título para el modal.
+ */
+function openImageViewer(url, title) {
+    if (!imageViewerModal || !imageViewerImg || !imageViewerTitle) return;
+
+    imageViewerImg.src = url;
+    imageViewerTitle.textContent = title;
+    imageViewerModal.classList.remove('hidden');
+}
+
+/**
+ * Cierra el modal visor de imágenes.
+ */
+function closeImageViewer() {
+    if (!imageViewerModal || !imageViewerImg) return;
+
+    imageViewerModal.classList.add('hidden');
+    imageViewerImg.src = ''; // Limpia la imagen para evitar que se muestre la anterior brevemente
+}
+
+function openReceiptFromButton(button) {
+    if (!button) return false;
+
+    const receiptUrl = button.dataset.receiptUrl;
+    const receiptTitle = button.dataset.receiptTitle || 'Comprobante';
+    if (!receiptUrl) return false;
+
+    const filePath = receiptUrl.split('?')[0] || '';
+    const isImageFile = /\.(jpe?g|png|gif|webp|bmp)$/i.test(filePath);
+
+    if (isImageFile && typeof openImageViewer === 'function') {
+        openImageViewer(receiptUrl, receiptTitle);
+    } else {
+        window.open(receiptUrl, '_blank', 'noopener');
+    }
+
+    return true;
+}
+
 
 // --- Lgica de Administracin de Cuentas ---
 
@@ -1619,6 +1665,20 @@ function renderTransactionHistory(transactions) {
 
         const time = tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleTimeString() : '';
 
+        const displayStatus = tx.status || 'Sin comprobante';
+
+        const statusClass = displayStatus === 'Pendiente'
+            ? 'bg-orange-100 text-orange-800'
+            : displayStatus === 'Completado'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-gray-200 text-gray-700';
+
+        const orderLabel = tx.id ? tx.id.slice(0, 8).toUpperCase() : 'ORDEN';
+
+        const receiptSection = tx.adminReceiptUrl
+            ? `<button class="view-receipt-btn text-cyan-700 hover:underline text-xs font-semibold" data-receipt-url="${tx.adminReceiptUrl}" data-receipt-title="Comprobante de destino (Orden ${orderLabel})">Ver comprobante del pago recibido</button>`
+            : '<span class="text-xs text-gray-500">Comprobante de pago en destino pendiente</span>';
+
 
 
         const item = document.createElement('div');
@@ -1637,7 +1697,13 @@ function renderTransactionHistory(transactions) {
 
             </p>
 
-            <span class="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded-full ${tx.status === 'Pendiente' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}">${tx.status}</span>
+            <span class="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded-full ${statusClass}">${displayStatus}</span>
+
+            <div class="mt-2 text-xs text-gray-600">
+
+                ${receiptSection}
+
+            </div>
 
         `;
 
@@ -2041,6 +2107,20 @@ function handleAdminTransactionsListClick(event) {
 
 
 
+    const viewReceiptButton = event.target.closest('.view-receipt-btn');
+
+    if (viewReceiptButton) {
+
+        const opened = openReceiptFromButton(viewReceiptButton);
+        if (opened) {
+            event.preventDefault();
+        }
+        return;
+
+    }
+
+
+
     const uploadButton = event.target.closest('.admin-upload-btn');
 
     if (!uploadButton) return;
@@ -2209,6 +2289,16 @@ async function uploadAdminReceipt(transactionPath, file) {
 
 }
 
+function handleTransactionHistoryClick(event) {
+    const viewReceiptButton = event.target.closest('.view-receipt-btn');
+    if (!viewReceiptButton) return;
+
+    const opened = openReceiptFromButton(viewReceiptButton);
+    if (opened) {
+        event.preventDefault();
+    }
+}
+
 
 
 function setupAdminTransactionsListener() {
@@ -2353,19 +2443,13 @@ function renderAdminTransactions(transactions) {
 
 
 
-        const userReceiptSection = tx.userReceiptUrl
+        const userReceiptSection = tx.userReceiptUrl ?
+            `<button class="view-receipt-btn text-cyan-700 hover:underline text-xs md:text-sm" data-receipt-url="${tx.userReceiptUrl}" data-receipt-title="Comprobante del Cliente (Orden ${tx.id.slice(0, 8).toUpperCase()})">Ver comprobante del cliente</button>` :
+            '<span class="text-xs text-orange-600">Comprobante del cliente pendiente</span>';
 
-            ? `<a href="${tx.userReceiptUrl}" target="_blank" rel="noopener" class="text-cyan-700 hover:underline text-xs md:text-sm">Ver comprobante del cliente</a>`
-
-            : '<span class="text-xs text-orange-600">Comprobante del cliente pendiente</span>';
-
-
-
-        const adminReceiptSection = tx.adminReceiptUrl
-
-            ? `<a href="${tx.adminReceiptUrl}" target="_blank" rel="noopener" class="text-cyan-700 hover:underline text-xs md:text-sm">Ver comprobante de destino</a>`
-
-            : '<span class="text-xs text-gray-500">Comprobante de destino no cargado</span>';
+        const adminReceiptSection = tx.adminReceiptUrl ?
+            `<button class="view-receipt-btn text-cyan-700 hover:underline text-xs md:text-sm" data-receipt-url="${tx.adminReceiptUrl}" data-receipt-title="Comprobante de Destino (Orden ${tx.id.slice(0, 8).toUpperCase()})">Ver comprobante de destino</button>` :
+            '<span class="text-xs text-gray-500">Comprobante de destino no cargado</span>';
 
 
 
@@ -2496,6 +2580,17 @@ window.onload = function () {
     if (savedAccountsList) savedAccountsList.addEventListener('click', handleSavedAccountsListClick);
 
     if (adminTransactionsList) adminTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
+    if (historyContainer) historyContainer.addEventListener('click', handleTransactionHistoryClick);
+
+    if (closeImageViewerButton) {
+        closeImageViewerButton.addEventListener('click', closeImageViewer);
+    }
+    if (imageViewerModal) {
+        imageViewerModal.addEventListener('click', (event) => {
+            // Cierra el modal si se hace clic en el fondo oscuro (overlay)
+            if (event.target === imageViewerModal) closeImageViewer();
+        });
+    }
 
     // Listeners para los nuevos formularios de autenticación
     if (registerForm) registerForm.addEventListener('submit', handleRegistration);

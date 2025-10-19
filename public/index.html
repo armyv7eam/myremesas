@@ -663,6 +663,22 @@
 
     </div>
 
+    <!-- VISOR DE IMÁGENES MODAL (OCULTO POR DEFECTO) -->
+    <div id="image-viewer-modal" class="modal-overlay hidden">
+        <div class="modal-content relative max-w-3xl w-full">
+            <button id="close-image-viewer-button" class="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-700 hover:bg-gray-200 z-10">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <h3 id="image-viewer-title" class="text-lg font-semibold text-gray-800 mb-4">Comprobante</h3>
+            <div class="bg-gray-200 rounded-lg">
+                <img id="image-viewer-img" src="" alt="Comprobante de pago" class="max-h-[80vh] w-full object-contain rounded-lg">
+            </div>
+        </div>
+    </div>
+
+
 
 
     <!-- Firebase SDKs -->

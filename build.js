@@ -71,6 +71,10 @@ try {
   let content = fs.readFileSync(mainJsPath, 'utf8');
   console.log('Read public/main.js successfully.');
 
+  // **INSTRUCCIÓN**: Reemplaza 'myremesas-files-storage' con el nombre exacto de tu bucket si usaste uno diferente.
+  const customStorageBucket = 'myremesas-files-storage';
+  firebaseConfig = firebaseConfig.replace(/"storageBucket":\s*".*?"/, `"storageBucket": "${customStorageBucket}"`);
+
   // Reemplazar los placeholders con los valores reales
   content = content.replace('"VERCEL_INJECTED_FIREBASE_CONFIG"', firebaseConfig); // Reemplaza el placeholder con el JSON directamente
   content = content.replace(/const appId = ".*";/, `const appId = "${appId}";`);
