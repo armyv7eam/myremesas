@@ -4,7 +4,7 @@ const BINANCE_API_KEY = process.env.BINANCE_API_KEY || '';
 const BINANCE_API_SECRET = process.env.BINANCE_API_SECRET || '';
 
 const FALLBACK_RATES = {
-    WLD_to_USDT: 2.80,
+    WLD_to_USDT: 0.88,
     USDT_to_CLP_P2P: 950.00,
     VES_per_USDT_SELL: 37.00,
 };
@@ -138,7 +138,7 @@ async function getCoingeckoSpotRate(errorBucket = []) {
         if (Number.isFinite(price) && price > 0) {
             return { price, source: 'coingecko_spot' };
         }
-        errorBucket.push({ exchange: 'coingecko', source: 'simple_price', message: 'Respuesta sin precio válido' });
+        errorBucket.push({ exchange: 'coingecko', source: 'simple_price', message: 'Respuesta sin precio vï¿½lido' });
         return null;
     } catch (error) {
         const message = error.response ? `HTTP ${error.response.status} - ${error.response.statusText}` : error.message;
@@ -162,7 +162,13 @@ async function getSpotRate() {
         return bybitSpot;
     }
 
-    console.error('No se pudo obtener precio spot WLD/USDT desde Binance ni Bybit.');
+    const coingeckoSpot = await getCoingeckoSpotRate(spotErrors);
+    if (coingeckoSpot) {
+        coingeckoSpot.errors = spotErrors;
+        return coingeckoSpot;
+    }
+
+    console.error('No se pudo obtener precio spot WLD/USDT desde Binance, Bybit ni Coingecko.');
     return { price: null, source: 'fallback', errors: spotErrors };
 }
 
