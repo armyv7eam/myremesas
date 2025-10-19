@@ -125,6 +125,102 @@ async function getBybitSpotRate(errorBucket = []) {
     }
 }
 
+async function getOkxSpotRate(errorBucket = []) {
+    try {
+        const { data } = await axios.get('https://www.okx.com/api/v5/market/ticker', {
+            params: { instId: 'WLD-USDT' },
+            timeout: 5000,
+        });
+
+        const price = parseFloat(data?.data?.[0]?.last);
+        if (Number.isFinite(price) && price > 0) {
+            return { price, source: 'okx_spot' };
+        }
+
+        errorBucket.push({
+            exchange: 'okx',
+            source: 'ticker',
+            message: 'Respuesta sin precio valido',
+        });
+        return null;
+    } catch (error) {
+        const message = error.response
+            ? `HTTP ${error.response.status} - ${error.response.statusText}`
+            : error.message;
+        console.warn('Fallo consulta spot (okx_spot):', message);
+        errorBucket.push({
+            exchange: 'okx',
+            source: 'ticker',
+            message,
+        });
+        return null;
+    }
+}
+
+async function getKucoinSpotRate(errorBucket = []) {
+    try {
+        const { data } = await axios.get('https://api.kucoin.com/api/v1/market/orderbook/level1', {
+            params: { symbol: 'WLD-USDT' },
+            timeout: 5000,
+        });
+
+        const price = parseFloat(data?.data?.price);
+        if (Number.isFinite(price) && price > 0) {
+            return { price, source: 'kucoin_spot' };
+        }
+
+        errorBucket.push({
+            exchange: 'kucoin',
+            source: 'orderbook_level1',
+            message: 'Respuesta sin precio valido',
+        });
+        return null;
+    } catch (error) {
+        const message = error.response
+            ? `HTTP ${error.response.status} - ${error.response.statusText}`
+            : error.message;
+        console.warn('Fallo consulta spot (kucoin_spot):', message);
+        errorBucket.push({
+            exchange: 'kucoin',
+            source: 'orderbook_level1',
+            message,
+        });
+        return null;
+    }
+}
+
+async function getGateSpotRate(errorBucket = []) {
+    try {
+        const { data } = await axios.get('https://api.gateio.ws/api/v4/spot/tickers', {
+            params: { currency_pair: 'WLD_USDT' },
+            timeout: 5000,
+        });
+
+        const price = parseFloat(data?.[0]?.last);
+        if (Number.isFinite(price) && price > 0) {
+            return { price, source: 'gate_spot' };
+        }
+
+        errorBucket.push({
+            exchange: 'gate',
+            source: 'spot_ticker',
+            message: 'Respuesta sin precio valido',
+        });
+        return null;
+    } catch (error) {
+        const message = error.response
+            ? `HTTP ${error.response.status} - ${error.response.statusText}`
+            : error.message;
+        console.warn('Fallo consulta spot (gate_spot):', message);
+        errorBucket.push({
+            exchange: 'gate',
+            source: 'spot_ticker',
+            message,
+        });
+        return null;
+    }
+}
+
 async function getCoingeckoSpotRate(errorBucket = []) {
     try {
         const { data } = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
@@ -162,13 +258,31 @@ async function getSpotRate() {
         return bybitSpot;
     }
 
+    const okxSpot = await getOkxSpotRate(spotErrors);
+    if (okxSpot) {
+        okxSpot.errors = spotErrors;
+        return okxSpot;
+    }
+
+    const kucoinSpot = await getKucoinSpotRate(spotErrors);
+    if (kucoinSpot) {
+        kucoinSpot.errors = spotErrors;
+        return kucoinSpot;
+    }
+
+    const gateSpot = await getGateSpotRate(spotErrors);
+    if (gateSpot) {
+        gateSpot.errors = spotErrors;
+        return gateSpot;
+    }
+
     const coingeckoSpot = await getCoingeckoSpotRate(spotErrors);
     if (coingeckoSpot) {
         coingeckoSpot.errors = spotErrors;
         return coingeckoSpot;
     }
 
-    console.error('No se pudo obtener precio spot WLD/USDT desde Binance, Bybit ni Coingecko.');
+    console.error('No se pudo obtener precio spot WLD/USDT desde Binance, Bybit, OKX, Kucoin, Gate ni Coingecko.');
     return { price: null, source: 'fallback', errors: spotErrors };
 }
 
