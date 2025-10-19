@@ -349,10 +349,7 @@ async function initializeFirebase() {
 
         });
 
-        // Iniciar sesión anónimamente la primera vez
-        await signInAnonymously(auth);
-
-
+        // La autenticación anónima ya se maneja dentro del listener onAuthStateChanged.
 
     } catch (error) {
 
