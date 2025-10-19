@@ -10,7 +10,7 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "http
 
 // Establecer nivel de log para depuracin de Firestore
 
-setLogLevel('Debug');
+setLogLevel('debug');
 
 
 
@@ -32,7 +32,7 @@ const appId = "1:775892034675:web:98ed2724bcaff2ed427606";
 
 const firebaseConfig = {"apiKey":"AIzaSyCnXU8XU7ZzA_12CDaYaY9W2rWBmkGLB-g","authDomain":"studio-7601782447-44d81.firebaseapp.com","projectId":"studio-7601782447-44d81","storageBucket":"studio-7601782447-44d81.firebasestorage.app","messagingSenderId":"775892034675","appId":"1:775892034675:web:98ed2724bcaff2ed427606"};
 
-const initialAuthToken = null; // No estamos usando este mtodo por ahora.
+const initialAuthToken = null; // No estamos usando este método por ahora.
 
 
 
@@ -72,7 +72,7 @@ let adminAccounts = [];
 
 
 
-// Configuracin de mrgenes (se puede sobrescribir desde Firestore)
+// Configuración de márgenes (se puede sobrescribir desde Firestore)
 
 const DEFAULT_MARGIN_CONFIG = {
 
@@ -248,7 +248,7 @@ async function initializeFirebase() {
 
         if (!firebaseConfig) {
 
-            authStatus.textContent = "Error: Configuracin de Firebase no disponible.";
+            authStatus.textContent = "Error: Configuración de Firebase no disponible.";
 
             return;
 
@@ -304,7 +304,7 @@ async function initializeFirebase() {
 
                         adminTransactionsSection.classList.add('hidden');
 
-                        adminTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Debes iniciar sesi??n como administrador para ver esta informaci??n.</p>';
+                        adminTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Debes iniciar sesión como administrador para ver esta información.</p>';
 
                     }
 
@@ -368,7 +368,7 @@ async function authenticateUser() {
 
          console.error("Error de autenticacin:", error);
 
-         authStatus.textContent = `Error de Autenticacin: ${error.message}`;
+         authStatus.textContent = `Error de Autenticación: ${error.message}`;
 
      }
 
@@ -410,7 +410,7 @@ function formatCurrency(value, currencyCode) {
 
  /**
 
- * **NUEVA FUNCIN**: Copia texto al portapapeles y muestra feedback.
+ * **NUEVA FUNCIÓN**: Copia texto al portapapeles y muestra feedback.
 
  */
 
@@ -598,7 +598,6 @@ function setupMarginConfigListener() {
         if (snapshot.exists()) {
 
             const data = snapshot.data();
-
             marginConfig = {
 
                 discountWldClp: typeof data.discountWldClp === 'number' ? data.discountWldClp : DEFAULT_MARGIN_CONFIG.discountWldClp,
@@ -621,11 +620,11 @@ function setupMarginConfigListener() {
 
     }, (error) => {
 
-        console.error('Error al escuchar m?rgenes:', error);
+        console.error('Error al escuchar márgenes:', error);
 
         if (error?.code === 'permission-denied') {
 
-            console.warn('El usuario no tiene permisos para leer config/pricing. Se usar?n m?rgenes por defecto.');
+            console.warn('El usuario no tiene permisos para leer config/pricing. Se usarán márgenes por defecto.');
 
             marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 
@@ -655,7 +654,7 @@ function readPercentInput(inputElement, label, fallbackDecimal) {
 
     if (!Number.isFinite(numeric)) {
 
-        throw new Error(`Ingrese un valor numrico vlido para ${label}.`);
+        throw new Error(`Ingrese un valor numérico válido para ${label}.`);
 
     }
 
@@ -677,7 +676,7 @@ async function saveMarginConfig(event) {
 
     if (!isAuthReady || !db) {
 
-        showMarginStatus('Error: conexin no lista.', true);
+        showMarginStatus('Error: conexión no lista.', true);
 
         return;
 
@@ -685,7 +684,7 @@ async function saveMarginConfig(event) {
 
     if (!ADMIN_UIDS.includes(userId)) {
 
-        showMarginStatus('No autorizado para actualizar mrgenes.', true);
+        showMarginStatus('No autorizado para actualizar márgenes.', true);
 
         return;
 
@@ -713,7 +712,7 @@ async function saveMarginConfig(event) {
 
     try {
 
-        discountWldClp = readPercentInput(marginWldClpInput, 'Descuento WLD -> CLP', currentConfig.discountWldClp);
+        discountWldClp = readPercentInput(marginWldClpInput, 'Descuento WLD → CLP', currentConfig.discountWldClp);
 
         discountClpVes = readPercentInput(marginClpVesInput, 'Descuento CLP -> VES', currentConfig.discountClpVes);
 
@@ -735,7 +734,7 @@ async function saveMarginConfig(event) {
 
     try {
 
-        showMarginStatus('Guardando mrgenes...');
+        showMarginStatus('Guardando márgenes...');
 
         if (saveMarginsButton) {
 
@@ -767,15 +766,15 @@ async function saveMarginConfig(event) {
 
         calculateExchange(false);
 
-        showMarginStatus('Mrgenes guardados correctamente.');
+        showMarginStatus('Márgenes guardados correctamente.');
 
         setTimeout(() => hideMarginStatus(), 3000);
 
     } catch (error) {
 
-        console.error('Error al guardar mrgenes:', error);
+        console.error('Error al guardar márgenes:', error);
 
-        showMarginStatus(`Error al guardar mrgenes: ${error.message}`, true);
+        showMarginStatus(`Error al guardar márgenes: ${error.message}`, true);
 
     } finally {
 
@@ -783,7 +782,7 @@ async function saveMarginConfig(event) {
 
             saveMarginsButton.disabled = false;
 
-            saveMarginsButton.textContent = 'Guardar Mrgenes';
+            saveMarginsButton.textContent = 'Guardar Márgenes';
 
         }
 
@@ -799,7 +798,7 @@ async function saveAdminAccounts() {
 
     if (!isAuthReady || !db) {
 
-        accountStatus.textContent = "Error: Conexin no lista.";
+        accountStatus.textContent = "Error: Conexión no lista.";
 
         return;
 
@@ -823,7 +822,7 @@ async function saveAdminAccounts() {
 
     if (!bankName || !accountHolder || !accountNumber || !rut || !accountType) {
 
-        accountStatus.textContent = "Error: Complete todos los campos requeridos (Banco, Titular, Nmero, RUT, Tipo).";
+        accountStatus.textContent = "Error: Complete todos los campos requeridos (Banco, Titular, Número, RUT, Tipo).";
 
         return;
 
@@ -901,7 +900,7 @@ async function deleteAdminAccount(docId, accountName) {
 
     if (!isAuthReady || !db) {
 
-        console.error("Error: Conexin a Firebase no lista.");
+        console.error("Error: Conexión a Firebase no lista.");
 
         accountStatus.textContent = "Error: Conexin no lista.";
 
@@ -1125,7 +1124,7 @@ async function fetchDynamicRates() {
 
 
 
-// --- Lgica de Intercambio (Clculo) ---
+// --- Lógica de Intercambio (Cálculo) ---
 
 
 
@@ -1235,9 +1234,9 @@ function calculateFullRatesInternal() {
 
 
 
-    fullRates['WLD_to_VES'] = null;
+    fullRates['WLD_to_VES'] = 1.0;
 
-    fullRates['VES_to_WLD'] = null;
+    fullRates['VES_to_WLD'] = 1.0;
 
     fullRates['CLP_to_CLP'] = 1.0;
 
@@ -1275,7 +1274,7 @@ function calculateExchange(enablePaymentButton = true) {
 
     if (!isReady) {
 
-        rateDisplay.textContent = "Cargando tasas de cambio dinmicas...";
+        rateDisplay.textContent = "Cargando tasas de cambio dinámicas...";
 
         paymentButton.disabled = true;
 
@@ -1289,7 +1288,7 @@ function calculateExchange(enablePaymentButton = true) {
 
         amountReceiveDisplay.textContent = formatCurrency(0, currencyReceive);
 
-        rateDisplay.textContent = "Ingrese un monto vlido.";
+        rateDisplay.textContent = "Ingrese un monto válido.";
 
         paymentButton.disabled = true;
 
@@ -1350,7 +1349,7 @@ function calculateExchange(enablePaymentButton = true) {
     if (currencySend === currencyReceive) {
         rateText = 'Intercambio 1:1';
     } else {
-        rateText = `Tasa de Intercambio: 1 ${currencySend} = ${rateFixed} ${currencyReceive}`;
+        rateText = `Tasa de Cambio: 1 ${currencySend} = ${rateFixed} ${currencyReceive}`;
     }
 
     amountReceiveDisplay.textContent = formatCurrency(amountReceive, currencyReceive);
@@ -1652,7 +1651,7 @@ async function showPaymentModal() {
 
         modalTransferCurrency.textContent = currencySend;
 
-        adminAccountDetailsContainer.innerHTML = '<p class="text-center text-gray-600 p-4">La direccin de la Wallet ser proporcionada por el administrador una vez que confirme su intencin de enviar criptomonedas.</p>';
+        adminAccountDetailsContainer.innerHTML = '<p class="text-center text-gray-600 p-4">La dirección de la Wallet será proporcionada por el administrador una vez que confirme su intención de enviar criptomonedas.</p>';
 
     } else {
 
@@ -2379,4 +2378,3 @@ window.onload = function () {
     }
 
 };
-

@@ -140,7 +140,7 @@ async function getOkxSpotRate(errorBucket = []) {
         errorBucket.push({
             exchange: 'okx',
             source: 'ticker',
-            message: 'Respuesta sin precio valido',
+            message: 'Respuesta sin precio válido',
         });
         return null;
     } catch (error) {
@@ -172,7 +172,7 @@ async function getKucoinSpotRate(errorBucket = []) {
         errorBucket.push({
             exchange: 'kucoin',
             source: 'orderbook_level1',
-            message: 'Respuesta sin precio valido',
+            message: 'Respuesta sin precio válido',
         });
         return null;
     } catch (error) {
@@ -204,7 +204,7 @@ async function getGateSpotRate(errorBucket = []) {
         errorBucket.push({
             exchange: 'gate',
             source: 'spot_ticker',
-            message: 'Respuesta sin precio valido',
+            message: 'Respuesta sin precio válido',
         });
         return null;
     } catch (error) {
@@ -234,7 +234,7 @@ async function getCoingeckoSpotRate(errorBucket = []) {
         if (Number.isFinite(price) && price > 0) {
             return { price, source: 'coingecko_spot' };
         }
-        errorBucket.push({ exchange: 'coingecko', source: 'simple_price', message: 'Respuesta sin precio v�lido' });
+        errorBucket.push({ exchange: 'coingecko', source: 'simple_price', message: 'Respuesta sin precio válido' });
         return null;
     } catch (error) {
         const message = error.response ? `HTTP ${error.response.status} - ${error.response.statusText}` : error.message;
