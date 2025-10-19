@@ -148,6 +148,55 @@
 
 </head>
 
+<body class="min-h-screen bg-gray-100">
+
+    <!-- Contenedor de Autenticación -->
+    <div id="auth-container" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-md">
+            <!-- Formulario de Inicio de Sesión -->
+            <div id="login-form" class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
+                <form id="login-form-inputs">
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                        <input type="email" id="login-email" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="login-password" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700">Entrar</button>
+                </form>
+                <p class="text-center text-sm text-gray-600 mt-4">
+                    ¿No tienes cuenta? <button id="show-register-form" class="font-medium text-cyan-600 hover:underline">Regístrate</button>
+                </p>
+                 <p id="auth-error" class="text-red-500 text-sm mt-4 text-center"></p>
+            </div>
+
+            <!-- Formulario de Registro -->
+            <div id="register-form" class="bg-white p-8 rounded-xl shadow-lg hidden">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Crear Cuenta</h2>
+                <form id="register-form-inputs">
+                    <div class="mb-4">
+                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+                        <input type="email" id="register-email" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+                        <input type="password" id="register-password" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="register-password-confirm" class="block text-sm font-medium text-gray-700 mb-1">Confirmar Contraseña</label>
+                        <input type="password" id="register-password-confirm" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700">Registrar</button>
+                </form>
+                <p class="text-center text-sm text-gray-600 mt-4">
+                    ¿Ya tienes cuenta? <button id="show-login-form" class="font-medium text-cyan-600 hover:underline">Inicia Sesión</button>
+                </p>
+            </div>
+        </div>
+    </div>
 <body class="min-h-screen p-4 md:p-8">
 
 
@@ -165,6 +214,8 @@
             <div class="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium hidden" id="user-id-display">
 
                 <span class="font-bold">ID de Usuario:</span> <span id="user-id"></span>
+
+                <button id="logout-button" class="ml-4 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600">Cerrar Sesión</button>
 
             </div>
 
@@ -428,7 +479,7 @@
 
                             <option value="USDT">USDT (Tether)</option>
 
-                            <option value="VES">VES (Bolvar Soberano)</option>
+                            <option value="VES">VES (Bolívar Soberano)</option>
 
                         </select>
 
@@ -462,7 +513,7 @@
 
                         <select id="currency-receive" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-cyan-500 focus:border-cyan-500 text-lg">
 
-                            <option value="VES">VES (Bolvar Soberano)</option>
+                            <option value="VES">VES (Bolívar Soberano)</option>
 
                             <option value="CLP">CLP (Peso Chileno)</option>
 
@@ -480,7 +531,7 @@
 
                     <div class="mt-6 p-4 bg-cyan-500 text-white rounded-lg">
 
-                        <p class="text-sm font-medium">Usted Recibir Aproximadamente:</p>
+                        <p class="text-sm font-medium">Usted va a Recibir:</p>
 
                         <p id="amount-receive-display" class="text-3xl font-bold mt-1">0.00 VES</p>
 
@@ -548,13 +599,14 @@
 
                 <p id="modal-amount-send" class="text-3xl font-extrabold text-red-600 mt-1">CLP 0.00</p>
 
-                <p class="text-xs text-red-500 mt-2">Usted recibir aproximadamente: <span id="modal-amount-receive">VES 0.00</span></p>
+                <p class="text-xs text-red-500 mt-2">Usted va a recibir: <span id="modal-amount-receive">VES 0.00</span></p>
 
             </div>
 
 
 
             
+
 <!-- Datos de la Cuenta de Destino (Admin) -->
             <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
                 <div>
@@ -564,21 +616,42 @@
                         <p class="text-gray-500 text-sm" id="no-accounts-message">El administrador no ha configurado cuentas CLP.</p>
                     </div>
                     <p id="modal-crypto-warning" class="text-red-500 text-xs mt-3 hidden">
-                        Advertencia: si envías criptomonedas, el administrador compartirá la dirección de la wallet una vez que confirmes la transferencia.
+                        Advertencia: si envias criptomonedas, el administrador compartira la direccion de la wallet una vez que confirmes la transferencia.
                     </p>
                 </div>
 
-                <div class="border-t border-gray-200 pt-4">
-                    <h4 class="text-sm font-semibold text-gray-700 mb-2">Enviar tu comprobante</h4>
-                    <p class="text-xs text-gray-500 mb-3">Después de transferir, envía el comprobante vía WhatsApp al administrador para validar el pago.</p>
-                    <a href="https://wa.me/56930072631?text=Hola%2C%20adjunto%20el%20comprobante%20de%20mi%20transferencia.%20Nombre:%20[tu%20nombre]%20Monto:%20[monto]" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.57 2 2.04 6.54 2.04 12c0 2.1.55 4.05 1.6 5.77L2 22l4.35-1.61c1.63 1.12 3.55 1.71 5.7 1.71 5.46 0 10-4.54 10-10s-4.53-10-9.99-10Zm5.87 14.52c-.25.7-1.47 1.34-2.02 1.43-.52.1-1.19.18-1.92-.12-.44-.17-1-.32-1.73-.63-3.05-1.32-5.03-4.41-5.18-4.62-.15-.21-1.24-1.65-1.24-3.15s.79-2.25 1.08-2.56c.25-.28.67-.4 1.08-.4.13 0 .25.01.36.01.32.01.48.03.69.54.25.6.85 2.07.92 2.22.07.15.11.32.02.5-.08.17-.12.28-.24.44-.12.15-.26.33-.37.45-.12.12-.24.26-.1.5.14.25.63 1.04 1.35 1.69.93.83 1.71 1.09 1.96 1.21.25.13.4.11.55-.06.14-.17.63-.73.8-.98.17-.24.34-.2.57-.12.23.08 1.49.7 1.74.83.26.13.43.19.49.3.06.12.06.7-.2 1.4Z"/></svg>
-                        Enviar por WhatsApp
-                    </a>
+                <div class="border-t border-gray-200 pt-4 space-y-4">
+                    <div id="usdt-destination-form" class="hidden space-y-2 bg-white border border-cyan-200 rounded-lg p-3">
+                        <h4 class="text-sm font-semibold text-gray-700">Datos para recibir USDT</h4>
+                        <p class="text-xs text-gray-500">Ingresa los datos exactos de tu cuenta o wallet para recibir el pago en USDT.</p>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1" for="usdt-wallet-input">Binance ID / Binance Pay / Wallet USDT</label>
+                        <input id="usdt-wallet-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Ej: Binance Pay ID 123456789 o Wallet TRC20">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 mt-2" for="usdt-network-select">Red preferida</label>
+                        <select id="usdt-network-select" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <option value="">Selecciona la red</option>
+                            <option value="TRC20">TRC20 (Tron)</option>
+                            <option value="BEP20">BEP20 (BSC)</option>
+                            <option value="ERC20">ERC20 (Ethereum)</option>
+                            <option value="Polygon">Polygon</option>
+                            <option value="Arbitrum One">Arbitrum One</option>
+                            <option value="Otro">Otro (especificar en notas)</option>
+                        </select>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 mt-2" for="usdt-notes-input">Notas adicionales (opcional)</label>
+                        <input id="usdt-notes-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Informacion extra, si aplica">
+                    </div>
+
+                    <div class="space-y-2">
+                        <h4 class="text-sm font-semibold text-gray-700">Enviar tu comprobante</h4>
+                        <p class="text-xs text-gray-500">Despues de transferir, envia el comprobante via WhatsApp al administrador para validar el pago.</p>
+                        <a href="https://wa.me/56930072631?text=Hola%2C%20adjunto%20el%20comprobante%20de%20mi%20transferencia.%20Nombre:%20[tu%20nombre]%20Monto:%20[monto]" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.57 2 2.04 6.54 2.04 12c0 2.1.55 4.05 1.6 5.77L2 22l4.35-1.61c1.63 1.12 3.55 1.71 5.7 1.71 5.46 0 10-4.54 10-10s-4.53-10-9.99-10Zm5.87 14.52c-.25.7-1.47 1.34-2.02 1.43-.52.1-1.19.18-1.92-.12-.44-.17-1-.32-1.73-.63-3.05-1.32-5.03-4.41-5.18-4.62-.15-.21-1.24-1.65-1.24-3.15s.79-2.25 1.08-2.56c.25-.28.67-.4 1.08-.4.13 0 .25.01.36.01.32.01.48.03.69.54.25.6.85 2.07.92 2.22.07.15.11.32.02.5-.08.17-.12.28-.24.44-.12.15-.26.33-.37.45-.12.12-.24.26-.1.5.14.25.63 1.04 1.35 1.69.93.83 1.71 1.09 1.96 1.21.25.13.4.11.55-.06.14-.17.63-.73.8-.98.17-.24.34-.2.57-.12.23.08 1.49.7 1.74.83.26.13.43.19.49.3.06.12.06.7-.2 1.4Z"/></svg>
+                            Enviar por WhatsApp
+                        </a>
+                    </div>
                 </div>
             </div>
 
-            <p class="text-xs text-gray-500 mt-4 text-center">Una vez realizada la transferencia, envía el comprobante al administrador por WhatsApp (+56 9 3007 2631).</p>
+<p class="text-xs text-gray-500 mt-4 text-center">Una vez realizada la transferencia, envía el comprobante al administrador por WhatsApp (+56 9 3007 2631).</p>
 
 <button id="close-modal-button" class="mt-6 w-full py-3 bg-cyan-600 text-white text-lg font-semibold rounded-lg hover:bg-cyan-700 transition duration-300">
 
