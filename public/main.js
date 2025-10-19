@@ -108,7 +108,7 @@ let isCurrentUserAdmin = false;
 
 let adminTransactionsUnsubscribe = null;
 // Nuevas variables para autenticación por email
-let authFormsSection, registerForm, loginForm, logoutButton;
+let authContainer, appContainer, authFormsSection, registerForm, loginForm, logoutButton, showRegisterButton, showLoginButton;
 let registerStatus, loginStatus;
 
 let usdtDestinationSaveTimeout = null;
@@ -240,13 +240,25 @@ function initializeDOM() {
 
 
     // **CORRECCIN**: Evita que el botn de pago enve el formulario por defecto.
-
     if (paymentButton) paymentButton.type = 'button';
 
 
 
     applyMarginConfigToUI();
 
+    // Contenedores principales
+    authContainer = document.getElementById('auth-container');
+    appContainer = document.getElementById('app');
+
+    // Elementos para autenticación por email
+    authFormsSection = document.getElementById('auth-forms');
+    registerForm = document.getElementById('register-form');
+    loginForm = document.getElementById('login-form');
+    logoutButton = document.getElementById('logout-button');
+    registerStatus = document.getElementById('register-status');
+    loginStatus = document.getElementById('login-status');
+    showRegisterButton = document.getElementById('show-register-form');
+    showLoginButton = document.getElementById('show-login-form');
 }
 
 
@@ -281,16 +293,20 @@ async function initializeFirebase() {
 
         onAuthStateChanged(auth, async (user) => {
 
-            if (user) {
+            if (user && !user.isAnonymous) {
+                // Usuario con email y contraseña
+                authContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+
                 userId = user.uid;
                 // Si el usuario no es anónimo, muestra su email. Si no, muestra su UID.
-                if (!user.isAnonymous && user.email) {
+                if (user.email) {
                     userIdDisplay.textContent = user.email;
-                    authFormsSection.classList.add('hidden'); // Oculta formularios de login/registro
+                    if (authFormsSection) authFormsSection.classList.add('hidden'); // Oculta formularios de login/registro
                     logoutButton.classList.remove('hidden'); // Muestra botón de logout
                 } else {
                     userIdDisplay.textContent = `Anónimo (${userId.substring(0, 8)}...)`;
-                    authFormsSection.classList.remove('hidden'); // Muestra formularios
+                    if (authFormsSection) authFormsSection.classList.remove('hidden'); // Muestra formularios
                     logoutButton.classList.add('hidden'); // Oculta botón de logout
                 }
                 userIdContainer.classList.remove('hidden');
@@ -334,12 +350,14 @@ async function initializeFirebase() {
                 setupTransactionListener();
 
                 setupAdminAccountsListener(); 
-
             } else {
-                // No hay usuario logueado. Mostrar formularios de registro/login.
+                // No hay usuario logueado o es anónimo. Mostrar formularios de registro/login.
+                if (user && user.isAnonymous) {
+                    await signOut(auth); // Cerramos sesión anónima para forzar login/registro
+                }
                 userId = null;
                 isCurrentUserAdmin = false;
-                authStatus.textContent = "Por favor, inicie sesión o regístrese.";
+                if(authStatus) authStatus.textContent = "Por favor, inicie sesión o regístrese.";
                 if(userIdContainer) userIdContainer.classList.add('hidden');
                 if(authFormsSection) authFormsSection.classList.remove('hidden');
                 if(logoutButton) logoutButton.classList.add('hidden');
@@ -349,6 +367,9 @@ async function initializeFirebase() {
                 if (adminToggleContainer) adminToggleContainer.classList.add('hidden');
                 if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesión para ver su historial.</p>';
                 if (adminTransactionsSection) adminTransactionsSection.classList.add('hidden');
+
+                authContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
 
             }
 
@@ -778,6 +799,102 @@ async function saveMarginConfig(event) {
 
     }
 
+}
+
+
+
+// --- Lógica de Autenticación por Email ---
+
+/**
+ * Maneja el registro de un nuevo usuario.
+ */
+async function handleRegistration(event) {
+    event.preventDefault();
+    if (!auth) return;
+
+    const email = registerForm.querySelector('#register-email').value;
+    const password = registerForm.querySelector('#register-password').value;
+    const passwordConfirm = registerForm.querySelector('#register-password-confirm').value;
+
+    if (password !== passwordConfirm) {
+        registerStatus.textContent = 'Las contraseñas no coinciden.';
+        registerStatus.classList.remove('hidden');
+        return;
+    }
+
+    registerStatus.textContent = 'Registrando...';
+    registerStatus.classList.remove('hidden', 'text-red-500');
+    registerStatus.classList.add('text-gray-600');
+
+    try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged se encargará de redirigir a la app.
+        registerStatus.textContent = '¡Registro exitoso! Redirigiendo...';
+        registerStatus.classList.remove('text-red-500', 'text-gray-600');
+        registerStatus.classList.add('text-green-600');
+    } catch (error) {
+        console.error('Error de registro:', error);
+        registerStatus.textContent = `Error: ${error.message}`;
+        registerStatus.classList.remove('hidden', 'text-gray-600', 'text-green-600');
+        registerStatus.classList.add('text-red-500');
+    }
+}
+
+/**
+ * Maneja el inicio de sesión de un usuario existente.
+ */
+async function handleLogin(event) {
+    event.preventDefault();
+    if (!auth) return;
+
+    const email = loginForm.querySelector('#login-email').value;
+    const password = loginForm.querySelector('#login-password').value;
+
+    loginStatus.textContent = 'Iniciando sesión...';
+    loginStatus.classList.remove('hidden', 'text-red-500');
+    loginStatus.classList.add('text-gray-600');
+
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged se encargará de redirigir a la app.
+        loginStatus.textContent = '¡Inicio de sesión exitoso! Redirigiendo...';
+        loginStatus.classList.remove('text-red-500', 'text-gray-600');
+        loginStatus.classList.add('text-green-600');
+    } catch (error) {
+        console.error('Error de inicio de sesión:', error);
+        let message = 'Error al iniciar sesión. Verifica tus credenciales.';
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            message = 'Correo o contraseña incorrectos.';
+        } else {
+            message = `Error: ${error.message}`;
+        }
+        loginStatus.textContent = message;
+        loginStatus.classList.remove('hidden', 'text-gray-600', 'text-green-600');
+        loginStatus.classList.add('text-red-500');
+    }
+}
+
+/**
+ * Maneja el cierre de sesión del usuario.
+ */
+async function handleLogout() {
+    if (!auth) return;
+    try {
+        await signOut(auth);
+        // onAuthStateChanged se encargará de limpiar la UI y mostrar el login.
+        console.log('Usuario cerró sesión.');
+        // Limpiar estados globales que persisten tras logout
+        currentTransactionId = null;
+        currentTransactionPath = null;
+        isCurrentUserAdmin = false;
+        if (adminTransactionsUnsubscribe) {
+            adminTransactionsUnsubscribe();
+            adminTransactionsUnsubscribe = null;
+        }
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        authStatus.textContent = `Error al cerrar sesión: ${error.message}`;
+    }
 }
 
 // --- Lgica de Administracin de Cuentas ---
@@ -2384,6 +2501,18 @@ window.onload = function () {
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     if (logoutButton) logoutButton.addEventListener('click', handleLogout);
 
+    if (showRegisterButton) {
+        showRegisterButton.addEventListener('click', () => {
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+        });
+    }
+    if (showLoginButton) {
+        showLoginButton.addEventListener('click', () => {
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        });
+    }
 
 
     if (paymentButton) paymentButton.addEventListener('click', showPaymentModal);
