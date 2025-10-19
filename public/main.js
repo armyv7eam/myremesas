@@ -374,8 +374,6 @@ async function initializeFirebase() {
 
         });
 
-        // La autenticación anónima ya se maneja dentro del listener onAuthStateChanged.
-
     } catch (error) {
 
         console.error("Error al inicializar o autenticar Firebase:", error);
