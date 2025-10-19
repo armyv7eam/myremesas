@@ -336,15 +336,20 @@ async function initializeFirebase() {
                 setupAdminAccountsListener(); 
 
             } else {
-                // Si no hay usuario, podría ser porque cerró sesión.
-                // Volvemos a la autenticación anónima.
+                // No hay usuario logueado. Mostrar formularios de registro/login.
                 userId = null;
                 isCurrentUserAdmin = false;
-                authStatus.textContent = "No autenticado. Iniciando sesión anónima...";
-                signInAnonymously(auth).catch(error => {
-                    console.error("Error al re-autenticar anónimamente:", error);
-                    authStatus.textContent = `Error: ${error.message}`;
-                });
+                authStatus.textContent = "Por favor, inicie sesión o regístrese.";
+                if(userIdContainer) userIdContainer.classList.add('hidden');
+                if(authFormsSection) authFormsSection.classList.remove('hidden');
+                if(logoutButton) logoutButton.classList.add('hidden');
+
+                // Ocultar y limpiar paneles de admin e historial
+                if (adminPanel) adminPanel.classList.add('hidden');
+                if (adminToggleContainer) adminToggleContainer.classList.add('hidden');
+                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesión para ver su historial.</p>';
+                if (adminTransactionsSection) adminTransactionsSection.classList.add('hidden');
+
             }
 
         });
