@@ -446,37 +446,41 @@ function copyToClipboard(text, element) {
     document.body.removeChild(textArea);
 }
 
-function createCopyRow(label, value, options = {}) {
-    if (!value) return '';
-    const displayValue = options.mask ? '******' : value;
-    const valueClasses = options.monospace ? 'font-mono text-gray-900 break-all' : 'text-gray-900 break-words';
+/**
+ * Genera el bloque de HTML para los detalles de una cuenta, con un interlineado más ajustado
+ * y un único botón para copiar todos los datos.
+ */
+function buildAccountDetailsMarkup(account) {
+    const details = [
+        { label: 'Banco', value: account.bankName },
+        { label: 'Titular', value: account.accountHolder },
+        { label: 'RUT', value: account.rut },
+        { label: 'Tipo', value: account.accountType },
+        { label: 'Número', value: account.accountNumber },
+    ];
+    if (account.email && account.email !== 'N/A') {
+        details.push({ label: 'Email', value: account.email });
+    }
+
+    const copyText = details.map(d => `${d.label}: ${d.value}`).join('\n');
+
+    const detailsHtml = details.map(d => 
+        `<p class="leading-tight"><span class="font-medium">${d.label}:</span> ${d.value}</p>`
+    ).join('');
+
     return `
-        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 text-xs md:text-sm text-gray-600">
-            <span class="w-24 font-medium text-gray-700">${label}:</span>
-            <div class="flex-1 flex items-center gap-2">
-                <span class="${valueClasses}">${displayValue}</span>
-                <button class="copy-btn p-1 text-cyan-600 hover:bg-cyan-100 rounded" data-copy="${value}" aria-label="Copiar ${label}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <span class="copy-feedback">Copiado</span>
-                </button>
+        <div class="relative">
+            <div class="text-xs md:text-sm text-gray-800 space-y-1">
+                ${detailsHtml}
             </div>
+            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${copyText.replace(/"/g, '&quot;')}" aria-label="Copiar todos los datos de la cuenta">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span class="copy-feedback">Copiado</span>
+            </button>
         </div>
     `;
-}
-
-function buildAccountDetailsMarkup(account) {
-    const rows = [];
-    rows.push(createCopyRow('Titular', account.accountHolder));
-    rows.push(createCopyRow('RUT', account.rut, { monospace: true }));
-    rows.push(createCopyRow('Numero de cuenta', account.accountNumber, { monospace: true }));
-    rows.push(createCopyRow('Tipo', account.accountType));
-    rows.push(createCopyRow('Banco', account.bankName));
-    if (account.email && account.email !== 'N/A') {
-        rows.push(createCopyRow('Email', account.email));
-    }
-    return rows.join('');
 }
 
 function getMarginValue(key) {
@@ -1457,7 +1461,7 @@ function calculateExchange(enablePaymentButton = true) {
     } else if (currencySend === 'CLP' && currencyReceive === 'USDT') {
         const inverted = rate !== 0 ? 1 / rate : null;
         rateText = inverted
-            ? `Tasa de Cambio 1 USDT = ${inverted.toFixed(2)} CLP (CLP/USDT)`
+            ? `Tasa de Cambio 1 USDT = ${inverted.toFixed(2)} CLP `
             : `Tasa de Cambio 1 ${currencySend} = ${rateFixed} ${currencyReceive}`;
     } else {
         rateText = `Tasa de Cambio 1 ${currencySend} = ${rateFixed} ${currencyReceive}`;
