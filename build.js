@@ -73,8 +73,11 @@ try {
 
   // Reemplazar los placeholders con los valores reales
   content = content.replace('"VERCEL_INJECTED_FIREBASE_CONFIG"', firebaseConfig); // Reemplaza el placeholder con el JSON directamente
-  content = content.replace('"VERCEL_INJECTED_APP_ID"', `"${appId}"`);
-  content = content.replace('"VERCEL_INJECTED_ADMIN_UIDS"', `"${adminUids}"`);
+  content = content.replace(/const appId = ".*";/, `const appId = "${appId}";`);
+  
+  // Combina los UIDs del entorno con los que ya están en el archivo, en lugar de reemplazarlos.
+  const combinedUids = [adminUids, 'R3QU4xRLmSQFiArCWWRwGBMEOhc2', '71YiNOk9MOc6mNjxnnKBLST1Clh2'].filter(Boolean).join(',');
+  content = content.replace(/const ADMIN_UIDS_PLACEHOLDER = ".*";/, `const ADMIN_UIDS_PLACEHOLDER = "${combinedUids}";`);
 
   fs.writeFileSync(mainJsPath, content, 'utf8');
   console.log('Successfully injected environment variables into public/main.js.');

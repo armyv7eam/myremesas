@@ -18,10 +18,8 @@ setLogLevel('debug');
 
 // Lista de User IDs de administradores autorizados para ver el panel.
 
-// **INSTRUCCIÓN**: Pega aquí el UID del nuevo administrador que obtuviste de la consola de Firebase.
-// Puedes añadir más UIDs separándolos por comas, por ejemplo: "uid1,uid2,uid3"
-const NUEVO_ADMIN_UID = "PEGA_AQUÍ_EL_UID_DEL_USUARIO"; // <--- ¡REEMPLAZA ESTO!
-const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2," + NUEVO_ADMIN_UID;
+// UIDs de administradores. Se pueden añadir más separados por comas.
+const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2,R3QU4xRLmSQFiArCWWRwGBMEOhc2";
 
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
 
