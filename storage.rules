@@ -15,13 +15,10 @@ service firebase.storage {
 
 
     function isAdmin() {
-
       return isSignedIn() && request.auth.uid in [
-
-    "R3QU4xRLmSQFiArCWWRwGBMEOhc2"
-
+        "R3QU4xRLmSQFiArCWWRwGBMEOhc2",
+        "71YiNOk9MOc6mNjxnnKBLST1Clh2"
       ];
-
     }
 
 
@@ -59,11 +56,7 @@ service firebase.storage {
     // Cualquier otra ruta, solo lectura pública (ajusta si necesitas algo distinto)
 
     match /{allPaths=**} {
-
-      allow read: if true;
-
-      allow write: if false;
-
+      allow read, write: if false;
     }
 
   }

@@ -9,28 +9,38 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && request.auth.uid in [
-        "R3QU4xRLmSQFiArCWWRwGBMEOhc2", "71YiNOk9MOc6mNjxnnKBLST1Clh2"
+        "R3QU4xRLmSQFiArCWWRwGBMEOhc2",
+        "71YiNOk9MOc6mNjxnnKBLST1Clh2"
       ];
     }
 
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
     match /artifacts/{appId}/public/data/admin_accounts/{accountId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
-    match /config/pricing {
-      allow read, write: if isAdmin();
+    match /config/{docId} {
+      allow read: if docId == "pricing" && isSignedIn();
+      allow write: if docId == "pricing" && isAdmin();
     }
 
     match /{path=**}/transactions/{transactionId} {
       allow read, write: if isAdmin();
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }
