@@ -9,7 +9,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && request.auth.uid in [
-    "R3QU4xRLmSQFiArCWWRwGBMEOhc2"
+        "R3QU4xRLmSQFiArCWWRwGBMEOhc2", "71YiNOk9MOc6mNjxnnKBLST1Clh2"
       ];
     }
 
@@ -28,6 +28,9 @@ service cloud.firestore {
     match /config/pricing {
       allow read, write: if isAdmin();
     }
+
+    match /{path=**}/transactions/{transactionId} {
+      allow read, write: if isAdmin();
+    }
   }
 }
-
