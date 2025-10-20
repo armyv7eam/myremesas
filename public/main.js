@@ -300,6 +300,70 @@ function initializeDOM() {
     toggleOrderCreationButton = document.getElementById('toggle-order-creation-button');
 }
 
+function setupAuthEventListeners() {
+    if (loginForm) {
+        loginForm.querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const statusElement = document.getElementById('login-status');
+
+            try {
+                statusElement.classList.add('hidden');
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Error de inicio de sesin:", error);
+                statusElement.textContent = `Error: ${error.message.replace("Firebase: ", "")}`;
+                statusElement.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (registerForm) {
+        registerForm.querySelector('form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-password-confirm').value;
+            const statusElement = document.getElementById('register-status');
+
+            if (password !== confirmPassword) {
+                statusElement.textContent = "Las contraseas no coinciden.";
+                statusElement.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                statusElement.classList.add('hidden');
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                console.error("Error de registro:", error);
+                statusElement.textContent = `Error: ${error.message.replace("Firebase: ", "")}`;
+                statusElement.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (showRegisterButton) {
+        showRegisterButton.addEventListener('click', () => {
+            if (loginForm) loginForm.classList.add('hidden');
+            if (registerForm) registerForm.classList.remove('hidden');
+        });
+    }
+
+    if (showLoginButton) {
+        showLoginButton.addEventListener('click', () => {
+            if (registerForm) registerForm.classList.add('hidden');
+            if (loginForm) loginForm.classList.remove('hidden');
+        });
+    }
+
+    if (logoutButton) {
+        logoutButton.addEventListener('click', async () => {
+            await signOut(auth);
+        });
+    }
+}
 
 
 // --- Funciones de Utilidad y Firebase ---
@@ -328,7 +392,7 @@ async function initializeFirebase() {
 
         storage = getStorage(app);
 
-
+        setupAuthEventListeners();
 
         onAuthStateChanged(auth, async (user) => {
 
@@ -562,10 +626,4 @@ function buildAccountDetailsMarkup(account) {
             <div class="text-xs md:text-sm text-gray-800 space-y-1">
                 ${detailsHtml}
             </div>
-            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${copyText.replace(/"/g, '&quot;')}">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                <span class="copy-feedback absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-700 text-white text-xs rounded py-1 px-2 opacity-0 transition-all duration-300 pointer-events-none">Copiado!</span>
-            </button>
-        </div>
-    `;
-}
+            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${copyText.replace(/
