@@ -602,23 +602,25 @@ function copyToClipboard(text, element) {
  * y un nico botn para copiar todos los datos.
 
  */
-
 function buildAccountDetailsMarkup(account) {
     const details = [
         { label: 'Banco', value: account.bankName },
         { label: 'Titular', value: account.accountHolder },
         { label: 'RUT', value: account.rut },
         { label: 'Tipo', value: account.accountType },
-        { label: 'Nmero', value: account.accountNumber },
+        { label: 'Numero', value: account.accountNumber },
     ];
     if (account.email && account.email !== 'N/A') {
         details.push({ label: 'Email', value: account.email });
     }
 
     const copyText = details.map(d => `${d.label}: ${d.value}`).join('\n');
+    const sanitizedCopyText = copyText
+        .replace(/"/g, '&quot;')
+        .replace(/\n/g, '&#10;');
 
-    const detailsHtml = details.map(d => 
-        `<p class="leading-tight"><span class="font-medium">${d.label}:</span> ${d.value}</p>` 
+    const detailsHtml = details.map(d =>
+        `<p class="leading-tight"><span class="font-medium">${d.label}:</span> ${d.value}</p>`
     ).join('');
 
     return `
@@ -626,4 +628,12 @@ function buildAccountDetailsMarkup(account) {
             <div class="text-xs md:text-sm text-gray-800 space-y-1">
                 ${detailsHtml}
             </div>
-            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${copyText.replace(/
+            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${sanitizedCopyText}">
+                Copiar
+            </button>
+            <div class="copy-feedback absolute top-0 right-12 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 transition-all duration-200 pointer-events-none">
+                Copiado!
+            </div>
+        </div>
+    `;
+}
