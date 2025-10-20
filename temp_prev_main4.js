@@ -1,4 +1,4 @@
-ï»¿import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
 import { getAuth, signInAnonymously, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -18,8 +18,8 @@ setLogLevel('debug');
 
 // Lista de User IDs de administradores autorizados para ver el panel.
 
-// UIDs de administradores. Se pueden aadir ms separados por comas.
-const ADMIN_UIDS_PLACEHOLDER = "R3QU4xRLmSQFiArCWWRwGBMEOhc2,R3QU4xRLmSQFiArCWWRwGBMEOhc2,71YiNOk9MOc6mNjxnnKBLST1Clh2";
+// UIDs de administradores. Se pueden a+¦adir m+ís separados por comas.
+const ADMIN_UIDS_PLACEHOLDER = "71YiNOk9MOc6mNjxnnKBLST1Clh2,R3QU4xRLmSQFiArCWWRwGBMEOhc2";
 
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
 
@@ -31,7 +31,7 @@ const appId = "1:775892034675:web:98ed2724bcaff2ed427606";
 
 const firebaseConfig = {"apiKey":"AIzaSyCnXU8XU7ZzA_12CDaYaY9W2rWBmkGLB-g","authDomain":"studio-7601782447-44d81.firebaseapp.com","projectId":"studio-7601782447-44d81","storageBucket":"studio-7601782447-44d81.firebasestorage.app","messagingSenderId":"775892034675","appId":"1:775892034675:web:98ed2724bcaff2ed427606"};
 
-const initialAuthToken = null; // No estamos usando este mtodo por ahora.
+const initialAuthToken = null; // No estamos usando este m+®todo por ahora.
 
 
 
@@ -71,7 +71,7 @@ let adminAccounts = [];
 
 
 
-// Configuracin de mrgenes (se puede sobrescribir desde Firestore)
+// Configuraci+¦n de m+írgenes (se puede sobrescribir desde Firestore)
 
 const DEFAULT_MARGIN_CONFIG = {
 
@@ -93,9 +93,9 @@ let marginConfigUnsubscribe = null;
 
 
 
-// --- DECLARACIN DE VARIABLES DEL DOM (INICIALIZACIN MOVIDA A initializeDOM) ---
+// --- DECLARACI+ôN DE VARIABLES DEL DOM (INICIALIZACI+ôN MOVIDA A initializeDOM) ---
 
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton;
+let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput;
 
 
 
@@ -106,13 +106,11 @@ let currentTransactionPath = null;
 let isCurrentUserAdmin = false;
 
 let adminTransactionsUnsubscribe = null;
-let transactionListenerUnsubscribe = null;
-let adminAccountsUnsubscribe = null;
-// Nuevas variables para autenticacin por email
+// Nuevas variables para autenticaci+¦n por email
 let authContainer, appContainer, authFormsSection, registerForm, loginForm, logoutButton, showRegisterButton, showLoginButton;
 let registerStatus, loginStatus;
+
 let usdtDestinationSaveTimeout = null;
-let vesDestinationSaveTimeout = null;
 
 
 
@@ -225,9 +223,10 @@ function initializeDOM() {
     uploadReceiptButton = document.getElementById('upload-receipt-button');
 
     receiptUploadStatus = document.getElementById('receipt-upload-status');
+
     adminTransactionsSection = document.getElementById('admin-transactions-section');
-    adminPendingTransactionsList = document.getElementById('admin-pending-transactions');
-    adminCompletedTransactionsList = document.getElementById('admin-completed-transactions');
+
+    adminTransactionsList = document.getElementById('admin-transactions-list');
 
     usdtDestinationForm = document.getElementById('usdt-destination-form');
 
@@ -237,24 +236,9 @@ function initializeDOM() {
 
     usdtNotesInput = document.getElementById('usdt-notes-input');
 
-    vesDestinationForm = document.getElementById('ves-destination-form');
-
-    vesBeneficiaryInput = document.getElementById('ves-beneficiary-input');
-
-    vesIdInput = document.getElementById('ves-id-input');
-
-    vesBankInput = document.getElementById('ves-bank-input');
-
-    vesAccountTypeInput = document.getElementById('ves-account-type-input');
-
-    vesAccountNumberInput = document.getElementById('ves-account-number-input');
-
-    vesNotesInput = document.getElementById('ves-notes-input');
-
 
 
     // **CORRECCIN**: Evita que el botn de pago enve el formulario por defecto.
-
     if (paymentButton) paymentButton.type = 'button';
 
 
@@ -262,108 +246,20 @@ function initializeDOM() {
     applyMarginConfigToUI();
 
     // Contenedores principales
-
     authContainer = document.getElementById('auth-container');
-
     appContainer = document.getElementById('app');
 
-
-
-    // Elementos para autenticacin por email
-
+    // Elementos para autenticaci+¦n por email
     authFormsSection = document.getElementById('auth-forms');
-
     registerForm = document.getElementById('register-form');
-
     loginForm = document.getElementById('login-form');
-
     logoutButton = document.getElementById('logout-button');
-
     registerStatus = document.getElementById('register-status');
-
     loginStatus = document.getElementById('login-status');
-
     showRegisterButton = document.getElementById('show-register-form');
-
     showLoginButton = document.getElementById('show-login-form');
-
-    imageViewerModal = document.getElementById('image-viewer-modal');
-
-    closeImageViewerButton = document.getElementById('close-image-viewer-button');
-
-    imageViewerImg = document.getElementById('image-viewer-img');
-
-    imageViewerTitle = document.getElementById('image-viewer-title');
-
-    orderCreationSection = document.getElementById('order-creation-section');
-
-    toggleOrderCreationButton = document.getElementById('toggle-order-creation-button');
 }
 
-function setupAuthEventListeners() {
-    if (loginForm) {
-        loginForm.querySelector('form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const statusElement = document.getElementById('login-status');
-
-            try {
-                statusElement.classList.add('hidden');
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                console.error("Error de inicio de sesin:", error);
-                statusElement.textContent = `Error: ${error.message.replace("Firebase: ", "")}`;
-                statusElement.classList.remove('hidden');
-            }
-        });
-    }
-
-    if (registerForm) {
-        registerForm.querySelector('form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const confirmPassword = document.getElementById('register-password-confirm').value;
-            const statusElement = document.getElementById('register-status');
-
-            if (password !== confirmPassword) {
-                statusElement.textContent = "Las contraseas no coinciden.";
-                statusElement.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                statusElement.classList.add('hidden');
-                await createUserWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                console.error("Error de registro:", error);
-                statusElement.textContent = `Error: ${error.message.replace("Firebase: ", "")}`;
-                statusElement.classList.remove('hidden');
-            }
-        });
-    }
-
-    if (showRegisterButton) {
-        showRegisterButton.addEventListener('click', () => {
-            if (loginForm) loginForm.classList.add('hidden');
-            if (registerForm) registerForm.classList.remove('hidden');
-        });
-    }
-
-    if (showLoginButton) {
-        showLoginButton.addEventListener('click', () => {
-            if (registerForm) registerForm.classList.add('hidden');
-            if (loginForm) loginForm.classList.remove('hidden');
-        });
-    }
-
-    if (logoutButton) {
-        logoutButton.addEventListener('click', async () => {
-            await signOut(auth);
-        });
-    }
-}
 
 
 // --- Funciones de Utilidad y Firebase ---
@@ -376,7 +272,7 @@ async function initializeFirebase() {
 
         if (!firebaseConfig) {
 
-            authStatus.textContent = "Error: Configucin de Firebase no disponible.";
+            authStatus.textContent = "Error: Configuraci+¦n de Firebase no disponible.";
 
             return;
 
@@ -392,53 +288,31 @@ async function initializeFirebase() {
 
         storage = getStorage(app);
 
-        setupAuthEventListeners();
+
 
         onAuthStateChanged(auth, async (user) => {
 
             if (user && !user.isAnonymous) {
-
-                // Usuario con email y contrasea
-
+                // Usuario con email y contrase+¦a
                 authContainer.classList.add('hidden');
-
                 appContainer.classList.remove('hidden');
 
-
-
                 userId = user.uid;
-
-                // Si el usuario no es annimo, muestra su email. Si no, muestra su UID.
-
+                // Si el usuario no es an+¦nimo, muestra su email. Si no, muestra su UID.
                 if (user.email) {
-
                     userIdDisplay.textContent = user.email;
-
                     if (authFormsSection) authFormsSection.classList.add('hidden'); // Oculta formularios de login/registro
-
-                    logoutButton.classList.remove('hidden'); // Muestra botn de logout
-
+                    logoutButton.classList.remove('hidden'); // Muestra bot+¦n de logout
                 } else {
-
-                    userIdDisplay.textContent = `Annimo (${userId.substring(0, 8)}...)`;
-
+                    userIdDisplay.textContent = `An+¦nimo (${userId.substring(0, 8)}...)`;
                     if (authFormsSection) authFormsSection.classList.remove('hidden'); // Muestra formularios
-
-                    logoutButton.classList.add('hidden'); // Oculta botn de logout
-
+                    logoutButton.classList.add('hidden'); // Oculta bot+¦n de logout
                 }
-
                 userIdContainer.classList.remove('hidden');
-
-
 
                 authStatus.textContent = "Autenticado. Listo para usar.";
 
-
-
                 isAuthReady = true;
-
-
 
 
 
@@ -453,11 +327,8 @@ async function initializeFirebase() {
                     adminToggleContainer.classList.remove('hidden');
 
                     setupAdminTransactionsListener();
-                    if (orderCreationSection) orderCreationSection.classList.add('hidden');
 
                 } else {
-
-                    if (orderCreationSection) orderCreationSection.classList.remove('hidden');
 
                     marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 
@@ -467,8 +338,8 @@ async function initializeFirebase() {
 
                         adminTransactionsSection.classList.add('hidden');
 
-                        if (adminPendingTransactionsList) adminPendingTransactionsList.innerHTML = '';
-                        if (adminCompletedTransactionsList) adminCompletedTransactionsList.innerHTML = '';
+                        adminTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Debes iniciar sesi+¦n como administrador para ver esta informaci+¦n.</p>';
+
                     }
 
                 }
@@ -478,52 +349,32 @@ async function initializeFirebase() {
                 setupTransactionListener();
 
                 setupAdminAccountsListener(); 
-
             } else {
-
-                // No hay usuario logueado o es annimo. Mostrar formularios de registro/login.
-
+                // No hay usuario logueado o es an+¦nimo. Mostrar formularios de registro/login.
                 if (user && user.isAnonymous) {
-
-                    await signOut(auth); // Cerramos sesin annima para forzar login/registro
-
+                    await signOut(auth); // Cerramos sesi+¦n an+¦nima para forzar login/registro
                 }
-
                 userId = null;
-
                 isCurrentUserAdmin = false;
-
-                if(authStatus) authStatus.textContent = "Por favor, inicie sesin o regstrese.";
-
+                if(authStatus) authStatus.textContent = "Por favor, inicie sesi+¦n o reg+¡strese.";
                 if(userIdContainer) userIdContainer.classList.add('hidden');
-
                 if(authFormsSection) authFormsSection.classList.remove('hidden');
-
                 if(logoutButton) logoutButton.classList.add('hidden');
 
-
-
                 // Ocultar y limpiar paneles de admin e historial
-
                 if (adminPanel) adminPanel.classList.add('hidden');
-
                 if (adminToggleContainer) adminToggleContainer.classList.add('hidden');
-
-                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesin para ver su historial.</p>';
-
+                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesi+¦n para ver su historial.</p>';
                 if (adminTransactionsSection) adminTransactionsSection.classList.add('hidden');
 
-
-
                 authContainer.classList.remove('hidden');
-
                 appContainer.classList.add('hidden');
-
-
 
             }
 
         });
+
+        // La autenticaci+¦n an+¦nima ya se maneja dentro del listener onAuthStateChanged.
 
     } catch (error) {
 
@@ -569,7 +420,7 @@ function formatCurrency(value, currencyCode) {
 
  /**
 
- * **NUEVA FUNCI+Ã´N**: Copia texto al portapapeles y muestra feedback.
+ * **NUEVA FUNCI+ôN**: Copia texto al portapapeles y muestra feedback.
 
  */
 
@@ -596,11 +447,8 @@ function copyToClipboard(text, element) {
 }
 
 /**
-
- * Genera el bloque de HTML para los detalles de una cuenta, con un interlineado ms ajustado
-
- * y un nico botn para copiar todos los datos.
-
+ * Genera el bloque de HTML para los detalles de una cuenta, con un interlineado m+ís ajustado
+ * y un +¦nico bot+¦n para copiar todos los datos.
  */
 function buildAccountDetailsMarkup(account) {
     const details = [
@@ -608,18 +456,15 @@ function buildAccountDetailsMarkup(account) {
         { label: 'Titular', value: account.accountHolder },
         { label: 'RUT', value: account.rut },
         { label: 'Tipo', value: account.accountType },
-        { label: 'Numero', value: account.accountNumber },
+        { label: 'N+¦mero', value: account.accountNumber },
     ];
     if (account.email && account.email !== 'N/A') {
         details.push({ label: 'Email', value: account.email });
     }
 
     const copyText = details.map(d => `${d.label}: ${d.value}`).join('\n');
-    const sanitizedCopyText = copyText
-        .replace(/"/g, '&quot;')
-        .replace(/\n/g, '&#10;');
 
-    const detailsHtml = details.map(d =>
+    const detailsHtml = details.map(d => 
         `<p class="leading-tight"><span class="font-medium">${d.label}:</span> ${d.value}</p>`
     ).join('');
 
@@ -628,15 +473,16 @@ function buildAccountDetailsMarkup(account) {
             <div class="text-xs md:text-sm text-gray-800 space-y-1">
                 ${detailsHtml}
             </div>
-            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${sanitizedCopyText}">
-                Copiar
+            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${copyText.replace(/"/g, '&quot;')}" aria-label="Copiar todos los datos de la cuenta">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span class="copy-feedback">Copiado</span>
             </button>
-            <div class="copy-feedback absolute top-0 right-12 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 transition-all duration-200 pointer-events-none">
-                Copiado!
-            </div>
         </div>
     `;
 }
+
 function getMarginValue(key) {
 
     const value = marginConfig[key];
@@ -784,21 +630,21 @@ function setupMarginConfigListener() {
 
         applyMarginConfigToUI();
 
-        calculateExchange();
+        calculateExchange(false);
 
     }, (error) => {
 
-        console.error('Error al escuchar m+Ã­rgenes:', error);
+        console.error('Error al escuchar m+írgenes:', error);
 
         if (error?.code === 'permission-denied') {
 
-            console.warn('El usuario no tiene permisos para leer config/pricing. Se usar+Ã­n m+Ã­rgenes por defecto.');
+            console.warn('El usuario no tiene permisos para leer config/pricing. Se usar+ín m+írgenes por defecto.');
 
             marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 
             applyMarginConfigToUI();
 
-            calculateExchange();
+            calculateExchange(false);
 
         }
 
@@ -822,7 +668,7 @@ function readPercentInput(inputElement, label, fallbackDecimal) {
 
     if (!Number.isFinite(numeric)) {
 
-        throw new Error(`Ingrese un valor num+Â®rico v+Ã­lido para ${label}.`);
+        throw new Error(`Ingrese un valor num+®rico v+ílido para ${label}.`);
 
     }
 
@@ -844,7 +690,7 @@ async function saveMarginConfig(event) {
 
     if (!isAuthReady || !db) {
 
-        showMarginStatus('Error: conexi+Â¦n no lista.', true);
+        showMarginStatus('Error: conexi+¦n no lista.', true);
 
         return;
 
@@ -852,7 +698,7 @@ async function saveMarginConfig(event) {
 
     if (!ADMIN_UIDS.includes(userId)) {
 
-        showMarginStatus('No autorizado para actualizar m+Ã­rgenes.', true);
+        showMarginStatus('No autorizado para actualizar m+írgenes.', true);
 
         return;
 
@@ -880,7 +726,7 @@ async function saveMarginConfig(event) {
 
     try {
 
-        discountWldClp = readPercentInput(marginWldClpInput, 'Descuento WLD Ã”Ã¥Ã† CLP', currentConfig.discountWldClp);
+        discountWldClp = readPercentInput(marginWldClpInput, 'Descuento WLD ÔåÆ CLP', currentConfig.discountWldClp);
 
         discountClpVes = readPercentInput(marginClpVesInput, 'Descuento CLP -> VES', currentConfig.discountClpVes);
 
@@ -902,7 +748,7 @@ async function saveMarginConfig(event) {
 
     try {
 
-        showMarginStatus('Guardando m+Ã­rgenes...');
+        showMarginStatus('Guardando m+írgenes...');
 
         if (saveMarginsButton) {
 
@@ -932,17 +778,17 @@ async function saveMarginConfig(event) {
 
         applyMarginConfigToUI();
 
-        calculateExchange();
+        calculateExchange(false);
 
-        showMarginStatus('M+Ã­rgenes guardados correctamente.');
+        showMarginStatus('M+írgenes guardados correctamente.');
 
         setTimeout(() => hideMarginStatus(), 3000);
 
     } catch (error) {
 
-        console.error('Error al guardar m+Ã­rgenes:', error);
+        console.error('Error al guardar m+írgenes:', error);
 
-        showMarginStatus(`Error al guardar m+Ã­rgenes: ${error.message}`, true);
+        showMarginStatus(`Error al guardar m+írgenes: ${error.message}`, true);
 
     } finally {
 
@@ -950,7 +796,7 @@ async function saveMarginConfig(event) {
 
             saveMarginsButton.disabled = false;
 
-            saveMarginsButton.textContent = 'Guardar M+Ã­rgenes';
+            saveMarginsButton.textContent = 'Guardar M+írgenes';
 
         }
 
@@ -960,7 +806,7 @@ async function saveMarginConfig(event) {
 
 
 
-// --- L+Â¦gica de Autenticaci+Â¦n por Email ---
+// --- L+¦gica de Autenticaci+¦n por Email ---
 
 /**
  * Maneja el registro de un nuevo usuario.
@@ -974,7 +820,7 @@ async function handleRegistration(event) {
     const passwordConfirm = registerForm.querySelector('#register-password-confirm').value;
 
     if (password !== passwordConfirm) {
-        registerStatus.textContent = 'Las contrase+Â¦as no coinciden.';
+        registerStatus.textContent = 'Las contrase+¦as no coinciden.';
         registerStatus.classList.remove('hidden');
         return;
     }
@@ -985,8 +831,8 @@ async function handleRegistration(event) {
 
     try {
         await createUserWithEmailAndPassword(auth, email, password);
-        // onAuthStateChanged se encargar+Ã­ de redirigir a la app.
-        registerStatus.textContent = '-Ã­Registro exitoso! Redirigiendo...';
+        // onAuthStateChanged se encargar+í de redirigir a la app.
+        registerStatus.textContent = '-íRegistro exitoso! Redirigiendo...';
         registerStatus.classList.remove('text-red-500', 'text-gray-600');
         registerStatus.classList.add('text-green-600');
     } catch (error) {
@@ -998,7 +844,7 @@ async function handleRegistration(event) {
 }
 
 /**
- * Maneja el inicio de sesi+Â¦n de un usuario existente.
+ * Maneja el inicio de sesi+¦n de un usuario existente.
  */
 async function handleLogin(event) {
     event.preventDefault();
@@ -1007,21 +853,21 @@ async function handleLogin(event) {
     const email = loginForm.querySelector('#login-email').value;
     const password = loginForm.querySelector('#login-password').value;
 
-    loginStatus.textContent = 'Iniciando sesi+Â¦n...';
+    loginStatus.textContent = 'Iniciando sesi+¦n...';
     loginStatus.classList.remove('hidden', 'text-red-500');
     loginStatus.classList.add('text-gray-600');
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        // onAuthStateChanged se encargar+Ã­ de redirigir a la app.
-        loginStatus.textContent = '-Ã­Inicio de sesi+Â¦n exitoso! Redirigiendo...';
+        // onAuthStateChanged se encargar+í de redirigir a la app.
+        loginStatus.textContent = '-íInicio de sesi+¦n exitoso! Redirigiendo...';
         loginStatus.classList.remove('text-red-500', 'text-gray-600');
         loginStatus.classList.add('text-green-600');
     } catch (error) {
-        console.error('Error de inicio de sesi+Â¦n:', error);
-        let message = 'Error al iniciar sesi+Â¦n. Verifica tus credenciales.';
+        console.error('Error de inicio de sesi+¦n:', error);
+        let message = 'Error al iniciar sesi+¦n. Verifica tus credenciales.';
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-            message = 'Correo o contrase+Â¦a incorrectos.';
+            message = 'Correo o contrase+¦a incorrectos.';
         } else {
             message = `Error: ${error.message}`;
         }
@@ -1032,14 +878,14 @@ async function handleLogin(event) {
 }
 
 /**
- * Maneja el cierre de sesi+Â¦n del usuario.
+ * Maneja el cierre de sesi+¦n del usuario.
  */
 async function handleLogout() {
     if (!auth) return;
     try {
         await signOut(auth);
-        // onAuthStateChanged se encargar+Ã­ de limpiar la UI y mostrar el login.
-        console.log('Usuario cerr+Â¦ sesi+Â¦n.');
+        // onAuthStateChanged se encargar+í de limpiar la UI y mostrar el login.
+        console.log('Usuario cerr+¦ sesi+¦n.');
         // Limpiar estados globales que persisten tras logout
         currentTransactionId = null;
         currentTransactionPath = null;
@@ -1049,8 +895,8 @@ async function handleLogout() {
             adminTransactionsUnsubscribe = null;
         }
     } catch (error) {
-        console.error('Error al cerrar sesi+Â¦n:', error);
-        authStatus.textContent = `Error al cerrar sesi+Â¦n: ${error.message}`;
+        console.error('Error al cerrar sesi+¦n:', error);
+        authStatus.textContent = `Error al cerrar sesi+¦n: ${error.message}`;
     }
 }
 
@@ -1062,7 +908,7 @@ async function saveAdminAccounts() {
 
     if (!isAuthReady || !db) {
 
-        accountStatus.textContent = "Error: Conexi+Â¦n no lista.";
+        accountStatus.textContent = "Error: Conexi+¦n no lista.";
 
         return;
 
@@ -1086,7 +932,7 @@ async function saveAdminAccounts() {
 
     if (!bankName || !accountHolder || !accountNumber || !rut || !accountType) {
 
-        accountStatus.textContent = "Error: Complete todos los campos requeridos (Banco, Titular, N+Â¦mero, RUT, Tipo).";
+        accountStatus.textContent = "Error: Complete todos los campos requeridos (Banco, Titular, N+¦mero, RUT, Tipo).";
 
         return;
 
@@ -1164,7 +1010,7 @@ async function deleteAdminAccount(docId, accountName) {
 
     if (!isAuthReady || !db) {
 
-        console.error("Error: Conexi+Â¦n a Firebase no lista.");
+        console.error("Error: Conexi+¦n a Firebase no lista.");
 
         accountStatus.textContent = "Error: Conexin no lista.";
 
@@ -1380,7 +1226,7 @@ async function fetchDynamicRates() {
 
     // **CORRECCIN**: Llama al clculo inicial pero sin habilitar el botn de pago.
 
-    calculateExchange();
+    calculateExchange(false);
 
 }
 
@@ -1388,7 +1234,7 @@ async function fetchDynamicRates() {
 
 
 
-// --- L+Â¦gica de Intercambio (C+Ã­lculo) ---
+// --- L+¦gica de Intercambio (C+ílculo) ---
 
 
 
@@ -1538,7 +1384,7 @@ function calculateExchange(enablePaymentButton = true) {
 
     if (!isReady) {
 
-        rateDisplay.textContent = "Cargando tasas de cambio din+Ã­micas...";
+        rateDisplay.textContent = "Cargando tasas de cambio din+ímicas...";
 
         paymentButton.disabled = true;
 
@@ -1552,7 +1398,7 @@ function calculateExchange(enablePaymentButton = true) {
 
         amountReceiveDisplay.textContent = formatCurrency(0, currencyReceive);
 
-        rateDisplay.textContent = "Ingrese un monto v+Ã­lido.";
+        rateDisplay.textContent = "Ingrese un monto v+ílido.";
 
         paymentButton.disabled = true;
 
@@ -1942,7 +1788,7 @@ async function showPaymentModal() {
 
         modalTransferCurrency.textContent = currencySend;
 
-        adminAccountDetailsContainer.innerHTML = '<p class="text-center text-gray-600 p-4">La direcci+Â¦n de la Wallet ser+Ã­ proporcionada por el administrador una vez que confirme su intenci+Â¦n de enviar criptomonedas.</p>';
+        adminAccountDetailsContainer.innerHTML = '<p class="text-center text-gray-600 p-4">La direcci+¦n de la Wallet ser+í proporcionada por el administrador una vez que confirme su intenci+¦n de enviar criptomonedas.</p>';
 
     } else {
 
@@ -1979,28 +1825,6 @@ function scheduleUsdtDestinationPersist() {
             });
         } catch (error) {
             console.error('Error al guardar destino USDT:', error);
-        }
-    }, 400);
-}
-
-function scheduleVesDestinationPersist() {
-    if (!isAuthReady || !db || !currentTransactionPath) return;
-    if (vesDestinationForm && vesDestinationForm.classList.contains('hidden')) return;
-    if (vesDestinationSaveTimeout) clearTimeout(vesDestinationSaveTimeout);
-    vesDestinationSaveTimeout = setTimeout(async () => {
-        try {
-            await updateDoc(doc(db, currentTransactionPath), {
-                userVesDestination: {
-                    beneficiary: vesBeneficiaryInput ? vesBeneficiaryInput.value.trim() : '',
-                    idNumber: vesIdInput ? vesIdInput.value.trim() : '',
-                    bank: vesBankInput ? vesBankInput.value.trim() : '',
-                    accountType: vesAccountTypeInput ? vesAccountTypeInput.value : '',
-                    accountNumber: vesAccountNumberInput ? vesAccountNumberInput.value.trim() : '',
-                    notes: vesNotesInput ? vesNotesInput.value.trim() : '',
-                },
-            });
-        } catch (error) {
-            console.error('Error al guardar destino VES:', error);
         }
     }, 400);
 }
@@ -2390,170 +2214,233 @@ async function uploadAdminReceipt(transactionPath, file) {
 
 
 function setupAdminTransactionsListener() {
-    if (!db || !isCurrentUserAdmin || !adminPendingTransactionsList || !adminCompletedTransactionsList) {
+
+    if (!db || !isCurrentUserAdmin || !adminTransactionsList) {
+
         return;
+
     }
+
+
 
     if (adminTransactionsUnsubscribe) {
+
         adminTransactionsUnsubscribe();
+
     }
 
+
+
     const transactionsQuery = collectionGroup(db, 'transactions');
+
     adminTransactionsUnsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+
         const transactions = [];
 
         snapshot.forEach((docSnap) => {
+
             const docPath = docSnap.ref.path;
+
             if (!docPath.includes(`artifacts/${appId}/`)) {
+
                 return;
+
             }
 
             const data = docSnap.data();
+
             transactions.push({
+
                 id: docSnap.id,
+
                 path: docPath,
+
                 ...data,
+
             });
+
         });
+
+
 
         transactions.sort((a, b) => {
+
             const aTime = a.timestamp?.seconds || 0;
+
             const bTime = b.timestamp?.seconds || 0;
+
             return bTime - aTime;
+
         });
 
+
+
         renderAdminTransactions(transactions);
+
     }, (error) => {
+
         console.error('Error al escuchar transacciones (admin):', error);
-        const errorMarkup = '<p class="text-sm text-red-600">Error al cargar las ordenes.</p>';
-        adminPendingTransactionsList.innerHTML = errorMarkup;
-        adminCompletedTransactionsList.innerHTML = errorMarkup;
+
+        if (adminTransactionsList) {
+
+            adminTransactionsList.innerHTML = '<p class="text-sm text-red-600">Error al cargar las rdenes.</p>';
+
+        }
+
     });
+
 }
 
 
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-
-
-function createCopyRow(label, value) {
-    const safeValue = escapeHtml(value ?? 'N/A');
-    const copyPayload = `${label}: ${value ?? 'N/A'}`
-        .replace(/"/g, '&quot;')
-        .replace(/\n/g, '&#10;');
-    return `
-        <div class="flex items-center justify-between gap-2">
-            <span class="text-xs md:text-sm text-gray-600">${escapeHtml(label)}: <span class="font-semibold text-gray-900">${safeValue}</span></span>
-            <button class="copy-btn inline-flex items-center gap-1 text-xs md:text-sm text-cyan-700 hover:underline" data-copy="${copyPayload}">
-                Copiar
-            </button>
-        </div>
-    `;
-}
 
 function renderAdminTransactions(transactions) {
-    if (!adminTransactionsSection || !adminPendingTransactionsList || !adminCompletedTransactionsList) return;
+
+    if (!adminTransactionsList) return;
+
+
 
     if (!transactions.length) {
-        adminPendingTransactionsList.innerHTML = '<p class="text-sm text-gray-500">No hay ordenes registradas todavia.</p>';
-        adminCompletedTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Aun no hay ordenes completadas.</p>';
-        adminTransactionsSection.classList.remove('hidden');
+
+        adminTransactionsList.innerHTML = '<p class="text-sm text-gray-500">No hay rdenes registradas todava.</p>';
+
+        if (adminTransactionsSection) {
+
+            adminTransactionsSection.classList.remove('hidden');
+
+        }
+
         return;
+
     }
 
-    adminPendingTransactionsList.innerHTML = '';
-    adminCompletedTransactionsList.innerHTML = '';
+
+
+    adminTransactionsList.innerHTML = '';
+
+
 
     transactions.forEach((tx) => {
+
         const amountSendText = formatCurrency(tx.amountSend || 0, tx.currencySend || 'CLP');
+
         const amountReceiveText = formatCurrency(tx.amountReceive || 0, tx.currencyReceive || 'CLP');
-        const isCompleted = tx.status === 'Completado';
-        const badgeClass = isCompleted
+
+        const badgeClass = tx.status === 'Completado'
+
             ? 'bg-green-100 text-green-700'
+
             : tx.status === 'Pendiente'
+
                 ? 'bg-orange-100 text-orange-700'
+
                 : 'bg-gray-200 text-gray-600';
 
-        const targetList = isCompleted ? adminCompletedTransactionsList : adminPendingTransactionsList;
 
-        const safeUserReceiptUrl = tx.userReceiptUrl
-            ? tx.userReceiptUrl.replace(/"/g, '&quot;')
-            : '';
-        const safeAdminReceiptUrl = tx.adminReceiptUrl
-            ? tx.adminReceiptUrl.replace(/"/g, '&quot;')
-            : '';
-        const safeUserId = escapeHtml(tx.userId || 'N/A');
-        const orderLabel = escapeHtml((tx.id || '').slice(0, 8).toUpperCase());
-        const statusLabel = escapeHtml(tx.status || 'Sin comprobante');
-        const actionLabel = isCompleted ? 'Comprobante cargado' : 'Marcar como completada';
-        const disabledAttr = isCompleted ? 'disabled' : '';
 
         const card = document.createElement('div');
+
         card.className = 'admin-transaction-card border border-yellow-200 bg-white rounded-lg p-4 space-y-3 shadow-sm';
+
         card.setAttribute('data-transaction-id', tx.id);
+
         card.setAttribute('data-transaction-path', tx.path);
-        card.setAttribute('data-transaction-status', tx.status || '');
+
+
 
         const rateRow = tx.rateApplied
+
             ? createCopyRow('Tasa aplicada', tx.rateApplied.toFixed(tx.currencyReceive === 'CLP' ? 2 : 4))
+
             : '';
 
+
+
         const userReceiptSection = tx.userReceiptUrl
-            ? `<button class="copy-btn text-cyan-700 hover:underline text-xs md:text-sm" data-copy="${safeUserReceiptUrl}">Copiar enlace del comprobante del cliente</button>`
+
+            ? `<a href="${tx.userReceiptUrl}" target="_blank" rel="noopener" class="text-cyan-700 hover:underline text-xs md:text-sm">Ver comprobante del cliente</a>`
+
             : '<span class="text-xs text-orange-600">Comprobante del cliente pendiente</span>';
 
+
+
         const adminReceiptSection = tx.adminReceiptUrl
-            ? `<button class="copy-btn text-cyan-700 hover:underline text-xs md:text-sm" data-copy="${safeAdminReceiptUrl}">Copiar enlace del comprobante de destino</button>`
+
+            ? `<a href="${tx.adminReceiptUrl}" target="_blank" rel="noopener" class="text-cyan-700 hover:underline text-xs md:text-sm">Ver comprobante de destino</a>`
+
             : '<span class="text-xs text-gray-500">Comprobante de destino no cargado</span>';
 
+
+
         card.innerHTML = `
+
             <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+
                 <div>
-                    <p class="text-sm font-semibold text-gray-800">Orden ${orderLabel}</p>
-                    <p class="text-xs text-gray-500">Usuario: ${safeUserId}</p>
+
+                    <p class="text-sm font-semibold text-gray-800">Orden ${tx.id.slice(0, 8).toUpperCase()}</p>
+
+                    <p class="text-xs text-gray-500">Usuario: ${tx.userId || 'N/A'}</p>
+
                 </div>
-                <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">${statusLabel}</span>
+
+                <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">${tx.status || 'Sin comprobante'}</span>
+
             </div>
+
             <div class="space-y-2">
+
                 ${createCopyRow('Monto enviado', amountSendText)}
+
                 ${createCopyRow('Monto destino', amountReceiveText)}
+
                 ${rateRow}
+
             </div>
+
             <div class="space-y-1 text-xs text-gray-600">
+
                 ${userReceiptSection}<br>
+
                 ${adminReceiptSection}
+
             </div>
+
             <div class="mt-2 border-t border-gray-200 pt-3">
+
                 <label class="block text-xs font-semibold text-gray-700 mb-2">Subir comprobante de destino</label>
+
                 <div class="flex flex-col md:flex-row gap-3">
-                    <input type="file" class="admin-receipt-input flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-500" accept="image/*,.pdf" ${disabledAttr}>
-                    <button class="admin-upload-btn px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed" ${disabledAttr}>
-                        ${escapeHtml(actionLabel)}
+
+                    <input type="file" class="admin-receipt-input flex-1 text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-yellow-500" accept="image/*,.pdf">
+
+                    <button class="admin-upload-btn px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg hover:bg-yellow-700 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
+
+                        Marcar como completada
+
                     </button>
+
                 </div>
+
                 <p class="admin-upload-status text-xs text-gray-500 mt-2 hidden"></p>
+
             </div>
+
         `;
 
-        targetList.appendChild(card);
+
+
+        adminTransactionsList.appendChild(card);
+
     });
 
-    if (!adminPendingTransactionsList.children.length) {
-        adminPendingTransactionsList.innerHTML = '<p class="text-sm text-gray-500">No hay ordenes pendientes por ahora.</p>';
-    }
-    if (!adminCompletedTransactionsList.children.length) {
-        adminCompletedTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Aun no hay ordenes completadas.</p>';
+
+
+    if (adminTransactionsSection) {
+
+        adminTransactionsSection.classList.remove('hidden');
+
     }
 
-    adminTransactionsSection.classList.remove('hidden');
 }
 
 
@@ -2562,117 +2449,105 @@ function renderAdminTransactions(transactions) {
 
 
 
+window.onload = function () {
+
+    initializeDOM();
+
+    initializeFirebase();
 
 
 
+    setTimeout(() => {
 
-function registerStaticEventListeners() {
-    if (amountSendInput) amountSendInput.addEventListener('input', () => calculateExchange());
-    if (currencySendSelect) currencySendSelect.addEventListener('change', () => calculateExchange());
-    if (currencyReceiveSelect) currencyReceiveSelect.addEventListener('change', () => calculateExchange());
-    if (swapButton) swapButton.addEventListener('click', () => {
-        swapCurrencies();
-        calculateExchange();
-    });
+        fetchDynamicRates();
 
-    if (toggleAdminButton && adminPanel) {
+    }, 500);
+
+
+
+    if (amountSendInput) amountSendInput.addEventListener('input', calculateExchange);
+
+    if (currencySendSelect) currencySendSelect.addEventListener('change', calculateExchange);
+
+    if (currencyReceiveSelect) currencyReceiveSelect.addEventListener('change', calculateExchange);
+
+    if (swapButton) swapButton.addEventListener('click', swapCurrencies);
+
+
+
+    if (toggleAdminButton) {
+
         toggleAdminButton.addEventListener('click', () => {
-            const isHidden = adminPanel.classList.toggle('hidden');
-            toggleAdminButton.textContent = isHidden
-                ? 'Mostrar Panel de Administracion'
-                : 'Ocultar Panel de Administracion';
+
+            adminPanel.classList.toggle('hidden');
+
+            toggleAdminButton.textContent = adminPanel.classList.contains('hidden') ? 'Mostrar Panel de Administracin' : 'Ocultar Panel de Administracin';
+
         });
+
     }
 
+
+
     if (saveAccountsButton) saveAccountsButton.addEventListener('click', saveAdminAccounts);
+
     if (saveMarginsButton) saveMarginsButton.addEventListener('click', saveMarginConfig);
+
     if (uploadReceiptButton) uploadReceiptButton.addEventListener('click', handleUserReceiptUpload);
 
     if (savedAccountsList) savedAccountsList.addEventListener('click', handleSavedAccountsListClick);
-    if (adminPendingTransactionsList) adminPendingTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
-    if (adminCompletedTransactionsList) adminCompletedTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
 
+    if (adminTransactionsList) adminTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
+
+    // Listeners para los nuevos formularios de autenticaci+¦n
     if (registerForm) registerForm.addEventListener('submit', handleRegistration);
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     if (logoutButton) logoutButton.addEventListener('click', handleLogout);
 
-    if (showRegisterButton && registerForm && loginForm) {
+    if (showRegisterButton) {
         showRegisterButton.addEventListener('click', () => {
             loginForm.classList.add('hidden');
             registerForm.classList.remove('hidden');
         });
     }
-
-    if (showLoginButton && registerForm && loginForm) {
+    if (showLoginButton) {
         showLoginButton.addEventListener('click', () => {
             registerForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
         });
     }
 
+
     if (paymentButton) paymentButton.addEventListener('click', showPaymentModal);
+
     if (closeModalButton) {
+
         closeModalButton.addEventListener('click', () => {
-            if (paymentModal) paymentModal.classList.add('hidden');
+
+            paymentModal.classList.add('hidden');
+
         });
+
     }
+
+
 
     if (adminAccountDetailsContainer) {
+
         adminAccountDetailsContainer.addEventListener('click', (event) => {
+
             const button = event.target.closest('.copy-btn');
+
             if (button) {
-                copyToClipboard(button.dataset.copy, button);
+
+                const textToCopy = button.dataset.copy;
+
+                copyToClipboard(textToCopy, button);
+
             }
+
         });
+
     }
 
-    if (usdtWalletInput) usdtWalletInput.addEventListener('input', scheduleUsdtDestinationPersist);
-    if (usdtNetworkSelect) usdtNetworkSelect.addEventListener('change', scheduleUsdtDestinationPersist);
-    if (usdtNotesInput) usdtNotesInput.addEventListener('input', scheduleUsdtDestinationPersist);
-
-    if (vesBeneficiaryInput) vesBeneficiaryInput.addEventListener('input', scheduleVesDestinationPersist);
-    if (vesIdInput) vesIdInput.addEventListener('input', scheduleVesDestinationPersist);
-    if (vesBankInput) vesBankInput.addEventListener('input', scheduleVesDestinationPersist);
-    if (vesAccountTypeInput) vesAccountTypeInput.addEventListener('change', scheduleVesDestinationPersist);
-    if (vesAccountNumberInput) vesAccountNumberInput.addEventListener('input', scheduleVesDestinationPersist);
-    if (vesNotesInput) vesNotesInput.addEventListener('input', scheduleVesDestinationPersist);
-
-    if (toggleOrderCreationButton && orderCreationSection) {
-        toggleOrderCreationButton.addEventListener('click', () => {
-            const isHidden = orderCreationSection.classList.toggle('hidden');
-            toggleOrderCreationButton.textContent = isHidden ? 'Mostrar creador de ordenes' : 'Ocultar creador de ordenes';
-        });
-    }
-}
-
-async function bootstrapApp() {
-    try {
-        initializeDOM();
-        registerStaticEventListeners();
-        calculateExchange();
-
-        await initializeFirebase();
-        setTimeout(() => {
-            fetchDynamicRates().catch((error) => console.error('Error al obtener tasas:', error));
-        }, 500);
-    } catch (error) {
-        console.error('Error al iniciar la aplicacion:', error);
-        if (authStatus) {
-            authStatus.textContent = 'No se pudo iniciar la aplicacion. Revise la consola.';
-            authStatus.classList.remove('hidden');
-        }
-    }
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootstrapApp);
-} else {
-    bootstrapApp();
-}
-
-
-
-
-
-
-
+};
