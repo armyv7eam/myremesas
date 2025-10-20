@@ -18,7 +18,7 @@ setLogLevel('debug');
 
 // Lista de User IDs de administradores autorizados para ver el panel.
 
-// UIDs de administradores. Se pueden añadir más separados por comas.
+// UIDs de administradores. Se pueden aadir ms separados por comas.
 const ADMIN_UIDS_PLACEHOLDER = "R3QU4xRLmSQFiArCWWRwGBMEOhc2,R3QU4xRLmSQFiArCWWRwGBMEOhc2,71YiNOk9MOc6mNjxnnKBLST1Clh2";
 
 const ADMIN_UIDS = ADMIN_UIDS_PLACEHOLDER.split(',').filter(uid => uid.trim() !== '');
@@ -31,7 +31,7 @@ const appId = "1:775892034675:web:98ed2724bcaff2ed427606";
 
 const firebaseConfig = {"apiKey":"AIzaSyCnXU8XU7ZzA_12CDaYaY9W2rWBmkGLB-g","authDomain":"studio-7601782447-44d81.firebaseapp.com","projectId":"studio-7601782447-44d81","storageBucket":"studio-7601782447-44d81.firebasestorage.app","messagingSenderId":"775892034675","appId":"1:775892034675:web:98ed2724bcaff2ed427606"};
 
-const initialAuthToken = null; // No estamos usando este método por ahora.
+const initialAuthToken = null; // No estamos usando este mtodo por ahora.
 
 
 
@@ -71,7 +71,7 @@ let adminAccounts = [];
 
 
 
-// Configuración de márgenes (se puede sobrescribir desde Firestore)
+// Configuracin de mrgenes (se puede sobrescribir desde Firestore)
 
 const DEFAULT_MARGIN_CONFIG = {
 
@@ -93,7 +93,7 @@ let marginConfigUnsubscribe = null;
 
 
 
-// --- DECLARACIÓN DE VARIABLES DEL DOM (INICIALIZACIÓN MOVIDA A initializeDOM) ---
+// --- DECLARACIN DE VARIABLES DEL DOM (INICIALIZACIN MOVIDA A initializeDOM) ---
 
 let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton;
 
@@ -108,7 +108,7 @@ let isCurrentUserAdmin = false;
 let adminTransactionsUnsubscribe = null;
 let transactionListenerUnsubscribe = null;
 let adminAccountsUnsubscribe = null;
-// Nuevas variables para autenticación por email
+// Nuevas variables para autenticacin por email
 let authContainer, appContainer, authFormsSection, registerForm, loginForm, logoutButton, showRegisterButton, showLoginButton;
 let registerStatus, loginStatus;
 let usdtDestinationSaveTimeout = null;
@@ -269,7 +269,7 @@ function initializeDOM() {
 
 
 
-    // Elementos para autenticación por email
+    // Elementos para autenticacin por email
 
     authFormsSection = document.getElementById('auth-forms');
 
@@ -312,7 +312,7 @@ async function initializeFirebase() {
 
         if (!firebaseConfig) {
 
-            authStatus.textContent = "Error: Configuración de Firebase no disponible.";
+            authStatus.textContent = "Error: Configucin de Firebase no disponible.";
 
             return;
 
@@ -334,7 +334,7 @@ async function initializeFirebase() {
 
             if (user && !user.isAnonymous) {
 
-                // Usuario con email y contraseña
+                // Usuario con email y contrasea
 
                 authContainer.classList.add('hidden');
 
@@ -344,7 +344,7 @@ async function initializeFirebase() {
 
                 userId = user.uid;
 
-                // Si el usuario no es anónimo, muestra su email. Si no, muestra su UID.
+                // Si el usuario no es annimo, muestra su email. Si no, muestra su UID.
 
                 if (user.email) {
 
@@ -352,15 +352,15 @@ async function initializeFirebase() {
 
                     if (authFormsSection) authFormsSection.classList.add('hidden'); // Oculta formularios de login/registro
 
-                    logoutButton.classList.remove('hidden'); // Muestra botón de logout
+                    logoutButton.classList.remove('hidden'); // Muestra botn de logout
 
                 } else {
 
-                    userIdDisplay.textContent = `Anónimo (${userId.substring(0, 8)}...)`;
+                    userIdDisplay.textContent = `Annimo (${userId.substring(0, 8)}...)`;
 
                     if (authFormsSection) authFormsSection.classList.remove('hidden'); // Muestra formularios
 
-                    logoutButton.classList.add('hidden'); // Oculta botón de logout
+                    logoutButton.classList.add('hidden'); // Oculta botn de logout
 
                 }
 
@@ -404,9 +404,7 @@ async function initializeFirebase() {
                         adminTransactionsSection.classList.add('hidden');
 
                         if (adminPendingTransactionsList) adminPendingTransactionsList.innerHTML = '';
-
                         if (adminCompletedTransactionsList) adminCompletedTransactionsList.innerHTML = '';
-
                     }
 
                 }
@@ -419,11 +417,11 @@ async function initializeFirebase() {
 
             } else {
 
-                // No hay usuario logueado o es anónimo. Mostrar formularios de registro/login.
+                // No hay usuario logueado o es annimo. Mostrar formularios de registro/login.
 
                 if (user && user.isAnonymous) {
 
-                    await signOut(auth); // Cerramos sesión anónima para forzar login/registro
+                    await signOut(auth); // Cerramos sesin annima para forzar login/registro
 
                 }
 
@@ -431,7 +429,7 @@ async function initializeFirebase() {
 
                 isCurrentUserAdmin = false;
 
-                if(authStatus) authStatus.textContent = "Por favor, inicie sesión o regístrese.";
+                if(authStatus) authStatus.textContent = "Por favor, inicie sesin o regstrese.";
 
                 if(userIdContainer) userIdContainer.classList.add('hidden');
 
@@ -447,7 +445,7 @@ async function initializeFirebase() {
 
                 if (adminToggleContainer) adminToggleContainer.classList.add('hidden');
 
-                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesión para ver su historial.</p>';
+                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesin para ver su historial.</p>';
 
                 if (adminTransactionsSection) adminTransactionsSection.classList.add('hidden');
 
@@ -534,16 +532,20 @@ function copyToClipboard(text, element) {
 }
 
 /**
- * Genera el bloque de HTML para los detalles de una cuenta, con un interlineado más ajustado
- * y un único botón para copiar todos los datos.
+
+ * Genera el bloque de HTML para los detalles de una cuenta, con un interlineado ms ajustado
+
+ * y un nico botn para copiar todos los datos.
+
  */
+
 function buildAccountDetailsMarkup(account) {
     const details = [
         { label: 'Banco', value: account.bankName },
         { label: 'Titular', value: account.accountHolder },
         { label: 'RUT', value: account.rut },
         { label: 'Tipo', value: account.accountType },
-        { label: 'Número', value: account.accountNumber },
+        { label: 'Nmero', value: account.accountNumber },
     ];
     if (account.email && account.email !== 'N/A') {
         details.push({ label: 'Email', value: account.email });
