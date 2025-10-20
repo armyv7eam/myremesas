@@ -621,6 +621,22 @@
                 </div>
 
                 <div class="border-t border-gray-200 pt-4 space-y-4">
+                    <div id="ves-destination-form" class="hidden space-y-2 bg-white border border-cyan-200 rounded-lg p-3">
+                        <h4 class="text-sm font-semibold text-gray-700">Datos para recibir transferencia en VES</h4>
+                        <p class="text-xs text-gray-500">Completa los datos de la cuenta destino en Venezuela para que podamos procesar tu pago.</p>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1" for="ves-beneficiary-input">Nombre del beneficiario</label>
+                        <input id="ves-beneficiary-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Ej: Maria Perez">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 mt-2" for="ves-id-input">Documento de identidad</label>
+                        <input id="ves-id-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Ej: V-12345678">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 mt-2" for="ves-bank-input">Banco destino</label>
+                        <input id="ves-bank-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Ej: Banco de Venezuela">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 mt-2" for="ves-account-type-input">Tipo de cuenta</label>
+                        <input id="ves-account-type-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Ej: Cuenta Corriente o Ahorro">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 mt-2" for="ves-account-number-input">Numero de cuenta</label>
+                        <input id="ves-account-number-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Ej: 0102-0123-45-1234567890">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1 mt-2" for="ves-notes-input">Notas adicionales (opcional)</label>
+                        <input id="ves-notes-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Informacion extra para el pago (opcional)">
+                    </div>
                     <div id="usdt-destination-form" class="hidden space-y-2 bg-white border border-cyan-200 rounded-lg p-3">
                         <h4 class="text-sm font-semibold text-gray-700">Datos para recibir USDT</h4>
                         <p class="text-xs text-gray-500">Ingresa los datos exactos de tu cuenta o wallet para recibir el pago en USDT.</p>
@@ -640,9 +656,17 @@
                         <input id="usdt-notes-input" type="text" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="Informacion extra, si aplica">
                     </div>
 
-                    <div class="space-y-2">
-                        <h4 class="text-sm font-semibold text-gray-700">Enviar tu comprobante</h4>
-                        <p class="text-xs text-gray-500">Despues de transferir, envia el comprobante via WhatsApp al administrador para validar el pago.</p>
+                    <div class="space-y-2 bg-white border border-cyan-200 rounded-lg p-3">
+                        <h4 class="text-sm font-semibold text-gray-700">Subir comprobante y confirmar orden</h4>
+                        <p class="text-xs text-gray-500">Sube el comprobante de tu transferencia para validar la operacion y continuar con el pago.</p>
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <input id="receipt-upload" type="file" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500" accept="image/*,.pdf">
+                            <button type="button" id="upload-receipt-button" class="px-4 py-2 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
+                                Subir comprobante y confirmar orden
+                            </button>
+                        </div>
+                        <p id="receipt-upload-status" class="text-xs text-gray-500 hidden"></p>
+                        <p class="text-xs text-gray-500">Si necesitas asistencia adicional, tambien puedes compartirlo por WhatsApp.</p>
                         <a href="https://wa.me/56930072631?text=Hola%2C%20adjunto%20el%20comprobante%20de%20mi%20transferencia.%20Nombre:%20[tu%20nombre]%20Monto:%20[monto]" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.57 2 2.04 6.54 2.04 12c0 2.1.55 4.05 1.6 5.77L2 22l4.35-1.61c1.63 1.12 3.55 1.71 5.7 1.71 5.46 0 10-4.54 10-10s-4.53-10-9.99-10Zm5.87 14.52c-.25.7-1.47 1.34-2.02 1.43-.52.1-1.19.18-1.92-.12-.44-.17-1-.32-1.73-.63-3.05-1.32-5.03-4.41-5.18-4.62-.15-.21-1.24-1.65-1.24-3.15s.79-2.25 1.08-2.56c.25-.28.67-.4 1.08-.4.13 0 .25.01.36.01.32.01.48.03.69.54.25.6.85 2.07.92 2.22.07.15.11.32.02.5-.08.17-.12.28-.24.44-.12.15-.26.33-.37.45-.12.12-.24.26-.1.5.14.25.63 1.04 1.35 1.69.93.83 1.71 1.09 1.96 1.21.25.13.4.11.55-.06.14-.17.63-.73.8-.98.17-.24.34-.2.57-.12.23.08 1.49.7 1.74.83.26.13.43.19.49.3.06.12.06.7-.2 1.4Z"/></svg>
                             Enviar por WhatsApp
@@ -651,7 +675,7 @@
                 </div>
             </div>
 
-<p class="text-xs text-gray-500 mt-4 text-center">Una vez realizada la transferencia, envía el comprobante al administrador por WhatsApp (+56 9 3007 2631).</p>
+<p class="text-xs text-gray-500 mt-4 text-center">Una vez realizada la transferencia, sube tu comprobante para confirmar la orden. Si lo prefieres, tambien puedes compartirlo por WhatsApp (+56 9 3007 2631).</p>
 
 <button id="close-modal-button" class="mt-6 w-full py-3 bg-cyan-600 text-white text-lg font-semibold rounded-lg hover:bg-cyan-700 transition duration-300">
 
@@ -690,3 +714,4 @@
 <!-- Test para forzar la detección de cambios -->
 
 </html>
+

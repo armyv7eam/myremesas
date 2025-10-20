@@ -95,7 +95,7 @@ let marginConfigUnsubscribe = null;
 
 // --- DECLARACIÓN DE VARIABLES DEL DOM (INICIALIZACIÓN MOVIDA A initializeDOM) ---
 
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle;
+let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, adminAccountDetailsContainer, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle;
 
 
 
@@ -106,10 +106,13 @@ let currentTransactionPath = null;
 let isCurrentUserAdmin = false;
 
 let adminTransactionsUnsubscribe = null;
+let transactionListenerUnsubscribe = null;
+let adminAccountsUnsubscribe = null;
 // Nuevas variables para autenticación por email
 let authContainer, appContainer, authFormsSection, registerForm, loginForm, logoutButton, showRegisterButton, showLoginButton;
 let registerStatus, loginStatus;
 let usdtDestinationSaveTimeout = null;
+let vesDestinationSaveTimeout = null;
 
 
 
@@ -234,6 +237,20 @@ function initializeDOM() {
     usdtNetworkSelect = document.getElementById('usdt-network-select');
 
     usdtNotesInput = document.getElementById('usdt-notes-input');
+
+    vesDestinationForm = document.getElementById('ves-destination-form');
+
+    vesBeneficiaryInput = document.getElementById('ves-beneficiary-input');
+
+    vesIdInput = document.getElementById('ves-id-input');
+
+    vesBankInput = document.getElementById('ves-bank-input');
+
+    vesAccountTypeInput = document.getElementById('ves-account-type-input');
+
+    vesAccountNumberInput = document.getElementById('ves-account-number-input');
+
+    vesNotesInput = document.getElementById('ves-notes-input');
 
 
 
@@ -482,6 +499,60 @@ function buildAccountDetailsMarkup(account) {
             </button>
         </div>
     `;
+}
+
+function buildInfoCopyBlock(title, details) {
+    const filtered = details.filter((item) => item.value && item.value !== '');
+    if (!filtered.length) return '';
+
+    const copyText = filtered.map((d) => `${d.label}: ${d.value}`).join('\n');
+    const rows = filtered.map((d) => `<p class="leading-tight"><span class="font-medium">${d.label}:</span> ${d.value}</p>`).join('');
+
+    return `
+        <div class="relative border border-cyan-100 rounded-lg p-3 bg-cyan-50/50">
+            <p class="text-xs font-semibold text-cyan-700 mb-2">${title}</p>
+            <div class="text-xs md:text-sm text-gray-800 space-y-1">
+                ${rows}
+            </div>
+            <button class="copy-btn absolute top-2 right-2 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${copyText.replace(/"/g, '&quot;')}" aria-label="Copiar detalles">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span class="copy-feedback">Copiado</span>
+            </button>
+        </div>
+    `;
+}
+
+function buildUserDestinationMarkup(tx) {
+    const sections = [];
+
+    if (tx.userVesDestination) {
+        const data = tx.userVesDestination || {};
+        const vesDetails = [
+            { label: 'Beneficiario', value: data.beneficiary },
+            { label: 'Documento', value: data.idNumber },
+            { label: 'Banco', value: data.bank },
+            { label: 'Tipo de cuenta', value: data.accountType },
+            { label: 'Numero de cuenta', value: data.accountNumber },
+            { label: 'Notas', value: data.notes },
+        ];
+        const block = buildInfoCopyBlock('Datos destino en VES', vesDetails);
+        if (block) sections.push(block);
+    }
+
+    if (tx.userUsdtDestination) {
+        const data = tx.userUsdtDestination || {};
+        const usdtDetails = [
+            { label: 'Wallet / ID', value: data.wallet },
+            { label: 'Red', value: data.network },
+            { label: 'Notas', value: data.notes },
+        ];
+        const block = buildInfoCopyBlock('Datos destino en USDT', usdtDetails);
+        if (block) sections.push(block);
+    }
+
+    return sections.join('');
 }
 
 function getMarginValue(key) {
@@ -895,6 +966,22 @@ async function handleLogout() {
             adminTransactionsUnsubscribe();
             adminTransactionsUnsubscribe = null;
         }
+        if (transactionListenerUnsubscribe) {
+            transactionListenerUnsubscribe();
+            transactionListenerUnsubscribe = null;
+        }
+        if (adminAccountsUnsubscribe) {
+            adminAccountsUnsubscribe();
+            adminAccountsUnsubscribe = null;
+        }
+        if (usdtDestinationSaveTimeout) {
+            clearTimeout(usdtDestinationSaveTimeout);
+            usdtDestinationSaveTimeout = null;
+        }
+        if (vesDestinationSaveTimeout) {
+            clearTimeout(vesDestinationSaveTimeout);
+            vesDestinationSaveTimeout = null;
+        }
     } catch (error) {
         console.error('Error al cerrar sesión:', error);
         authStatus.textContent = `Error al cerrar sesión: ${error.message}`;
@@ -1094,6 +1181,11 @@ function setupAdminAccountsListener() {
 
 
 
+    if (adminAccountsUnsubscribe) {
+        adminAccountsUnsubscribe();
+        adminAccountsUnsubscribe = null;
+    }
+
     const collectionPath = `artifacts/${appId}/public/data/admin_accounts`;
 
     const accountsCollectionRef = collection(db, collectionPath);
@@ -1102,7 +1194,7 @@ function setupAdminAccountsListener() {
 
 
 
-    onSnapshot(q, (snapshot) => {
+    adminAccountsUnsubscribe = onSnapshot(q, (snapshot) => {
 
         adminAccounts = [];
 
@@ -1605,6 +1697,11 @@ function setupTransactionListener() {
 
     if (!isAuthReady || !db || !userId) return;
 
+    if (transactionListenerUnsubscribe) {
+        transactionListenerUnsubscribe();
+        transactionListenerUnsubscribe = null;
+    }
+
 
 
     const collectionPath = `artifacts/${appId}/users/${userId}/transactions`;
@@ -1615,7 +1712,7 @@ function setupTransactionListener() {
 
 
 
-    onSnapshot(q, (snapshot) => {
+    transactionListenerUnsubscribe = onSnapshot(q, (snapshot) => {
 
         const transactions = [];
 
@@ -1675,7 +1772,11 @@ function renderTransactionHistory(transactions) {
 
         const orderLabel = tx.id ? tx.id.slice(0, 8).toUpperCase() : 'ORDEN';
 
-        const receiptSection = tx.adminReceiptUrl
+        const userReceiptInfo = tx.userReceiptUrl
+            ? `<button class="view-receipt-btn text-cyan-700 hover:underline text-xs font-semibold" data-receipt-url="${tx.userReceiptUrl}" data-receipt-title="Comprobante enviado (Orden ${orderLabel})">Ver comprobante enviado</button>`
+            : '<span class="text-xs text-orange-600">Debes subir el comprobante para activar la orden.</span>';
+
+        const adminReceiptInfo = tx.adminReceiptUrl
             ? `<button class="view-receipt-btn text-cyan-700 hover:underline text-xs font-semibold" data-receipt-url="${tx.adminReceiptUrl}" data-receipt-title="Comprobante de destino (Orden ${orderLabel})">Ver comprobante del pago recibido</button>`
             : '<span class="text-xs text-gray-500">Comprobante de pago en destino pendiente</span>';
 
@@ -1701,7 +1802,8 @@ function renderTransactionHistory(transactions) {
 
             <div class="mt-2 text-xs text-gray-600">
 
-                ${receiptSection}
+                ${userReceiptInfo}<br>
+                ${adminReceiptInfo}
 
             </div>
 
@@ -1736,6 +1838,19 @@ async function showPaymentModal() {
         }
     }
 
+    if (vesDestinationForm) {
+        if (currencyReceive === 'VES') {
+            vesDestinationForm.classList.remove('hidden');
+        } else {
+            vesDestinationForm.classList.add('hidden');
+            if (vesBeneficiaryInput) vesBeneficiaryInput.value = '';
+            if (vesIdInput) vesIdInput.value = '';
+            if (vesBankInput) vesBankInput.value = '';
+            if (vesAccountTypeInput) vesAccountTypeInput.value = '';
+            if (vesAccountNumberInput) vesAccountNumberInput.value = '';
+            if (vesNotesInput) vesNotesInput.value = '';
+        }
+    }
 
 
 
@@ -1767,11 +1882,10 @@ async function showPaymentModal() {
 
     const extraTransactionData = {};
     if (currencyReceive === 'USDT') {
-        extraTransactionData.userUsdtDestination = {
-            wallet: usdtWalletInput ? usdtWalletInput.value.trim() : '',
-            network: usdtNetworkSelect ? usdtNetworkSelect.value : '',
-            notes: usdtNotesInput ? usdtNotesInput.value.trim() : '',
-        };
+        extraTransactionData.userUsdtDestination = getUsdtDestinationData();
+    }
+    if (currencyReceive === 'VES') {
+        extraTransactionData.userVesDestination = getVesDestinationData();
     }
 
     const transactionRecord = await recordTransaction(amountSend, currencySend, amountSend * rate, currencyReceive, extraTransactionData);
@@ -1874,6 +1988,25 @@ async function showPaymentModal() {
 
 
 
+function getUsdtDestinationData() {
+    return {
+        wallet: usdtWalletInput ? usdtWalletInput.value.trim() : '',
+        network: usdtNetworkSelect ? usdtNetworkSelect.value : '',
+        notes: usdtNotesInput ? usdtNotesInput.value.trim() : '',
+    };
+}
+
+function getVesDestinationData() {
+    return {
+        beneficiary: vesBeneficiaryInput ? vesBeneficiaryInput.value.trim() : '',
+        idNumber: vesIdInput ? vesIdInput.value.trim() : '',
+        bank: vesBankInput ? vesBankInput.value.trim() : '',
+        accountType: vesAccountTypeInput ? vesAccountTypeInput.value.trim() : '',
+        accountNumber: vesAccountNumberInput ? vesAccountNumberInput.value.trim() : '',
+        notes: vesNotesInput ? vesNotesInput.value.trim() : '',
+    };
+}
+
 function scheduleUsdtDestinationPersist() {
     if (!isAuthReady || !db || !currentTransactionPath) return;
     if (usdtDestinationForm && usdtDestinationForm.classList.contains('hidden')) return;
@@ -1881,14 +2014,25 @@ function scheduleUsdtDestinationPersist() {
     usdtDestinationSaveTimeout = setTimeout(async () => {
         try {
             await updateDoc(doc(db, currentTransactionPath), {
-                userUsdtDestination: {
-                    wallet: usdtWalletInput ? usdtWalletInput.value.trim() : '',
-                    network: usdtNetworkSelect ? usdtNetworkSelect.value : '',
-                    notes: usdtNotesInput ? usdtNotesInput.value.trim() : '',
-                },
+                userUsdtDestination: getUsdtDestinationData(),
             });
         } catch (error) {
             console.error('Error al guardar destino USDT:', error);
+        }
+    }, 400);
+}
+
+function scheduleVesDestinationPersist() {
+    if (!isAuthReady || !db || !currentTransactionPath) return;
+    if (vesDestinationForm && vesDestinationForm.classList.contains('hidden')) return;
+    if (vesDestinationSaveTimeout) clearTimeout(vesDestinationSaveTimeout);
+    vesDestinationSaveTimeout = setTimeout(async () => {
+        try {
+            await updateDoc(doc(db, currentTransactionPath), {
+                userVesDestination: getVesDestinationData(),
+            });
+        } catch (error) {
+            console.error('Error al guardar destino VES:', error);
         }
     }, 400);
 }
@@ -2046,6 +2190,8 @@ async function handleUserReceiptUpload(event) {
         if (receiptUploadStatus) {
 
             receiptUploadStatus.textContent = 'Comprobante subido correctamente. Tu orden est pendiente de revisin.';
+
+            receiptUploadStatus.classList.remove('hidden');
 
             receiptUploadStatus.classList.remove('text-red-600');
 
@@ -2451,6 +2597,8 @@ function renderAdminTransactions(transactions) {
             `<button class="view-receipt-btn text-cyan-700 hover:underline text-xs md:text-sm" data-receipt-url="${tx.adminReceiptUrl}" data-receipt-title="Comprobante de Destino (Orden ${tx.id.slice(0, 8).toUpperCase()})">Ver comprobante de destino</button>` :
             '<span class="text-xs text-gray-500">Comprobante de destino no cargado</span>';
 
+        const destinationMarkup = buildUserDestinationMarkup(tx);
+
 
 
         card.innerHTML = `
@@ -2478,6 +2626,8 @@ function renderAdminTransactions(transactions) {
                 ${rateRow}
 
             </div>
+
+            ${destinationMarkup ? `<div class="space-y-2">${destinationMarkup}</div>` : ''}
 
             <div class="space-y-1 text-xs text-gray-600">
 
@@ -2581,6 +2731,16 @@ window.onload = function () {
 
     if (adminTransactionsList) adminTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
     if (historyContainer) historyContainer.addEventListener('click', handleTransactionHistoryClick);
+
+    if (usdtWalletInput) usdtWalletInput.addEventListener('input', scheduleUsdtDestinationPersist);
+    if (usdtNetworkSelect) usdtNetworkSelect.addEventListener('change', scheduleUsdtDestinationPersist);
+    if (usdtNotesInput) usdtNotesInput.addEventListener('input', scheduleUsdtDestinationPersist);
+
+    [vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput].forEach((input) => {
+        if (input) {
+            input.addEventListener('input', scheduleVesDestinationPersist);
+        }
+    });
 
     if (closeImageViewerButton) {
         closeImageViewerButton.addEventListener('click', closeImageViewer);
