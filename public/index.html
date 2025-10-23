@@ -584,7 +584,7 @@
 
                     <p class="text-gray-500 text-sm" id="loading-history">Cargando historial...</p>
 
-                    <!-- Las transacciones se cargarn aqu -->
+                    <!-- Las transacciones se cargarn aquí -->
 
                 </div>
 
@@ -628,9 +628,14 @@
             <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
                 <div>
                     <h3 class="text-lg font-bold text-gray-700 mb-3">Cuentas Disponibles para Transferencia (<span id="modal-transfer-currency">CLP</span>)</h3>
-                    <div id="admin-account-details-container" class="space-y-3 text-sm">
-                        <!-- Aqui se listaran todas las cuentas guardadas -->
-                        <p class="text-gray-500 text-sm" id="no-accounts-message">El administrador no ha configurado cuentas CLP.</p>
+                    <div class="space-y-3 text-sm">
+                        <select id="admin-account-select" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <option value="">-- Selecciona una cuenta --</option>
+                        </select>
+                        <p class="text-gray-500 text-sm hidden" id="no-accounts-message">El administrador no ha configurado cuentas CLP.</p>
+                        <div id="selected-admin-account-details" class="mt-3 p-3 bg-white border border-cyan-200 rounded-lg shadow-sm space-y-2 text-sm hidden">
+                            <!-- Los detalles de la cuenta seleccionada se mostrarán aquí -->
+                        </div>
                     </div>
                     <p id="modal-crypto-warning" class="text-red-500 text-xs mt-3 hidden">
                         Advertencia: si envias criptomonedas, el administrador compartira la direccion de la wallet una vez que confirmes la transferencia.
@@ -678,7 +683,7 @@
                         <p class="text-xs text-gray-500">Sube el comprobante de tu transferencia para validar la operacion y continuar con el pago.</p>
                         <div class="flex flex-col md:flex-row gap-3">
                             <input id="receipt-upload" type="file" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500" accept="image/*,.pdf">
-                            <button type="button" id="upload-receipt-button" class="px-4 py-2 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <button type="button" id="upload-receipt-button" class="px-3 py-1 bg-cyan-600 text-white text-xs font-semibold rounded-lg hover:bg-cyan-700 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
                                 Subir comprobante y confirmar orden
                             </button>
                         </div>
