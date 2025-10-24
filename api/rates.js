@@ -1,12 +1,9 @@
 const axios = require("axios");
 
-console.log("Executing api/rates.js"); // Log de ejecución
+console.log("Executing api/rates.js with CoinGecko API");
 
-// URL de la API de Binance para WLD/USDT (Spot)
-const BINANCE_SPOT_URL = "https://api.binance.com/api/v3/ticker/price?symbol=WLDUSDT";
-
-// URL de la API P2P pública de Bybit
-const BYBIT_P2P_URL = "https://api.bybit.com/fiat/v1/public/advertisement/query";
+// URL de la API de CoinGecko
+const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
 
 // Tasas de Referencia Fijas (Fallback)
 const FALLBACK_RATES = {
@@ -15,54 +12,38 @@ const FALLBACK_RATES = {
   VES_to_USDT_P2P: 36.00,
 };
 
-async function getBybitP2PRate(fiat) {
-  const payload = {
-    userId: "", 
-    asset: "USDT",
-    fiatCurrency: fiat,
-    payment: [], 
-    side: "1", 
-    size: "1", 
-    page: "1",
-    authMaker: false,
-  };
-
+/**
+ * Obtiene las tasas de cambio desde la API de CoinGecko.
+ * @returns {Promise<object|null>} Un objeto con las tasas o null si falla.
+ */
+async function getCoinGeckoRates() {
   try {
-    const response = await axios.post(BYBIT_P2P_URL, payload, {
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      timeout: 5000,
-    });
+    const params = {
+      ids: 'worldcoin,tether',
+      vs_currencies: 'usdt,clp,ves'
+    };
 
-    if (response.data?.code === "0" && response.data.result?.items?.length > 0) {
-      const rate = parseFloat(response.data.result.items[0].price);
-      return rate;
+    const response = await axios.get(COINGECKO_API_URL, { params, timeout: 5000 });
+    const data = response.data;
+
+    if (data && data.worldcoin && data.tether) {
+      return {
+        wld_usdt: data.worldcoin.usdt,
+        usdt_clp: data.tether.clp,
+        usdt_ves: data.tether.ves,
+      };
     }
     
-    console.warn(`No se encontraron ofertas P2P en Bybit para ${fiat}. Respuesta:`, response.data);
+    console.warn("Respuesta inesperada de CoinGecko API:", data);
     return null;
+
   } catch (error) {
-    console.error(`Error detallado al obtener tasa P2P de Bybit para ${fiat}:`, error);
+    console.error("Error detallado al obtener tasas de CoinGecko:", error.message);
     return null;
   }
 }
 
-async function getSpotRate() {
-  try {
-    const response = await axios.get(BINANCE_SPOT_URL, { timeout: 5000 });
-    if (response.data && response.data.price) {
-      return parseFloat(response.data.price);
-    }
-    console.warn("Respuesta inesperada de Binance Spot API:", response.data);
-    return null;
-  } catch (error) {
-    console.error("Error detallado al obtener WLD/USDT spot rate:", error);
-    return null;
-  }
-}
-
+// Función principal de Vercel Serverless
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Content-Type", "application/json");
@@ -74,27 +55,24 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const [spotPrice, clpRate, vesRate] = await Promise.all([
-      getSpotRate(),
-      getBybitP2PRate("CLP"),
-      getBybitP2PRate("VES"),
-    ]);
+    const coingeckoRates = await getCoinGeckoRates();
 
     const finalRates = {
       success: true,
-      WLD_to_USDT: spotPrice || FALLBACK_RATES.WLD_to_USDT,
-      USDT_to_CLP_P2P: clpRate || FALLBACK_RATES.USDT_to_CLP_P2P,
-      VES_to_USDT_P2P: vesRate || FALLBACK_RATES.VES_to_USDT_P2P,
+      WLD_to_USDT: coingeckoRates?.wld_usdt || FALLBACK_RATES.WLD_to_USDT,
+      USDT_to_CLP_P2P: coingeckoRates?.usdt_clp || FALLBACK_RATES.USDT_to_CLP_P2P,
+      VES_to_USDT_P2P: coingeckoRates?.usdt_ves || FALLBACK_RATES.VES_to_USDT_P2P,
       meta: {
-          wld_source: spotPrice ? 'Binance Spot' : 'Fallback',
-          clp_source: clpRate ? 'Bybit P2P' : 'Fallback',
-          ves_source: vesRate ? 'Bybit P2P' : 'Fallback',
+          wld_source: coingeckoRates?.wld_usdt ? 'CoinGecko' : 'Fallback',
+          clp_source: coingeckoRates?.usdt_clp ? 'CoinGecko' : 'Fallback',
+          ves_source: coingeckoRates?.usdt_ves ? 'CoinGecko' : 'Fallback',
       }
     };
 
     res.status(200).json(finalRates);
+
   } catch (error) {
-    console.error("Error general en la función de tasas:", error);
+    console.error("Error general en la función de tasas:", error.message);
     res.status(500).json({
       success: false,
       message: "Error al procesar tasas, usando valores de referencia.",
