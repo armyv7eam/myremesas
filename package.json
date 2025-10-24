@@ -6,9 +6,7 @@
     "axios": "^1.7.7"
   },
   "scripts": {
-    "build:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css",
-    "build:js": "node build.js",
-    "build": "npm run build:css && npm run build:js"
+    "build": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css"
   },
   "devDependencies": {
     "postcss": "^8",
