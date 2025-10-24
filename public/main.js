@@ -547,17 +547,25 @@ async function fetchDynamicRates() {
         const response = await fetch('/api/rates');
         if (!response.ok) throw new Error(`Respuesta de la API no fue exitosa: ${response.status}`);
         const data = await response.json();
+
         if (data?.success) {
-            liveRates.USDT_to_CLP = data.USDT_to_CLP_P2P;
-            liveRates.USDT_to_VES = data.VES_to_USDT_P2P; // CORREGIDO
-            liveRates.WLD_to_USDT = data.WLD_to_USDT;
-            wldUsdtDisplay.textContent = `WLD/USDT (spot): ${liveRates.WLD_to_USDT.toFixed(4)}`;
-            clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP`;
-            usdtClpP2pWldDisplay.textContent = `USDT/CLP: ${liveRates.USDT_to_CLP.toFixed(2)} CLP / USDT`;
-            vesUsdtP2pDisplay.textContent = `USDT/VES: 1 USDT = ${liveRates.USDT_to_VES.toFixed(2)} VES`;
-            rateFetchStatus.textContent = 'Tasas obtenidas de la API.';
+            const newClpRate = parseFloat(data.USDT_to_CLP_P2P);
+            if (!isNaN(newClpRate)) liveRates.USDT_to_CLP = newClpRate;
+
+            const newVesRate = parseFloat(data.VES_to_USDT_P2P);
+            if (!isNaN(newVesRate)) liveRates.USDT_to_VES = newVesRate;
+
+            const newWldRate = parseFloat(data.WLD_to_USDT);
+            if (!isNaN(newWldRate)) liveRates.WLD_to_USDT = newWldRate;
+            
+            wldUsdtDisplay.textContent = `WLD/USDT (${data.meta?.wld_source || '...'}): ${liveRates.WLD_to_USDT.toFixed(4)}`;
+            clpUsdtP2pDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP`;
+            usdtClpP2pWldDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): ${liveRates.USDT_to_CLP.toFixed(2)} CLP / USDT`;
+            vesUsdtP2pDisplay.textContent = `USDT/VES (${data.meta?.ves_source || '...'}): 1 USDT = ${liveRates.USDT_to_VES.toFixed(2)} VES`;
+            rateFetchStatus.textContent = 'Tasas actualizadas.';
+
         } else {
-            throw new Error("Respuesta de la API con formato inesperado.");
+            throw new Error(data.message || "Respuesta de la API con formato inesperado.");
         }
     } catch (error) {
         console.warn("Fallo en la conexión con la API. Usando tasas de referencia fijas.", error);
@@ -565,7 +573,7 @@ async function fetchDynamicRates() {
         clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP (Fijo)`;
         usdtClpP2pWldDisplay.textContent = `USDT/CLP: ${liveRates.USDT_to_CLP.toFixed(2)} CLP / USDT (Fijo)`;
         vesUsdtP2pDisplay.textContent = `USDT/VES: 1 USDT = ${liveRates.USDT_to_VES.toFixed(2)} VES (Fijo)`;
-        rateFetchStatus.textContent = 'Fallo de conexión. Usando tasas de Referencia Fijas.';
+        rateFetchStatus.textContent = 'Fallo de conexión. Usando tasas de Referencia.';
     }
     calculateExchange();
 }
