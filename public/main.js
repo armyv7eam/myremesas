@@ -549,7 +549,7 @@ async function fetchDynamicRates() {
         const data = await response.json();
         if (data?.success) {
             liveRates.USDT_to_CLP = data.USDT_to_CLP_P2P;
-            liveRates.USDT_to_VES = data.VES_to_USDT_P2P;
+            liveRates.USDT_to_VES = data.VES_to_USDT_P2P; // CORREGIDO
             liveRates.WLD_to_USDT = data.WLD_to_USDT;
             wldUsdtDisplay.textContent = `WLD/USDT (spot): ${liveRates.WLD_to_USDT.toFixed(4)}`;
             clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP`;
