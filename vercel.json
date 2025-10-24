@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/rates.js": {
-      "runtime": "nodejs18.x"
+      "runtime": "node@18.x"
     }
   },
   "rewrites": [
