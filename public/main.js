@@ -469,7 +469,7 @@ async function saveAdminAccounts() {
     saveAccountsButton.disabled = true;
     saveAccountsButton.textContent = 'Guardando...';
     try {
-        const collectionPath = `admin_accounts`;
+        const collectionPath = `artifacts/${appId}/public/data/admin_accounts`;
         await addDoc(collection(db, collectionPath), { ...accountData, updatedBy: userId, timestamp: serverTimestamp() });
         adminBankNameInput.value = '';
         adminAccountHolderInput.value = 'Ender Javier Piña Rojas';
@@ -493,7 +493,7 @@ async function deleteAdminAccount(docId, accountName) {
         return;
     }
     try {
-        const collectionPath = `admin_accounts`;
+        const collectionPath = `artifacts/${appId}/public/data/admin_accounts`;
         await deleteDoc(doc(db, collectionPath, docId));
         accountStatus.textContent = `Cuenta ${accountName} eliminada correctamente.`;
     } catch (error) {
@@ -504,7 +504,7 @@ async function deleteAdminAccount(docId, accountName) {
 
 function setupAdminAccountsListener() {
     if (!isAuthReady || !db) return;
-    const collectionPath = `admin_accounts`;
+    const collectionPath = `artifacts/${appId}/public/data/admin_accounts`;
     const q = query(collection(db, collectionPath));
     onSnapshot(q, (snapshot) => {
         adminAccounts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -655,7 +655,7 @@ async function recordTransaction(amountSend, currencySend, amountReceive, curren
         ...extraData
     };
     try {
-        const collectionPath = `users/${userId}/transactions`;
+        const collectionPath = `artifacts/${appId}/users/${userId}/transactions`;
         const docRef = await addDoc(collection(db, collectionPath), transactionData);
         return { id: docRef.id, path: `${collectionPath}/${docRef.id}` };
     } catch (error) {
@@ -666,7 +666,7 @@ async function recordTransaction(amountSend, currencySend, amountReceive, curren
 
 function setupTransactionListener() {
     if (!isAuthReady || !db || !userId) return;
-    const collectionPath = `users/${userId}/transactions`;
+    const collectionPath = `artifacts/${appId}/users/${userId}/transactions`;
     const q = query(collection(db, collectionPath));
     onSnapshot(q, (snapshot) => {
         const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -823,7 +823,8 @@ function setupAdminTransactionsListener() {
     if (adminTransactionsUnsubscribe) adminTransactionsUnsubscribe();
     const transactionsQuery = collectionGroup(db, 'transactions');
     adminTransactionsUnsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
-        const transactions = snapshot.docs            
+        const transactions = snapshot.docs
+            .filter(docSnap => docSnap.ref.path.includes(`artifacts/${appId}/`))
             .map(docSnap => ({ id: docSnap.id, path: docSnap.ref.path, ...docSnap.data() }));
         transactions.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
         renderAdminTransactions(transactions);
