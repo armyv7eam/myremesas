@@ -18,8 +18,10 @@ const FALLBACK_RATES = {
  */
 async function getCriptoYaP2PRate(fiat) {
   try {
+    // URL CORREGIDA: El formato es /api/{exchange}/{coin_to_buy}/{fiat_to_pay_with}/{volume}
     const url = `${CRIPTOYA_API_BASE_URL}/binance/usdt/${fiat.toLowerCase()}/1`;
     const response = await axios.get(url, { timeout: 7000 });
+    // CriptoYa devuelve el precio de COMPRA (ask) para el usuario.
     if (response.data && response.data.ask) {
       return response.data.ask;
     }
@@ -32,7 +34,7 @@ async function getCriptoYaP2PRate(fiat) {
 }
 
 /**
- * Obtiene todas las tasas de mercado desde la API de CoinGecko como respaldo.
+ * Obtiene las tasas de mercado desde la API de CoinGecko como respaldo.
  */
 async function getCoinGeckoBackupRates() {
   try {
