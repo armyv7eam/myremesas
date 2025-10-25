@@ -6,6 +6,7 @@ console.log("Executing api/rates.js with Final Hybrid API (CriptoYa + CoinGecko)
 const CRIPTOYA_API_BASE_URL = "https://criptoya.com/api";
 const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
 const BINANCE_SPOT_PRICE_URL = "https://api.binance.com/api/v3/ticker/price";
+const BYBIT_TICKER_URL = "https://api.bybit.com/v5/market/tickers";
 
 // Tasas de Referencia Fijas (Fallback)
 const FALLBACK_RATES = {
@@ -51,7 +52,37 @@ async function getBinanceSpotRate(symbol) {
     console.warn(`Respuesta inesperada de Binance para ${symbol}:`, response.data);
     return null;
   } catch (error) {
-    console.error(`Error al obtener tasa spot de Binance para ${symbol}:`, error.message);
+    const status = error.response?.status;
+    const suffix = status ? ` (HTTP ${status})` : "";
+    console.error(`Error al obtener tasa spot de Binance para ${symbol}: ${error.message}${suffix}`);
+    if (status === 451) {
+      console.warn("Binance rechaza la solicitud por restricciones geográficas. Intentando otra fuente.");
+    }
+    return null;
+  }
+}
+
+/**
+ * Obtiene el precio spot WLD/USDT desde Bybit.
+ */
+async function getBybitSpotRate(symbol) {
+  try {
+    const response = await axios.get(BYBIT_TICKER_URL, {
+      params: { category: "spot", symbol },
+      timeout: 7000,
+    });
+
+    const ticker = response.data?.result?.list?.[0];
+    if (ticker?.lastPrice) {
+      return parseFloat(ticker.lastPrice);
+    }
+
+    console.warn(`Respuesta inesperada de Bybit para ${symbol}:`, response.data);
+    return null;
+  } catch (error) {
+    const status = error.response?.status;
+    const suffix = status ? ` (HTTP ${status})` : "";
+    console.error(`Error al obtener tasa spot de Bybit para ${symbol}: ${error.message}${suffix}`);
     return null;
   }
 }
@@ -64,15 +95,30 @@ async function getCoinGeckoBackupRates() {
     const params = { ids: 'worldcoin,tether', vs_currencies: 'usdt,clp,ves' };
     const response = await axios.get(COINGECKO_API_URL, { params, timeout: 7000 });
     const data = response.data;
-    if (data && data.worldcoin?.usdt && data.tether?.clp && data.tether?.ves) {
-      return {
-        wld_usdt: data.worldcoin.usdt,
-        usdt_clp: data.tether.clp,
-        usdt_ves: data.tether.ves,
-      };
+    if (!data) {
+      console.warn("CoinGecko devolvió una respuesta vacía.");
+      return null;
     }
-    console.warn("Respuesta inesperada de CoinGecko:", data);
-    return null;
+
+    let wldUsdt = data.worldcoin?.usdt ?? null;
+    const usdtClp = data.tether?.clp ?? null;
+    const usdtVes = data.tether?.ves ?? null;
+
+    // Si CoinGecko no entrega WLD/USDT directo, intenta derivarlo desde CLP.
+    if (!wldUsdt && data.worldcoin?.clp && usdtClp) {
+      wldUsdt = data.worldcoin.clp / usdtClp;
+    }
+
+    if (!wldUsdt && !usdtClp && !usdtVes) {
+      console.warn("CoinGecko no entregó suficientes datos para tasas de respaldo:", data);
+      return null;
+    }
+
+    return {
+      wld_usdt: wldUsdt,
+      usdt_clp: usdtClp,
+      usdt_ves: usdtVes,
+    };
   } catch (error) {
     console.error("Error al obtener tasas de CoinGecko:", error.message);
     return null;
@@ -91,20 +137,31 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const [clpRateCriptoYa, vesRateCriptoYa, wldRateBinance, backupRatesCoinGecko] = await Promise.all([
+    const [
+      clpRateCriptoYa,
+      vesRateCriptoYa,
+      wldRateBinance,
+      wldRateBybit,
+      backupRatesCoinGecko,
+    ] = await Promise.all([
       getCriptoYaP2PRate("clp"),
       getCriptoYaP2PRate("ves"),
       getBinanceSpotRate("WLDUSDT"),
+      getBybitSpotRate("WLDUSDT"),
       getCoinGeckoBackupRates(),
     ]);
 
     const finalRates = {
       success: true,
-      WLD_to_USDT: wldRateBinance || backupRatesCoinGecko?.wld_usdt || FALLBACK_RATES.WLD_to_USDT,
+      WLD_to_USDT: wldRateBinance || wldRateBybit || backupRatesCoinGecko?.wld_usdt || FALLBACK_RATES.WLD_to_USDT,
       USDT_to_CLP_P2P: clpRateCriptoYa || backupRatesCoinGecko?.usdt_clp || FALLBACK_RATES.USDT_to_CLP_P2P,
       VES_to_USDT_P2P: vesRateCriptoYa || backupRatesCoinGecko?.usdt_ves || FALLBACK_RATES.VES_to_USDT_P2P,
       meta: {
-          wld_source: wldRateBinance ? 'Binance Spot' : (backupRatesCoinGecko?.wld_usdt ? 'CoinGecko' : 'Fallback'),
+          wld_source: wldRateBinance
+            ? 'Binance Spot'
+            : (wldRateBybit
+                ? 'Bybit Spot'
+                : (backupRatesCoinGecko?.wld_usdt ? 'CoinGecko' : 'Fallback')),
           clp_source: clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback'),
           ves_source: vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback'),
       }
