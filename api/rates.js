@@ -18,8 +18,8 @@ const FALLBACK_RATES = {
  */
 async function getCriptoYaP2PRate(fiat) {
   try {
-    // URL CORREGIDA: El formato es /api/{exchange}/{coin_to_buy}/{fiat_to_pay_with}/{volume}
-    const url = `${CRIPTOYA_API_BASE_URL}/binance/usdt/${fiat.toLowerCase()}/1`;
+    // URL CORRECTA: /api/binancep2p/{coin_to_buy}/{fiat_to_pay_with}/{volume}
+    const url = `${CRIPTOYA_API_BASE_URL}/binancep2p/usdt/${fiat.toLowerCase()}/1`;
     const response = await axios.get(url, { timeout: 7000 });
     // CriptoYa devuelve el precio de COMPRA (ask) para el usuario.
     if (response.data && response.data.ask) {
