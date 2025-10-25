@@ -5,6 +5,7 @@ console.log("Executing api/rates.js with Final Hybrid API (CriptoYa + CoinGecko)
 // URLs de las APIs
 const CRIPTOYA_API_BASE_URL = "https://criptoya.com/api";
 const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
+const BINANCE_SPOT_PRICE_URL = "https://api.binance.com/api/v3/ticker/price";
 
 // Tasas de Referencia Fijas (Fallback)
 const FALLBACK_RATES = {
@@ -29,6 +30,28 @@ async function getCriptoYaP2PRate(fiat) {
     return null;
   } catch (error) {
     console.error(`Error al obtener tasa de CriptoYa para ${fiat}:`, error.message);
+    return null;
+  }
+}
+
+/**
+ * Obtiene el precio spot WLD/USDT desde Binance.
+ */
+async function getBinanceSpotRate(symbol) {
+  try {
+    const response = await axios.get(BINANCE_SPOT_PRICE_URL, {
+      params: { symbol },
+      timeout: 7000,
+    });
+
+    if (response.data?.price) {
+      return parseFloat(response.data.price);
+    }
+
+    console.warn(`Respuesta inesperada de Binance para ${symbol}:`, response.data);
+    return null;
+  } catch (error) {
+    console.error(`Error al obtener tasa spot de Binance para ${symbol}:`, error.message);
     return null;
   }
 }
@@ -68,19 +91,20 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const [clpRateCriptoYa, vesRateCriptoYa, backupRatesCoinGecko] = await Promise.all([
+    const [clpRateCriptoYa, vesRateCriptoYa, wldRateBinance, backupRatesCoinGecko] = await Promise.all([
       getCriptoYaP2PRate("clp"),
       getCriptoYaP2PRate("ves"),
+      getBinanceSpotRate("WLDUSDT"),
       getCoinGeckoBackupRates(),
     ]);
 
     const finalRates = {
       success: true,
-      WLD_to_USDT: backupRatesCoinGecko?.wld_usdt || FALLBACK_RATES.WLD_to_USDT,
+      WLD_to_USDT: wldRateBinance || backupRatesCoinGecko?.wld_usdt || FALLBACK_RATES.WLD_to_USDT,
       USDT_to_CLP_P2P: clpRateCriptoYa || backupRatesCoinGecko?.usdt_clp || FALLBACK_RATES.USDT_to_CLP_P2P,
       VES_to_USDT_P2P: vesRateCriptoYa || backupRatesCoinGecko?.usdt_ves || FALLBACK_RATES.VES_to_USDT_P2P,
       meta: {
-          wld_source: backupRatesCoinGecko?.wld_usdt ? 'CoinGecko' : 'Fallback',
+          wld_source: wldRateBinance ? 'Binance Spot' : (backupRatesCoinGecko?.wld_usdt ? 'CoinGecko' : 'Fallback'),
           clp_source: clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback'),
           ves_source: vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback'),
       }
