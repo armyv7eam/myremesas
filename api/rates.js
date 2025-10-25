@@ -14,7 +14,6 @@ const FALLBACK_RATES = {
 
 /**
  * Obtiene todas las tasas de cambio necesarias desde la API de CoinGecko.
- * @returns {Promise<object|null>} Un objeto con las tasas o null si falla.
  */
 async function getCoinGeckoAllRates() {
   try {
@@ -23,7 +22,10 @@ async function getCoinGeckoAllRates() {
       vs_currencies: 'usdt,clp,ves'
     };
 
-    const response = await axios.get(COINGECKO_API_URL, { params, timeout: 5000 });
+    console.log("Iniciando llamada a CoinGecko...");
+    const response = await axios.get(COINGECKO_API_URL, { params, timeout: 9000 }); // Timeout aumentado a 9 segundos
+    console.log("Llamada a CoinGecko completada. Procesando datos...");
+
     const data = response.data;
 
     if (data && data.worldcoin && data.tether) {
