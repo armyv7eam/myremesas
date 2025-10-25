@@ -2,7 +2,7 @@
 
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel, deleteDoc, setDoc, updateDoc, collectionGroup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel, deleteDoc, setDoc, updateDoc, collectionGroup, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -176,8 +176,8 @@ async function initializeFirebase() {
                 isAuthReady = true;
                 const isAdminUser = ADMIN_UIDS.includes(userId);
                 isCurrentUserAdmin = isAdminUser;
+                setupMarginConfigListener();
                 if (isAdminUser) {
-                    setupMarginConfigListener();
                     adminToggleContainer.classList.remove('hidden');
                     setupAdminTransactionsListener();
                     if (orderCreationSection) orderCreationSection.classList.add('hidden');
@@ -197,6 +197,10 @@ async function initializeFirebase() {
                 if (user && user.isAnonymous) {
                     await signOut(auth);
                 }
+                if (marginConfigUnsubscribe) {
+                    marginConfigUnsubscribe();
+                    marginConfigUnsubscribe = null;
+                }
                 userId = null;
                 isCurrentUserAdmin = false;
                 if(authStatus) authStatus.textContent = "Por favor, inicie sesión o regístrese.";
@@ -209,6 +213,8 @@ async function initializeFirebase() {
                 if (adminTransactionsSection) adminTransactionsSection.classList.add('hidden');
                 authContainer.classList.remove('hidden');
                 appContainer.classList.add('hidden');
+                marginConfig = { ...DEFAULT_MARGIN_CONFIG };
+                applyMarginConfigToUI();
             }
         });
     } catch (error) {
@@ -686,6 +692,25 @@ function setupTransactionListener() {
     });
 }
 
+function getStatusBadgeClasses(status) {
+    switch (status) {
+        case 'Pendiente':
+            return 'bg-orange-100 text-orange-800';
+        case 'Completado':
+            return 'bg-green-100 text-green-800';
+        case 'Cancelada':
+            return 'bg-gray-200 text-gray-700';
+        case 'Sin comprobante':
+            return 'bg-blue-100 text-blue-800';
+        default:
+            return 'bg-gray-100 text-gray-700';
+    }
+}
+
+function canCancelTransaction(status) {
+    return status === 'Sin comprobante' || status === 'Pendiente';
+}
+
 function renderTransactionHistory(transactions) {
     historyContainer.innerHTML = '';
     if (transactions.length === 0) {
@@ -696,14 +721,68 @@ function renderTransactionHistory(transactions) {
         const date = tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleDateString() : 'Cargando...';
         const time = tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleTimeString() : '';
         const item = document.createElement('div');
-        item.className = 'p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm';
+        item.className = 'p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-1';
+        item.setAttribute('data-transaction-id', tx.id || '');
+        const badgeClasses = getStatusBadgeClasses(tx.status);
+        const cancelButtonMarkup = canCancelTransaction(tx.status)
+            ? `<button class="cancel-transaction-btn inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold text-red-600 border border-red-200 rounded-md bg-white hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-300" data-transaction-id="${escapeHtml(tx.id || '')}">Cancelar orden</button>`
+            : '';
         item.innerHTML = `
             <p class="font-bold text-gray-800">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
             <p class="text-xs text-gray-500 mt-1">Tasa: ${tx.rateApplied ? tx.rateApplied.toFixed(4) : 'N/A'} | ${date} ${time}</p>
-            <span class="inline-block mt-2 px-2 py-0.5 text-xs font-semibold rounded-full ${tx.status === 'Pendiente' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'}">${tx.status}</span>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${badgeClasses}">${escapeHtml(tx.status || 'N/A')}</span>
+                ${cancelButtonMarkup}
+            </div>
         `;
         historyContainer.appendChild(item);
     });
+}
+
+async function cancelUserTransaction(transactionId) {
+    if (!transactionId || !db || !userId) throw new Error('Transacción no disponible.');
+    const transactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', transactionId);
+    const transactionSnap = await getDoc(transactionRef);
+    if (!transactionSnap.exists()) {
+        throw new Error('La orden no existe.');
+    }
+    const data = transactionSnap.data();
+    if (data.status === 'Completado') {
+        throw new Error('La orden ya fue completada.');
+    }
+    if (data.status === 'Cancelada') {
+        return;
+    }
+    await updateDoc(transactionRef, {
+        status: 'Cancelada',
+        cancelledAt: serverTimestamp(),
+    });
+}
+
+async function handleHistoryContainerClick(event) {
+    const cancelButton = event.target.closest('.cancel-transaction-btn');
+    if (!cancelButton) return;
+    const transactionId = cancelButton.dataset.transactionId;
+    if (!transactionId) return;
+    const confirmed = window.confirm('¿Deseas cancelar esta orden? Esta acción no se puede deshacer.');
+    if (!confirmed) return;
+    const originalText = cancelButton.textContent;
+    cancelButton.disabled = true;
+    cancelButton.textContent = 'Cancelando...';
+    const previousOpacity = cancelButton.style.opacity;
+    cancelButton.style.opacity = '0.6';
+    try {
+        await cancelUserTransaction(transactionId);
+        cancelButton.textContent = 'Cancelada';
+        cancelButton.style.opacity = previousOpacity || '';
+        cancelButton.classList.add('bg-gray-100', 'border-gray-200', 'text-gray-500', 'cursor-not-allowed');
+    } catch (error) {
+        console.error('Error al cancelar la orden:', error);
+        alert(`No se pudo cancelar la orden: ${error.message}`);
+        cancelButton.disabled = false;
+        cancelButton.textContent = originalText;
+        cancelButton.style.opacity = previousOpacity || '';
+    }
 }
 
 async function showPaymentModal() {
@@ -726,7 +805,14 @@ async function showPaymentModal() {
     if (receiptUploadInput) receiptUploadInput.value = '';
     const rates = calculateFullRatesInternal();
     const rate = rates[`${currencySend}_to_${currencyReceive}`] || 0;
-    const transactionRecord = await recordTransaction(amountSend, currencySend, amountSend * rate, currencyReceive);
+    const extraMetadata = {};
+    if (auth?.currentUser?.email) {
+        extraMetadata.userEmail = auth.currentUser.email;
+    }
+    if (auth?.currentUser?.displayName) {
+        extraMetadata.userDisplayName = auth.currentUser.displayName;
+    }
+    const transactionRecord = await recordTransaction(amountSend, currencySend, amountSend * rate, currencyReceive, extraMetadata);
     if (!transactionRecord) {
         console.error('No se pudo registrar la transacción.');
         return;
@@ -862,15 +948,19 @@ function createAdminTransactionCard(tx) {
     const card = document.createElement('div');
     card.className = 'admin-transaction-card border border-yellow-200 bg-white rounded-lg p-4 space-y-3 shadow-sm';
     card.setAttribute('data-transaction-path', tx.path);
+    const statusBadgeClass = getStatusBadgeClasses(tx.status);
+    const ownerLabel = tx.userEmail || tx.userDisplayName || tx.userId || 'N/A';
     const isCompleted = tx.status === 'Completado';
-    const badgeClass = isCompleted ? 'bg-green-100 text-green-700' : tx.status === 'Pendiente' ? 'bg-orange-100 text-orange-700' : 'bg-gray-200 text-gray-600';
     card.innerHTML = `
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
-            <div>
+            <div class="space-y-1">
                 <p class="text-sm font-semibold text-gray-800">Orden ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}</p>
-                <p class="text-xs text-gray-500">Usuario: ${escapeHtml(tx.userId || 'N/A')}</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center px-2 py-0.5 font-semibold uppercase tracking-wide bg-cyan-100 text-cyan-700 rounded-full" style="font-size:0.65rem;">Cliente</span>
+                    <span class="text-xs text-gray-600" style="word-break:break-word;" title="${escapeHtml(ownerLabel)}">${escapeHtml(ownerLabel)}</span>
+                </div>
             </div>
-            <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
+            <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${statusBadgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
         </div>
         <div class="space-y-2">
             ${createCopyRow('Monto enviado', formatCurrency(tx.amountSend || 0, tx.currencySend || 'CLP'))}
@@ -885,7 +975,7 @@ function createAdminTransactionCard(tx) {
             <label class="block text-xs font-semibold text-gray-700 mb-2">Subir comprobante de destino</label>
             <div class="flex flex-col md:flex-row gap-3">
                 <input type="file" class="admin-receipt-input flex-1 text-sm border rounded-lg px-3 py-2" accept="image/*,.pdf" ${isCompleted ? 'disabled' : ''}>
-                <button class="admin-upload-btn px-4 py-2 bg-yellow-600 text-white text-sm font-semibold rounded-lg" ${isCompleted ? 'disabled' : ''}>${isCompleted ? 'Completada' : 'Subir y Completar'}</button>
+                <button class="admin-upload-btn inline-flex items-center justify-center px-3 py-2 bg-yellow-600 text-white text-xs font-semibold rounded-lg text-center" ${isCompleted ? 'disabled' : ''} style="white-space:normal;">${isCompleted ? 'Completada' : 'Subir y Completar'}</button>
             </div>
             <p class="admin-upload-status text-xs mt-2 hidden"></p>
         </div>
@@ -962,6 +1052,7 @@ function registerStaticEventListeners() {
     if (currencySendSelect) currencySendSelect.addEventListener('change', () => calculateExchange());
     if (currencyReceiveSelect) currencyReceiveSelect.addEventListener('change', () => calculateExchange());
     if (swapButton) swapButton.addEventListener('click', () => { swapCurrencies(); calculateExchange(); });
+    if (historyContainer) historyContainer.addEventListener('click', handleHistoryContainerClick);
     if (toggleAdminButton) toggleAdminButton.addEventListener('click', () => {
         const isHidden = adminPanel.classList.toggle('hidden');
         toggleAdminButton.textContent = isHidden ? 'Mostrar Panel' : 'Ocultar Panel';
