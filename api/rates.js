@@ -1,9 +1,10 @@
 const axios = require("axios");
 
-console.log("Executing api/rates.js with CoinGecko API");
+console.log("Executing api/rates.js with Hybrid API (CoinGecko + Binance)");
 
-// URL de la API de CoinGecko
+// URLs de las APIs
 const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
+const BINANCE_SPOT_URL = "https://api.binance.com/api/v3/ticker/price?symbol=WLDUSDT";
 
 // Tasas de Referencia Fijas (Fallback)
 const FALLBACK_RATES = {
@@ -13,32 +14,41 @@ const FALLBACK_RATES = {
 };
 
 /**
- * Obtiene las tasas de cambio desde la API de CoinGecko.
- * @returns {Promise<object|null>} Un objeto con las tasas o null si falla.
+ * Obtiene las tasas de cambio de monedas fiat desde la API de CoinGecko.
  */
-async function getCoinGeckoRates() {
+async function getCoinGeckoFiatRates() {
   try {
-    const params = {
-      ids: 'worldcoin,tether',
-      vs_currencies: 'usdt,clp,ves'
-    };
-
+    const params = { ids: 'tether', vs_currencies: 'clp,ves' };
     const response = await axios.get(COINGECKO_API_URL, { params, timeout: 5000 });
     const data = response.data;
 
-    if (data && data.worldcoin && data.tether) {
+    if (data && data.tether) {
       return {
-        wld_usdt: data.worldcoin.usdt,
         usdt_clp: data.tether.clp,
         usdt_ves: data.tether.ves,
       };
     }
-    
-    console.warn("Respuesta inesperada de CoinGecko API:", data);
+    console.warn("Respuesta inesperada de CoinGecko API para tasas fiat:", data);
     return null;
-
   } catch (error) {
-    console.error("Error detallado al obtener tasas de CoinGecko:", error.message);
+    console.error("Error detallado al obtener tasas fiat de CoinGecko:", error.message);
+    return null;
+  }
+}
+
+/**
+ * Obtiene el precio de WLD/USDT desde la API Spot de Binance.
+ */
+async function getBinanceSpotRate() {
+  try {
+    const response = await axios.get(BINANCE_SPOT_URL, { timeout: 5000 });
+    if (response.data && response.data.price) {
+      return parseFloat(response.data.price);
+    }
+    console.warn("Respuesta inesperada de Binance Spot API:", response.data);
+    return null;
+  } catch (error) {
+    console.error("Error detallado al obtener WLD/USDT spot rate de Binance:", error.message, error.response?.data);
     return null;
   }
 }
@@ -55,17 +65,20 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const coingeckoRates = await getCoinGeckoRates();
+    const [fiatRates, spotPrice] = await Promise.all([
+      getCoinGeckoFiatRates(),
+      getBinanceSpotRate(),
+    ]);
 
     const finalRates = {
       success: true,
-      WLD_to_USDT: coingeckoRates?.wld_usdt || FALLBACK_RATES.WLD_to_USDT,
-      USDT_to_CLP_P2P: coingeckoRates?.usdt_clp || FALLBACK_RATES.USDT_to_CLP_P2P,
-      VES_to_USDT_P2P: coingeckoRates?.usdt_ves || FALLBACK_RATES.VES_to_USDT_P2P,
+      WLD_to_USDT: spotPrice || FALLBACK_RATES.WLD_to_USDT,
+      USDT_to_CLP_P2P: fiatRates?.usdt_clp || FALLBACK_RATES.USDT_to_CLP_P2P,
+      VES_to_USDT_P2P: fiatRates?.usdt_ves || FALLBACK_RATES.VES_to_USDT_P2P,
       meta: {
-          wld_source: coingeckoRates?.wld_usdt ? 'CoinGecko' : 'Fallback',
-          clp_source: coingeckoRates?.usdt_clp ? 'CoinGecko' : 'Fallback',
-          ves_source: coingeckoRates?.usdt_ves ? 'CoinGecko' : 'Fallback',
+          wld_source: spotPrice ? 'Binance Spot' : 'Fallback',
+          clp_source: fiatRates?.usdt_clp ? 'CoinGecko' : 'Fallback',
+          ves_source: fiatRates?.usdt_ves ? 'CoinGecko' : 'Fallback',
       }
     };
 
