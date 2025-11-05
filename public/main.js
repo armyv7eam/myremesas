@@ -1385,9 +1385,9 @@ function escapeHtml(value) {
 
 function createCopyRow(label, value) {
     return `
-        <div class="flex items-center justify-between gap-2 py-1">
+        <div class="flex items-center justify-between gap-1.5">
             <span class="text-xs md:text-sm text-gray-600">${escapeHtml(label)}: <span class="font-semibold text-gray-900">${escapeHtml(value)}</span></span>
-            <button class="copy-btn btn btn-ghost btn-sm" data-copy="${escapeHtml(`${label}: ${value}`)}">Copiar</button>
+            <button class="copy-btn btn btn-ghost btn-sm shrink-0" data-copy="${escapeHtml(`${label}: ${value}`)}">Copiar</button>
         </div>
     `;
 }
