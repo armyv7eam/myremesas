@@ -447,6 +447,20 @@
 
             <h2 class="text-xl font-semibold mb-4 text-yellow-800">Panel de Configuración</h2>
 
+            <div id="binance-balance-card" class="hidden mb-6">
+                <div class="p-4 bg-white border border-cyan-200 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700">Saldo disponible Binance (USDT)</p>
+                        <p id="usdt-balance-display" class="text-2xl font-bold text-gray-900 mt-1">--</p>
+                        <p id="usdt-balance-status" class="text-xs text-gray-500 mt-1 hidden"></p>
+                    </div>
+                    <button id="refresh-usdt-balance" class="btn btn-outline btn-sm self-start sm:self-center">
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+
+
             
 
             <!-- SECCIN 1: TASAS DE MERCADO (SOLO LECTURA) -->
@@ -660,11 +674,11 @@
         <!-- Contenedor Principal: Calculadora y Historial -->
 
         <div id="order-creation-section">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
 
                 <!-- Columna 1 & 2: Calculadora de Intercambio -->
 
-                <div class="lg:col-span-2 p-6 bg-white rounded-xl card-shadow">
+                <div class="lg:col-span-3 p-6 bg-white rounded-xl card-shadow">
 
                     <h2 class="text-2xl font-semibold mb-6 text-gray-800">Calculadora de Intercambio</h2>
 
@@ -778,11 +792,11 @@
 
             <!-- Columna 3: Historial de Transacciones (Firebase Firestore) -->
 
-            <div class="lg:col-span-1 p-6 bg-white rounded-xl card-shadow">
+            <div class="lg:col-span-2 p-6 bg-white rounded-xl card-shadow">
 
                 <h2 class="text-2xl font-semibold mb-6 text-gray-800">Historial de Transacciones</h2>
 
-                <div id="transaction-history" class="space-y-3 h-96 overflow-y-auto pr-2">
+                <div id="transaction-history" class="space-y-3 h-96 lg:h-[32rem] overflow-y-auto pr-2">
 
                     <p class="text-gray-500 text-sm" id="loading-history">Cargando historial...</p>
 

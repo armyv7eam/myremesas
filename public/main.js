@@ -46,7 +46,7 @@ let marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 let marginConfigUnsubscribe = null;
 
 // --- DECLARACIN DE VARIABLES DEL DOM ---
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails;
+let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails, binanceBalanceCard, usdtBalanceDisplay, refreshUsdtBalanceButton, usdtBalanceStatus;
 
 let currentTransactionId = null;
 let currentTransactionPath = null;
@@ -127,6 +127,10 @@ function initializeDOM() {
     vesNotesInput = document.getElementById('ves-notes-input');
     adminAccountSelect = document.getElementById('admin-account-select');
     selectedAdminAccountDetails = document.getElementById('selected-admin-account-details');
+    binanceBalanceCard = document.getElementById('binance-balance-card');
+    usdtBalanceDisplay = document.getElementById('usdt-balance-display');
+    refreshUsdtBalanceButton = document.getElementById('refresh-usdt-balance');
+    usdtBalanceStatus = document.getElementById('usdt-balance-status');
     if (paymentButton) paymentButton.type = 'button';
     applyMarginConfigToUI();
     authContainer = document.getElementById('auth-container');
@@ -180,12 +184,17 @@ async function initializeFirebase() {
                 setupMarginConfigListener();
                 if (isAdminUser) {
                     adminToggleContainer.classList.remove('hidden');
+                    toggleBinanceBalanceCard(true);
+                    refreshBinanceBalance().catch(error => console.error('Error inicial al obtener saldo Binance:', error));
                     setupAdminTransactionsListener();
                     if (orderCreationSection) orderCreationSection.classList.add('hidden');
                 } else {
                     if (orderCreationSection) orderCreationSection.classList.remove('hidden');
                     marginConfig = { ...DEFAULT_MARGIN_CONFIG };
                     applyMarginConfigToUI();
+                    toggleBinanceBalanceCard(false);
+                    setUsdtBalanceStatus('', false);
+                    if (usdtBalanceDisplay) usdtBalanceDisplay.textContent = '--';
                     if (adminTransactionsSection) {
                         adminTransactionsSection.classList.add('hidden');
                         if (adminPendingTransactionsList) adminPendingTransactionsList.innerHTML = '';
@@ -216,6 +225,9 @@ async function initializeFirebase() {
                 appContainer.classList.add('hidden');
                 marginConfig = { ...DEFAULT_MARGIN_CONFIG };
                 applyMarginConfigToUI();
+                toggleBinanceBalanceCard(false);
+                setUsdtBalanceStatus('', false);
+                if (usdtBalanceDisplay) usdtBalanceDisplay.textContent = '--';
                 currentTransactionId = null;
                 currentTransactionPath = null;
                 currentTransactionRef = null;
@@ -673,7 +685,7 @@ function renderAdminAccountsList() {
         const item = document.createElement('div');
         item.className = 'p-4 bg-white border border-yellow-200 rounded-lg space-y-3 text-sm text-left shadow-sm';
         item.innerHTML = `
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1">
                 <div>
                     <p class="text-sm font-semibold text-gray-800">${account.bankName}</p>
                     <p class="text-xs text-gray-500">${account.accountType}</p>
@@ -1385,7 +1397,7 @@ function escapeHtml(value) {
 
 function createCopyRow(label, value) {
     return `
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center justify-between gap-1 py-0.5">
             <span class="text-xs md:text-sm text-gray-600">${escapeHtml(label)}: <span class="font-semibold text-gray-900">${escapeHtml(value)}</span></span>
             <button class="copy-btn btn btn-ghost btn-sm shrink-0" data-copy="${escapeHtml(`${label}: ${value}`)}">Copiar</button>
         </div>
@@ -1414,6 +1426,9 @@ function registerStaticEventListeners() {
     if (selectedAdminAccountDetails) selectedAdminAccountDetails.addEventListener('click', (event) => {
         const button = event.target.closest('.copy-btn');
         if (button) copyToClipboard(button.dataset.copy, button);
+    });
+    if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.addEventListener('click', () => {
+        refreshBinanceBalance().catch(error => console.error('Error al actualizar saldo Binance:', error));
     });
     if (closeImageViewerButton) closeImageViewerButton.addEventListener('click', () => closeReceiptViewer());
     if (imageViewerModal) imageViewerModal.addEventListener('click', (event) => {
@@ -1445,6 +1460,74 @@ function handleSavedAccountsListClick(event) {
     const copyButton = event.target.closest('.copy-btn');
     if (copyButton) {
         copyToClipboard(copyButton.dataset.copy, copyButton);
+    }
+}
+
+function toggleBinanceBalanceCard(isVisible) {
+    if (!binanceBalanceCard) return;
+    binanceBalanceCard.classList.toggle('hidden', !isVisible);
+}
+
+function setUsdtBalanceStatus(message, isError = false) {
+    if (!usdtBalanceStatus) return;
+    if (!message) {
+        usdtBalanceStatus.textContent = '';
+        usdtBalanceStatus.classList.add('hidden');
+        usdtBalanceStatus.classList.remove('text-red-600');
+        usdtBalanceStatus.classList.add('text-gray-500');
+        return;
+    }
+    usdtBalanceStatus.textContent = message;
+    usdtBalanceStatus.classList.remove('hidden');
+    if (isError) {
+        usdtBalanceStatus.classList.add('text-red-600');
+        usdtBalanceStatus.classList.remove('text-gray-500');
+    } else {
+        usdtBalanceStatus.classList.add('text-gray-500');
+        usdtBalanceStatus.classList.remove('text-red-600');
+    }
+}
+
+async function refreshBinanceBalance() {
+    if (!isCurrentUserAdmin || !binanceBalanceCard) return;
+    toggleBinanceBalanceCard(true);
+    setUsdtBalanceStatus('Consultando saldo...', false);
+    if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.disabled = true;
+    try {
+        const response = await fetch('/api/binance-balance?asset=USDT');
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success) {
+            throw new Error(payload.message || `HTTP ${response.status}`);
+        }
+        const balance = payload.balance;
+        if (!balance) {
+            if (usdtBalanceDisplay) usdtBalanceDisplay.textContent = '--';
+            setUsdtBalanceStatus(payload.message || 'Sin balance disponible.', false);
+            return;
+        }
+        const free = Number(balance.free || 0);
+        const locked = Number(balance.locked || 0);
+        const withdrawing = Number(balance.withdrawing || 0);
+        const total = Number(balance.total != null ? balance.total : free + locked + withdrawing);
+        if (usdtBalanceDisplay) {
+            usdtBalanceDisplay.textContent = `${total.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${payload.asset || 'USDT'}`;
+        }
+        const detailParts = [`Libre: ${free.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`];
+        if (locked > 0) detailParts.push(`Bloqueado: ${locked.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`);
+        if (withdrawing > 0) detailParts.push(`En retiro: ${withdrawing.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`);
+        const detailMessage = detailParts.join(' • ');
+        if (detailMessage) {
+            setUsdtBalanceStatus(detailMessage, false);
+        } else {
+            setUsdtBalanceStatus('', false);
+        }
+    } catch (error) {
+        console.error('Error al obtener saldo Binance:', error);
+        if (usdtBalanceDisplay) usdtBalanceDisplay.textContent = '--';
+        setUsdtBalanceStatus(error.message || 'No se pudo obtener el saldo.', true);
+        throw error;
+    } finally {
+        if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.disabled = false;
     }
 }
 
