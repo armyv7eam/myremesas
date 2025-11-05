@@ -50,6 +50,7 @@ let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSel
 
 let currentTransactionId = null;
 let currentTransactionPath = null;
+let currentTransactionRef = null;
 let isCurrentUserAdmin = false;
 let adminTransactionsUnsubscribe = null;
 let transactionListenerUnsubscribe = null;
@@ -215,6 +216,9 @@ async function initializeFirebase() {
                 appContainer.classList.add('hidden');
                 marginConfig = { ...DEFAULT_MARGIN_CONFIG };
                 applyMarginConfigToUI();
+                currentTransactionId = null;
+                currentTransactionPath = null;
+                currentTransactionRef = null;
             }
         });
     } catch (error) {
@@ -428,6 +432,61 @@ function buildDestinationDetailsMarkup(tx, { enableCopy = false } = {}) {
         blocks.push(buildDetailsSection('Wallet destino (USDT)', usdtDetails, { enableCopy }));
     }
     return blocks.filter(Boolean).join('');
+}
+
+function getCurrentTransactionDocRef() {
+    if (currentTransactionRef) return currentTransactionRef;
+    if (!db || !currentTransactionId || !userId) return null;
+    currentTransactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', currentTransactionId);
+    return currentTransactionRef;
+}
+
+function docRefFromAbsolutePath(path) {
+    if (!db || !path) return null;
+    const segments = path.split('/').filter(Boolean);
+    return doc(db, ...segments);
+}
+
+const IMAGE_FILE_REGEX = /\.(png|jpe?g|gif|bmp|webp|svg)$/i;
+
+function isImageLikeUrl(url) {
+    try {
+        const parsed = new URL(url, window.location.href);
+        return IMAGE_FILE_REGEX.test(parsed.pathname.toLowerCase());
+    } catch (error) {
+        console.warn('No se pudo analizar la URL del comprobante:', error);
+        return false;
+    }
+}
+
+function openReceiptViewer(url, title = 'Comprobante') {
+    if (!url) return;
+    if (isImageLikeUrl(url) && imageViewerModal && imageViewerImg && imageViewerTitle) {
+        imageViewerImg.src = url;
+        imageViewerTitle.textContent = title;
+        imageViewerModal.classList.remove('hidden');
+    } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+}
+
+function closeReceiptViewer() {
+    if (!imageViewerModal) return;
+    imageViewerModal.classList.add('hidden');
+    if (imageViewerImg) {
+        imageViewerImg.src = '';
+    }
+}
+
+function handleViewReceiptButton(button) {
+    if (!button) return;
+    const url = button.getAttribute('data-url');
+    const title = button.getAttribute('data-title') || 'Comprobante';
+    if (!url) {
+        alert('El comprobante no está disponible.');
+        return;
+    }
+    openReceiptViewer(url, title);
 }
 
 function getMarginValue(key) {
@@ -749,9 +808,10 @@ async function recordTransaction(amountSend, currencySend, amountReceive, curren
         ...extraData
     };
     try {
-        const collectionPath = `artifacts/${appId}/users/${userId}/transactions`;
-        const docRef = await addDoc(collection(db, collectionPath), transactionData);
-        return { id: docRef.id, path: `${collectionPath}/${docRef.id}` };
+        const userTransactionsRef = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+        const docRef = await addDoc(userTransactionsRef, transactionData);
+        const pathSegments = ['artifacts', appId, 'users', userId, 'transactions', docRef.id];
+        return { id: docRef.id, path: pathSegments.join('/'), ref: docRef, segments: pathSegments };
     } catch (error) {
         console.error('Error al registrar transacción:', error);
         return null;
@@ -760,8 +820,8 @@ async function recordTransaction(amountSend, currencySend, amountReceive, curren
 
 function setupTransactionListener() {
     if (!isAuthReady || !db || !userId) return;
-    const collectionPath = `artifacts/${appId}/users/${userId}/transactions`;
-    const q = query(collection(db, collectionPath));
+    const userTransactionsRef = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+    const q = query(userTransactionsRef);
     onSnapshot(q, (snapshot) => {
         const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         transactions.sort((a, b) => b.timestamp?.seconds - a.timestamp?.seconds);
@@ -808,6 +868,18 @@ function renderTransactionHistory(transactions) {
             ? `<button class="cancel-transaction-btn inline-flex items-center justify-center px-2 py-1 text-xs font-semibold text-red-600 border border-red-200 rounded-md bg-white hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-300" data-transaction-id="${escapeHtml(tx.id || '')}">Cancelar orden</button>`
             : '';
         const destinationDetailsMarkup = buildDestinationDetailsMarkup(tx, { enableCopy: false });
+        const receiptActionsMarkup = tx.userReceiptUrl
+            ? `<div class="flex flex-wrap items-center gap-2 pt-2 border-t border-dashed border-gray-200">
+                <span class="text-xs text-gray-600">Comprobante cliente:</span>
+                <button class="view-receipt-btn inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-url="${escapeHtml(tx.userReceiptUrl)}" data-title="Comprobante cliente ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}">
+                    Ver
+                </button>
+                <button class="copy-btn relative inline-flex items-center gap-1 px-2 py-1 text-xs text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-copy="${escapeHtml(tx.userReceiptUrl)}">
+                    Copiar enlace
+                    <span class="copy-feedback opacity-0 absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded transition-all duration-200 pointer-events-none">Copiado!</span>
+                </button>
+            </div>`
+            : '';
         item.innerHTML = `
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <p class="font-semibold text-gray-800 text-sm sm:text-base">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
@@ -815,6 +887,7 @@ function renderTransactionHistory(transactions) {
             </div>
             <p class="text-xs text-gray-500">Tasa: ${tx.rateApplied ? tx.rateApplied.toFixed(4) : 'N/A'} - ${date} ${time}</p>
             ${destinationDetailsMarkup ? `<div class="pt-2 border-t border-gray-200 space-y-2">${destinationDetailsMarkup}</div>` : ''}
+            ${receiptActionsMarkup}
             <div class="flex flex-wrap items-center gap-2">
                 ${cancelButtonMarkup}
             </div>
@@ -843,6 +916,18 @@ async function cancelUserTransaction(transactionId) {
 }
 
 async function handleHistoryContainerClick(event) {
+    const copyButton = event.target.closest('.copy-btn');
+    if (copyButton) {
+        event.preventDefault();
+        copyToClipboard(copyButton.dataset.copy, copyButton);
+        return;
+    }
+    const viewButton = event.target.closest('.view-receipt-btn');
+    if (viewButton) {
+        event.preventDefault();
+        handleViewReceiptButton(viewButton);
+        return;
+    }
     const cancelButton = event.target.closest('.cancel-transaction-btn');
     if (!cancelButton) return;
     const transactionId = cancelButton.dataset.transactionId;
@@ -873,6 +958,9 @@ async function showPaymentModal() {
     const currencySend = currencySendSelect.value;
     const currencyReceive = currencyReceiveSelect.value;
     const amountReceiveText = amountReceiveDisplay.textContent;
+    currentTransactionId = null;
+    currentTransactionPath = null;
+    currentTransactionRef = null;
     if (usdtDestinationForm) {
         usdtDestinationForm.classList.toggle('hidden', currencyReceive !== 'USDT');
     }
@@ -902,6 +990,7 @@ async function showPaymentModal() {
     }
     currentTransactionId = transactionRecord.id;
     currentTransactionPath = transactionRecord.path;
+    currentTransactionRef = transactionRecord.ref;
     if (currencySend === 'CLP') {
         modalCryptoWarning.classList.add('hidden');
         modalTransferCurrency.textContent = 'CLP';
@@ -939,14 +1028,17 @@ async function handleAdminAccountSelection() {
     if (!selectedAccountId) {
         selectedAdminAccountDetails.classList.add('hidden');
         selectedAdminAccountDetails.innerHTML = '';
-        if (db && currentTransactionPath) {
-            try {
-                await updateDoc(doc(db, currentTransactionPath), {
-                    adminDestinationAccount: deleteField(),
-                });
-            } catch (error) {
-                console.error('Error al limpiar cuenta destino seleccionada:', error);
-            }
+        const transactionRef = getCurrentTransactionDocRef();
+        if (!transactionRef) {
+            console.warn('No hay una orden activa para limpiar la cuenta destino.');
+            return;
+        }
+        try {
+            await updateDoc(transactionRef, {
+                adminDestinationAccount: deleteField(),
+            });
+        } catch (error) {
+            console.error('Error al limpiar cuenta destino seleccionada:', error);
         }
         return;
     }
@@ -954,36 +1046,42 @@ async function handleAdminAccountSelection() {
     if (selectedAccount) {
         selectedAdminAccountDetails.innerHTML = buildAccountDetailsMarkup(selectedAccount);
         selectedAdminAccountDetails.classList.remove('hidden');
-        if (db && currentTransactionPath) {
-            const accountPayload = {
-                id: selectedAccount.id || '',
-                bankName: selectedAccount.bankName || '',
-                accountHolder: selectedAccount.accountHolder || '',
-                rut: selectedAccount.rut || '',
-                accountType: selectedAccount.accountType || '',
-                accountNumber: selectedAccount.accountNumber || '',
-                email: selectedAccount.email || '',
-                savedAt: serverTimestamp(),
-            };
-            try {
-                await updateDoc(doc(db, currentTransactionPath), {
-                    adminDestinationAccount: accountPayload,
-                });
-            } catch (error) {
-                console.error('Error al guardar cuenta destino en la orden:', error);
-            }
+        const transactionRef = getCurrentTransactionDocRef();
+        if (!transactionRef) {
+            console.warn('No hay una orden activa para guardar la cuenta destino.');
+            return;
+        }
+        const accountPayload = {
+            id: selectedAccount.id || '',
+            bankName: selectedAccount.bankName || '',
+            accountHolder: selectedAccount.accountHolder || '',
+            rut: selectedAccount.rut || '',
+            accountType: selectedAccount.accountType || '',
+            accountNumber: selectedAccount.accountNumber || '',
+            email: selectedAccount.email || '',
+            savedAt: serverTimestamp(),
+        };
+        try {
+            await updateDoc(transactionRef, {
+                adminDestinationAccount: accountPayload,
+            });
+        } catch (error) {
+            console.error('Error al guardar cuenta destino en la orden:', error);
         }
     } else {
         selectedAdminAccountDetails.classList.add('hidden');
         selectedAdminAccountDetails.innerHTML = '';
-        if (db && currentTransactionPath) {
-            try {
-                await updateDoc(doc(db, currentTransactionPath), {
-                    adminDestinationAccount: deleteField(),
-                });
-            } catch (error) {
-                console.error('Error al limpiar cuenta destino seleccionada:', error);
-            }
+        const transactionRef = getCurrentTransactionDocRef();
+        if (!transactionRef) {
+            console.warn('No hay una orden activa para limpiar la cuenta destino.');
+            return;
+        }
+        try {
+            await updateDoc(transactionRef, {
+                adminDestinationAccount: deleteField(),
+            });
+        } catch (error) {
+            console.error('Error al limpiar cuenta destino seleccionada:', error);
         }
     }
 }
@@ -993,6 +1091,12 @@ async function handleUserReceiptUpload(event) {
     if (!uploadReceiptButton) return;
     if (!currentTransactionPath) {
         receiptUploadStatus.textContent = 'Primero genera una orden.';
+        receiptUploadStatus.className = 'text-xs text-red-600';
+        return;
+    }
+    const transactionRef = getCurrentTransactionDocRef();
+    if (!transactionRef) {
+        receiptUploadStatus.textContent = 'No se encontró la orden actual.';
         receiptUploadStatus.className = 'text-xs text-red-600';
         return;
     }
@@ -1015,7 +1119,7 @@ async function handleUserReceiptUpload(event) {
         const fileRef = storageRef(storage, storagePath);
         await uploadBytes(fileRef, file);
         const downloadUrl = await getDownloadURL(fileRef);
-        await updateDoc(doc(db, currentTransactionPath), {
+        await updateDoc(transactionRef, {
             userReceiptUrl: downloadUrl,
             status: 'Pendiente',
             userReceiptUploadedAt: serverTimestamp(),
@@ -1084,7 +1188,27 @@ function createAdminTransactionCard(tx) {
         ? `<button class="admin-cancel-btn inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-lg bg-white hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-300" data-transaction-path="${escapeHtml(tx.path)}">Cancelar orden</button>`
         : '';
     const destinationDetailsMarkup = buildDestinationDetailsMarkup(tx, { enableCopy: true });
-        card.innerHTML = `
+    const userReceiptSection = tx.userReceiptUrl
+        ? `<div class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-gray-700">Comprobante cliente:</span>
+                <button class="view-receipt-btn inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-url="${escapeHtml(tx.userReceiptUrl)}" data-title="Comprobante cliente ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}">Ver</button>
+                <button class="copy-btn relative inline-flex items-center gap-1 px-2 py-1 text-xs text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-copy="${escapeHtml(tx.userReceiptUrl)}">
+                    Copiar enlace
+                    <span class="copy-feedback opacity-0 absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded transition-all duration-200 pointer-events-none">Copiado!</span>
+                </button>
+            </div>`
+        : '<span class="text-xs text-orange-600">Comprobante cliente pendiente</span>';
+    const adminReceiptSection = tx.adminReceiptUrl
+        ? `<div class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-gray-700">Comprobante destino:</span>
+                <button class="view-receipt-btn inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-url="${escapeHtml(tx.adminReceiptUrl)}" data-title="Comprobante destino ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}">Ver</button>
+                <button class="copy-btn relative inline-flex items-center gap-1 px-2 py-1 text-xs text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-copy="${escapeHtml(tx.adminReceiptUrl)}">
+                    Copiar enlace
+                    <span class="copy-feedback opacity-0 absolute -top-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded transition-all duration-200 pointer-events-none">Copiado!</span>
+                </button>
+            </div>`
+        : '<span class="text-xs text-gray-500">Comprobante destino no cargado</span>';
+    card.innerHTML = `
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
             <div class="space-y-1">
                 <p class="text-sm sm:text-base font-semibold text-gray-800">Orden ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}</p>
@@ -1101,9 +1225,9 @@ function createAdminTransactionCard(tx) {
             ${tx.rateApplied ? createCopyRow('Tasa aplicada', tx.rateApplied.toFixed(4)) : ''}
         </div>
         ${destinationDetailsMarkup ? `<div class="border-t border-dashed border-gray-200 pt-3 space-y-2">${destinationDetailsMarkup}</div>` : ''}
-        <div class="space-y-1 text-xs text-gray-600">
-            ${tx.userReceiptUrl ? `<button class="copy-btn text-cyan-700 hover:underline text-xs" data-copy="${escapeHtml(tx.userReceiptUrl)}">Copiar comprobante cliente</button>` : '<span class="text-xs text-orange-600">Comprobante cliente pendiente</span>'}<br>
-            ${tx.adminReceiptUrl ? `<button class="copy-btn text-cyan-700 hover:underline text-xs" data-copy="${escapeHtml(tx.adminReceiptUrl)}">Copiar comprobante destino</button>` : '<span class="text-xs text-gray-500">Comprobante destino no cargado</span>'}
+        <div class="space-y-2 text-xs text-gray-600">
+            ${userReceiptSection}
+            ${adminReceiptSection}
         </div>
         <div class="mt-2 border-t border-gray-200 pt-3">
             <label class="block text-xs font-semibold text-gray-700 mb-2">Subir comprobante de destino</label>
@@ -1112,6 +1236,7 @@ function createAdminTransactionCard(tx) {
                 <button class="admin-upload-btn inline-flex items-center justify-center px-3 py-2 bg-yellow-600 text-white text-xs font-semibold rounded-lg text-center${completionButtonDisabled ? ' opacity-60 cursor-not-allowed' : ''}" ${completionButtonDisabled ? 'disabled' : ''} style="white-space:normal;">${completionButtonText}</button>
             </div>
             <p class="admin-upload-status text-xs mt-2 hidden"></p>
+            ${awaitingClientReceipt ? '<p class="text-xs text-orange-600 mt-2">Esperando comprobante del cliente para habilitar esta accion.</p>' : ''}
         </div>
         ${cancelButtonMarkup ? `<div class="pt-2 border-t border-dashed border-gray-200 space-y-2">
             <p class="text-xs text-gray-600">Acciones administrativas</p>
@@ -1120,12 +1245,17 @@ function createAdminTransactionCard(tx) {
     `;
     return card;
 }
-
 function handleAdminTransactionsListClick(event) {
     if (!isCurrentUserAdmin) return;
     const copyButton = event.target.closest('.copy-btn');
     if (copyButton) {
         copyToClipboard(copyButton.dataset.copy, copyButton);
+        return;
+    }
+    const viewButton = event.target.closest('.view-receipt-btn');
+    if (viewButton) {
+        event.preventDefault();
+        handleViewReceiptButton(viewButton);
         return;
     }
     const cancelButton = event.target.closest('.admin-cancel-btn');
@@ -1198,7 +1328,8 @@ function handleAdminTransactionsListClick(event) {
 
 async function uploadAdminReceipt(transactionPath, file) {
     if (!storage || !db) throw new Error('Firebase no inicializado.');
-    const transactionRef = doc(db, transactionPath);
+    const transactionRef = docRefFromAbsolutePath(transactionPath);
+    if (!transactionRef) throw new Error('Ruta de transaccion invalida.');
     const transactionSnap = await getDoc(transactionRef);
     if (!transactionSnap.exists()) {
         throw new Error('La orden no existe.');
@@ -1220,7 +1351,8 @@ async function uploadAdminReceipt(transactionPath, file) {
 
 async function cancelTransactionAsAdmin(transactionPath) {
     if (!db) throw new Error('Firebase no inicializado.');
-    const transactionRef = doc(db, transactionPath);
+    const transactionRef = docRefFromAbsolutePath(transactionPath);
+    if (!transactionRef) throw new Error('Ruta de transaccion invalida.');
     const transactionSnap = await getDoc(transactionRef);
     if (!transactionSnap.exists()) {
         throw new Error('La orden no existe.');
@@ -1279,6 +1411,10 @@ function registerStaticEventListeners() {
         const button = event.target.closest('.copy-btn');
         if (button) copyToClipboard(button.dataset.copy, button);
     });
+    if (closeImageViewerButton) closeImageViewerButton.addEventListener('click', () => closeReceiptViewer());
+    if (imageViewerModal) imageViewerModal.addEventListener('click', (event) => {
+        if (event.target === imageViewerModal) closeReceiptViewer();
+    });
     if (usdtWalletInput) usdtWalletInput.addEventListener('input', scheduleUsdtDestinationPersist);
     if (usdtNetworkSelect) usdtNetworkSelect.addEventListener('change', scheduleUsdtDestinationPersist);
     if (usdtNotesInput) usdtNotesInput.addEventListener('input', scheduleUsdtDestinationPersist);
@@ -1312,8 +1448,10 @@ function scheduleUsdtDestinationPersist() {
     if (!isAuthReady || !db || !currentTransactionPath || usdtDestinationForm.classList.contains('hidden')) return;
     if (usdtDestinationSaveTimeout) clearTimeout(usdtDestinationSaveTimeout);
     usdtDestinationSaveTimeout = setTimeout(async () => {
+        const transactionRef = getCurrentTransactionDocRef();
+        if (!transactionRef) return;
         try {
-            await updateDoc(doc(db, currentTransactionPath), {
+            await updateDoc(transactionRef, {
                 userUsdtDestination: {
                     wallet: usdtWalletInput.value.trim(),
                     network: usdtNetworkSelect.value,
@@ -1330,8 +1468,10 @@ function scheduleVesDestinationPersist() {
     if (!isAuthReady || !db || !currentTransactionPath || vesDestinationForm.classList.contains('hidden')) return;
     if (vesDestinationSaveTimeout) clearTimeout(vesDestinationSaveTimeout);
     vesDestinationSaveTimeout = setTimeout(async () => {
+        const transactionRef = getCurrentTransactionDocRef();
+        if (!transactionRef) return;
         try {
-            await updateDoc(doc(db, currentTransactionPath), {
+            await updateDoc(transactionRef, {
                 userVesDestination: {
                     beneficiary: vesBeneficiaryInput.value.trim(),
                     idNumber: vesIdInput.value.trim(),
@@ -1351,6 +1491,9 @@ async function bootstrapApp() {
     try {
         initializeDOM();
         registerStaticEventListeners();
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeReceiptViewer();
+        });
         calculateExchange();
         await initializeFirebase();
         setTimeout(() => fetchDynamicRates().catch(err => console.error('Error al obtener tasas:', err)), 500);
