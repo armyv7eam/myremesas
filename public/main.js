@@ -1397,9 +1397,9 @@ function escapeHtml(value) {
 
 function createCopyRow(label, value) {
     return `
-        <div class="flex items-center justify-between gap-1 py-0.5">
-            <span class="text-xs md:text-sm text-gray-600">${escapeHtml(label)}: <span class="font-semibold text-gray-900">${escapeHtml(value)}</span></span>
-            <button class="copy-btn btn btn-ghost btn-sm shrink-0" data-copy="${escapeHtml(`${label}: ${value}`)}">Copiar</button>
+        <div class="relative py-0.5">
+            <p class="text-xs md:text-sm text-gray-600 leading-tight pr-16">${escapeHtml(label)}: <span class="font-semibold text-gray-900">${escapeHtml(value)}</span></p>
+            <button class="copy-btn btn btn-ghost btn-sm shrink-0 absolute top-0 right-0" data-copy="${escapeHtml(`${label}: ${value}`)}">Copiar</button>
         </div>
     `;
 }
@@ -1524,7 +1524,11 @@ async function refreshBinanceBalance() {
     } catch (error) {
         console.error('Error al obtener saldo Binance:', error);
         if (usdtBalanceDisplay) usdtBalanceDisplay.textContent = '--';
-        setUsdtBalanceStatus(error.message || 'No se pudo obtener el saldo.', true);
+        if (error.message && error.message.includes('404')) {
+            setUsdtBalanceStatus('Endpoint de Binance no disponible. Verifica la configuración en vercel.json y despliega nuevamente.', true);
+        } else {
+            setUsdtBalanceStatus(error.message || 'No se pudo obtener el saldo.', true);
+        }
         throw error;
     } finally {
         if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.disabled = false;
