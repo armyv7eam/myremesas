@@ -2,7 +2,7 @@
 
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel, deleteDoc, setDoc, updateDoc, collectionGroup, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, addDoc, onSnapshot, collection, query, serverTimestamp, setLogLevel, deleteDoc, setDoc, updateDoc, collectionGroup, getDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
@@ -348,6 +348,86 @@ function buildAccountDetailsMarkup(account) {
             </div>
         </div>
     `;
+}
+
+function sanitizeCopyText(details) {
+    const joined = details.map(d => `${d.label}: ${d.value}`).join('\n');
+    return escapeHtml(joined).replace(/\n/g, '&#10;');
+}
+
+function buildDetailsSection(title, details, { enableCopy = false } = {}) {
+    const cleanDetails = details
+        .filter(detail => detail && detail.label && detail.value && String(detail.value).trim() !== '')
+        .map(detail => ({
+            label: detail.label,
+            value: String(detail.value).trim()
+        }));
+    if (!cleanDetails.length) return '';
+    const listItems = cleanDetails.map(detail => `
+        <div class="flex items-start justify-between gap-2">
+            <span class="text-gray-500">${escapeHtml(detail.label)}:</span>
+            <span class="font-semibold text-gray-800 text-right break-words break-all max-w-full">${escapeHtml(detail.value)}</span>
+        </div>
+    `).join('');
+    const sanitizedCopyText = enableCopy ? sanitizeCopyText(cleanDetails) : null;
+    const copyMarkup = enableCopy ? `
+        <span class="relative inline-flex">
+            <button class="copy-btn relative inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-copy="${sanitizedCopyText}">
+                Copiar datos
+                <span class="copy-feedback opacity-0 absolute inset-x-0 -top-6 mx-auto text-xs text-white bg-gray-900 px-2 py-1 rounded transition-all duration-200 pointer-events-none">Copiado!</span>
+            </button>
+        </span>
+    ` : '';
+    return `
+        <div class="destination-details-block bg-white border border-cyan-100 rounded-lg p-3 space-y-2">
+            <div class="flex items-start justify-between gap-2">
+                <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide sm:text-sm">${escapeHtml(title)}</span>
+                ${copyMarkup}
+            </div>
+            <div class="space-y-1 text-xs sm:text-sm">
+                ${listItems}
+            </div>
+        </div>
+    `;
+}
+
+function buildDestinationDetailsMarkup(tx, { enableCopy = false } = {}) {
+    if (!tx) return '';
+    const blocks = [];
+    if (tx.adminDestinationAccount) {
+        const account = tx.adminDestinationAccount;
+        const accountDetails = [
+            { label: 'Banco', value: account.bankName },
+            { label: 'Titular', value: account.accountHolder },
+            { label: 'RUT', value: account.rut },
+            { label: 'Tipo', value: account.accountType },
+            { label: 'Numero', value: account.accountNumber },
+            { label: 'Email', value: account.email },
+        ];
+        blocks.push(buildDetailsSection('Cuenta para depositar al administrador', accountDetails, { enableCopy }));
+    }
+    if (tx.userVesDestination) {
+        const dest = tx.userVesDestination;
+        const destDetails = [
+            { label: 'Beneficiario', value: dest.beneficiary },
+            { label: 'Documento', value: dest.idNumber },
+            { label: 'Banco', value: dest.bank },
+            { label: 'Tipo de cuenta', value: dest.accountType },
+            { label: 'Numero de cuenta', value: dest.accountNumber },
+            { label: 'Notas', value: dest.notes },
+        ];
+        blocks.push(buildDetailsSection('Cuenta destino (VES)', destDetails, { enableCopy }));
+    }
+    if (tx.userUsdtDestination) {
+        const dest = tx.userUsdtDestination;
+        const usdtDetails = [
+            { label: 'Wallet', value: dest.wallet },
+            { label: 'Red', value: dest.network },
+            { label: 'Notas', value: dest.notes },
+        ];
+        blocks.push(buildDetailsSection('Wallet destino (USDT)', usdtDetails, { enableCopy }));
+    }
+    return blocks.filter(Boolean).join('');
 }
 
 function getMarginValue(key) {
@@ -714,31 +794,34 @@ function canCancelTransaction(status) {
 function renderTransactionHistory(transactions) {
     historyContainer.innerHTML = '';
     if (transactions.length === 0) {
-        historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Aún no hay transacciones.</p>';
+        historyContainer.innerHTML = '<p class="text-gray-500 text-xs sm:text-sm p-2">Aun no hay transacciones.</p>';
         return;
     }
     transactions.forEach(tx => {
         const date = tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleDateString() : 'Cargando...';
         const time = tx.timestamp?.toDate ? tx.timestamp.toDate().toLocaleTimeString() : '';
         const item = document.createElement('div');
-        item.className = 'p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm space-y-1';
+        item.className = 'p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs sm:text-sm space-y-2 shadow-sm';
         item.setAttribute('data-transaction-id', tx.id || '');
         const badgeClasses = getStatusBadgeClasses(tx.status);
         const cancelButtonMarkup = canCancelTransaction(tx.status)
-            ? `<button class="cancel-transaction-btn inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold text-red-600 border border-red-200 rounded-md bg-white hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-300" data-transaction-id="${escapeHtml(tx.id || '')}">Cancelar orden</button>`
+            ? `<button class="cancel-transaction-btn inline-flex items-center justify-center px-2 py-1 text-xs font-semibold text-red-600 border border-red-200 rounded-md bg-white hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-300" data-transaction-id="${escapeHtml(tx.id || '')}">Cancelar orden</button>`
             : '';
+        const destinationDetailsMarkup = buildDestinationDetailsMarkup(tx, { enableCopy: false });
         item.innerHTML = `
-            <p class="font-bold text-gray-800">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
-            <p class="text-xs text-gray-500 mt-1">Tasa: ${tx.rateApplied ? tx.rateApplied.toFixed(4) : 'N/A'} | ${date} ${time}</p>
-            <div class="mt-2 flex flex-wrap items-center gap-2">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <p class="font-semibold text-gray-800 text-sm sm:text-base">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
                 <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${badgeClasses}">${escapeHtml(tx.status || 'N/A')}</span>
+            </div>
+            <p class="text-xs text-gray-500">Tasa: ${tx.rateApplied ? tx.rateApplied.toFixed(4) : 'N/A'} - ${date} ${time}</p>
+            ${destinationDetailsMarkup ? `<div class="pt-2 border-t border-gray-200 space-y-2">${destinationDetailsMarkup}</div>` : ''}
+            <div class="flex flex-wrap items-center gap-2">
                 ${cancelButtonMarkup}
             </div>
         `;
         historyContainer.appendChild(item);
     });
 }
-
 async function cancelUserTransaction(transactionId) {
     if (!transactionId || !db || !userId) throw new Error('Transacción no disponible.');
     const transactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', transactionId);
@@ -851,20 +934,57 @@ async function showPaymentModal() {
     paymentModal.classList.remove('hidden');
 }
 
-function handleAdminAccountSelection() {
+async function handleAdminAccountSelection() {
     const selectedAccountId = adminAccountSelect.value;
     if (!selectedAccountId) {
         selectedAdminAccountDetails.classList.add('hidden');
         selectedAdminAccountDetails.innerHTML = '';
+        if (db && currentTransactionPath) {
+            try {
+                await updateDoc(doc(db, currentTransactionPath), {
+                    adminDestinationAccount: deleteField(),
+                });
+            } catch (error) {
+                console.error('Error al limpiar cuenta destino seleccionada:', error);
+            }
+        }
         return;
     }
     const selectedAccount = adminAccounts.find(acc => acc.id === selectedAccountId);
     if (selectedAccount) {
         selectedAdminAccountDetails.innerHTML = buildAccountDetailsMarkup(selectedAccount);
         selectedAdminAccountDetails.classList.remove('hidden');
+        if (db && currentTransactionPath) {
+            const accountPayload = {
+                id: selectedAccount.id || '',
+                bankName: selectedAccount.bankName || '',
+                accountHolder: selectedAccount.accountHolder || '',
+                rut: selectedAccount.rut || '',
+                accountType: selectedAccount.accountType || '',
+                accountNumber: selectedAccount.accountNumber || '',
+                email: selectedAccount.email || '',
+                savedAt: serverTimestamp(),
+            };
+            try {
+                await updateDoc(doc(db, currentTransactionPath), {
+                    adminDestinationAccount: accountPayload,
+                });
+            } catch (error) {
+                console.error('Error al guardar cuenta destino en la orden:', error);
+            }
+        }
     } else {
         selectedAdminAccountDetails.classList.add('hidden');
         selectedAdminAccountDetails.innerHTML = '';
+        if (db && currentTransactionPath) {
+            try {
+                await updateDoc(doc(db, currentTransactionPath), {
+                    adminDestinationAccount: deleteField(),
+                });
+            } catch (error) {
+                console.error('Error al limpiar cuenta destino seleccionada:', error);
+            }
+        }
     }
 }
 
@@ -946,27 +1066,41 @@ function renderAdminTransactions(transactions) {
 
 function createAdminTransactionCard(tx) {
     const card = document.createElement('div');
-    card.className = 'admin-transaction-card border border-yellow-200 bg-white rounded-lg p-4 space-y-3 shadow-sm';
+    card.className = 'admin-transaction-card border border-yellow-200 bg-white rounded-lg p-4 space-y-3 shadow-sm text-xs sm:text-sm';
     card.setAttribute('data-transaction-path', tx.path);
+    card.setAttribute('data-user-has-receipt', tx.userReceiptUrl ? 'true' : 'false');
     const statusBadgeClass = getStatusBadgeClasses(tx.status);
     const ownerLabel = tx.userEmail || tx.userDisplayName || tx.userId || 'N/A';
     const isCompleted = tx.status === 'Completado';
-    card.innerHTML = `
-        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+    const awaitingClientReceipt = !tx.userReceiptUrl && !isCompleted;
+    const canAdminCancel = canCancelTransaction(tx.status);
+    const completionButtonDisabled = isCompleted || awaitingClientReceipt;
+    const completionButtonText = isCompleted
+        ? 'Completada'
+        : awaitingClientReceipt
+            ? 'Esperando comprobante'
+            : 'Subir y Completar';
+    const cancelButtonMarkup = canAdminCancel
+        ? `<button class="admin-cancel-btn inline-flex items-center justify-center px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-200 rounded-lg bg-white hover:bg-red-50 transition focus:outline-none focus:ring-2 focus:ring-red-300" data-transaction-path="${escapeHtml(tx.path)}">Cancelar orden</button>`
+        : '';
+    const destinationDetailsMarkup = buildDestinationDetailsMarkup(tx, { enableCopy: true });
+        card.innerHTML = `
+        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
             <div class="space-y-1">
-                <p class="text-sm font-semibold text-gray-800">Orden ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}</p>
+                <p class="text-sm sm:text-base font-semibold text-gray-800">Orden ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}</p>
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 font-semibold uppercase tracking-wide bg-cyan-100 text-cyan-700 rounded-full" style="font-size:0.65rem;">Cliente</span>
-                    <span class="text-xs text-gray-600" style="word-break:break-word;" title="${escapeHtml(ownerLabel)}">${escapeHtml(ownerLabel)}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 font-semibold uppercase tracking-wide bg-cyan-100 text-cyan-700 rounded-full" style="font-size:0.7rem;">Cliente</span>
+                    <span class="text-xs text-gray-600 break-words" title="${escapeHtml(ownerLabel)}">${escapeHtml(ownerLabel)}</span>
                 </div>
             </div>
-            <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${statusBadgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
+            <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
         </div>
         <div class="space-y-2">
             ${createCopyRow('Monto enviado', formatCurrency(tx.amountSend || 0, tx.currencySend || 'CLP'))}
             ${createCopyRow('Monto destino', formatCurrency(tx.amountReceive || 0, tx.currencyReceive || 'CLP'))}
             ${tx.rateApplied ? createCopyRow('Tasa aplicada', tx.rateApplied.toFixed(4)) : ''}
         </div>
+        ${destinationDetailsMarkup ? `<div class="border-t border-dashed border-gray-200 pt-3 space-y-2">${destinationDetailsMarkup}</div>` : ''}
         <div class="space-y-1 text-xs text-gray-600">
             ${tx.userReceiptUrl ? `<button class="copy-btn text-cyan-700 hover:underline text-xs" data-copy="${escapeHtml(tx.userReceiptUrl)}">Copiar comprobante cliente</button>` : '<span class="text-xs text-orange-600">Comprobante cliente pendiente</span>'}<br>
             ${tx.adminReceiptUrl ? `<button class="copy-btn text-cyan-700 hover:underline text-xs" data-copy="${escapeHtml(tx.adminReceiptUrl)}">Copiar comprobante destino</button>` : '<span class="text-xs text-gray-500">Comprobante destino no cargado</span>'}
@@ -974,11 +1108,15 @@ function createAdminTransactionCard(tx) {
         <div class="mt-2 border-t border-gray-200 pt-3">
             <label class="block text-xs font-semibold text-gray-700 mb-2">Subir comprobante de destino</label>
             <div class="flex flex-col md:flex-row gap-3">
-                <input type="file" class="admin-receipt-input flex-1 text-sm border rounded-lg px-3 py-2" accept="image/*,.pdf" ${isCompleted ? 'disabled' : ''}>
-                <button class="admin-upload-btn inline-flex items-center justify-center px-3 py-2 bg-yellow-600 text-white text-xs font-semibold rounded-lg text-center" ${isCompleted ? 'disabled' : ''} style="white-space:normal;">${isCompleted ? 'Completada' : 'Subir y Completar'}</button>
+                <input type="file" class="admin-receipt-input flex-1 text-sm border rounded-lg px-3 py-2" accept="image/*,.pdf" ${completionButtonDisabled ? 'disabled' : ''}>
+                <button class="admin-upload-btn inline-flex items-center justify-center px-3 py-2 bg-yellow-600 text-white text-xs font-semibold rounded-lg text-center${completionButtonDisabled ? ' opacity-60 cursor-not-allowed' : ''}" ${completionButtonDisabled ? 'disabled' : ''} style="white-space:normal;">${completionButtonText}</button>
             </div>
             <p class="admin-upload-status text-xs mt-2 hidden"></p>
         </div>
+        ${cancelButtonMarkup ? `<div class="pt-2 border-t border-dashed border-gray-200 space-y-2">
+            <p class="text-xs text-gray-600">Acciones administrativas</p>
+            <div class="flex flex-wrap gap-2">${cancelButtonMarkup}</div>
+        </div>` : ''}
     `;
     return card;
 }
@@ -990,14 +1128,51 @@ function handleAdminTransactionsListClick(event) {
         copyToClipboard(copyButton.dataset.copy, copyButton);
         return;
     }
+    const cancelButton = event.target.closest('.admin-cancel-btn');
+    if (cancelButton) {
+        const transactionPath = cancelButton.getAttribute('data-transaction-path');
+        if (!transactionPath) return;
+        const confirmed = window.confirm('¿Deseas cancelar esta orden? Esta acción no se puede deshacer.');
+        if (!confirmed) return;
+        const originalText = cancelButton.textContent;
+        cancelButton.disabled = true;
+        cancelButton.textContent = 'Cancelando...';
+        cancelButton.classList.add('opacity-60');
+        cancelTransactionAsAdmin(transactionPath)
+            .then(() => {
+                cancelButton.textContent = 'Cancelada';
+                const statusElement = cancelButton.closest('.admin-transaction-card')?.querySelector('.admin-upload-status');
+                if (statusElement) {
+                    statusElement.textContent = 'Orden cancelada por el administrador.';
+                    statusElement.className = 'admin-upload-status text-xs text-gray-600';
+                }
+            })
+            .catch(error => {
+                console.error('Error al cancelar orden (admin):', error);
+                alert(`No se pudo cancelar la orden: ${error.message}`);
+                cancelButton.disabled = false;
+                cancelButton.textContent = originalText;
+                cancelButton.classList.remove('opacity-60');
+            });
+        return;
+    }
     const uploadButton = event.target.closest('.admin-upload-btn');
     if (!uploadButton) return;
     const card = uploadButton.closest('.admin-transaction-card');
     const fileInput = card?.querySelector('.admin-receipt-input');
     const statusElement = card?.querySelector('.admin-upload-status');
+    const hasUserReceipt = card?.getAttribute('data-user-has-receipt') === 'true';
+    if (!hasUserReceipt) {
+        if (statusElement) {
+            statusElement.textContent = 'El cliente aún no ha cargado su comprobante.';
+            statusElement.className = 'admin-upload-status text-xs text-red-600';
+        }
+        return;
+    }
     const file = fileInput?.files?.[0];
     const transactionPath = card?.getAttribute('data-transaction-path');
     if (!file) {
+        if (!statusElement) return;
         statusElement.textContent = 'Selecciona un archivo.';
         statusElement.className = 'admin-upload-status text-xs text-red-600';
         return;
@@ -1023,15 +1198,49 @@ function handleAdminTransactionsListClick(event) {
 
 async function uploadAdminReceipt(transactionPath, file) {
     if (!storage || !db) throw new Error('Firebase no inicializado.');
+    const transactionRef = doc(db, transactionPath);
+    const transactionSnap = await getDoc(transactionRef);
+    if (!transactionSnap.exists()) {
+        throw new Error('La orden no existe.');
+    }
+    const transactionData = transactionSnap.data();
+    if (!transactionData.userReceiptUrl) {
+        throw new Error('El cliente aún no ha cargado su comprobante.');
+    }
     const storagePath = `${transactionPath}/receipts/admin/${Date.now()}-${file.name}`;
     const fileRef = storageRef(storage, storagePath);
     await uploadBytes(fileRef, file);
     const downloadUrl = await getDownloadURL(fileRef);
-    await updateDoc(doc(db, transactionPath), {
+    await updateDoc(transactionRef, {
         adminReceiptUrl: downloadUrl,
         status: 'Completado',
         completedAt: serverTimestamp(),
     });
+}
+
+async function cancelTransactionAsAdmin(transactionPath) {
+    if (!db) throw new Error('Firebase no inicializado.');
+    const transactionRef = doc(db, transactionPath);
+    const transactionSnap = await getDoc(transactionRef);
+    if (!transactionSnap.exists()) {
+        throw new Error('La orden no existe.');
+    }
+    const data = transactionSnap.data();
+    if (data.status === 'Completado') {
+        throw new Error('La orden ya fue completada.');
+    }
+    if (data.status === 'Cancelada') {
+        return;
+    }
+    const updatePayload = {
+        status: 'Cancelada',
+        cancelledAt: serverTimestamp(),
+        cancelledBy: 'admin',
+    };
+    if (auth?.currentUser?.uid) {
+        updatePayload.cancelledByUid = auth.currentUser.uid;
+    }
+    await updateDoc(transactionRef, updatePayload);
 }
 
 function escapeHtml(value) {
