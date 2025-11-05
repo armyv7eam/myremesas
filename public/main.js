@@ -777,7 +777,12 @@ function calculateExchange(enablePaymentButton = true) {
     errorMessage.classList.add('hidden');
     const amountReceive = amountSend * rate;
     let rateText = `Tasa: 1 ${currencySend} = ${rate.toFixed(currencyReceive === 'WLD' ? 8 : 4)} ${currencyReceive}`;
-    if (currencySend === currencyReceive) rateText = 'Intercambio 1:1';
+    if (currencySend === currencyReceive) {
+        rateText = 'Intercambio 1:1';
+    } else if (currencySend === 'CLP' && currencyReceive === 'USDT') {
+        const clpPerUsdt = rate > 0 ? (1 / rate) : 0;
+        rateText = `Tasa: 1 CLP = ${rate.toFixed(6)} USDT • 1 USDT = ${clpPerUsdt.toFixed(2)} CLP`;
+    }
     amountReceiveDisplay.textContent = formatCurrency(amountReceive, currencyReceive);
     rateDisplay.textContent = rateText;
 }
@@ -1381,9 +1386,9 @@ function escapeHtml(value) {
 
 function createCopyRow(label, value) {
     return `
-        <div class="flex items-center justify-between gap-2">
-            <span class="text-xs md:text-sm text-gray-600">${escapeHtml(label)}: <span class="font-semibold text-gray-900">${escapeHtml(value)}</span></span>
-            <button class="copy-btn btn btn-ghost btn-sm" data-copy="${escapeHtml(`${label}: ${value}`)}">Copiar</button>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 py-1">
+            <span class="text-xs md:text-sm text-gray-600 leading-relaxed">${escapeHtml(label)}: <span class="font-semibold text-gray-900">${escapeHtml(value)}</span></span>
+            <button class="copy-btn btn btn-ghost btn-sm sm:mt-0 mt-1 self-start sm:self-auto" data-copy="${escapeHtml(`${label}: ${value}`)}">Copiar</button>
         </div>
     `;
 }
