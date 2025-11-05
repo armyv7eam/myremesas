@@ -144,6 +144,208 @@
 
         }
 
+        :root {
+
+            --btn-radius: 0.75rem;
+
+            --btn-shadow: 0 10px 25px -10px rgba(14, 116, 144, 0.35);
+
+        }
+
+        .btn {
+
+            display: inline-flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            gap: 0.5rem;
+
+            border-radius: var(--btn-radius);
+
+            font-weight: 600;
+
+            letter-spacing: 0.01em;
+
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+
+            border-width: 1px;
+
+            border-style: solid;
+
+            cursor: pointer;
+
+            box-shadow: none;
+
+        }
+
+        .btn-sm { padding: 0.4rem 0.85rem; font-size: 0.75rem; border-radius: 0.65rem; }
+
+        .btn-md { padding: 0.6rem 1.15rem; font-size: 0.85rem; }
+
+        .btn-lg { padding: 0.85rem 1.5rem; font-size: 1rem; border-radius: 0.85rem; }
+
+        .btn-primary {
+
+            background: linear-gradient(135deg, #0891b2, #0ea5e9);
+
+            color: #ffffff;
+
+            border-color: transparent;
+
+            box-shadow: var(--btn-shadow);
+
+        }
+
+        .btn-primary:hover {
+
+            background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+
+            transform: translateY(-1px);
+
+        }
+
+        .btn-secondary {
+
+            background: linear-gradient(135deg, #334155, #475569);
+
+            color: #ffffff;
+
+            border-color: transparent;
+
+            box-shadow: 0 10px 25px -12px rgba(51, 65, 85, 0.6);
+
+        }
+
+        .btn-secondary:hover {
+
+            background: linear-gradient(135deg, #475569, #64748b);
+
+            transform: translateY(-1px);
+
+        }
+
+        .btn-danger {
+
+            background: linear-gradient(135deg, #dc2626, #f97316);
+
+            color: #ffffff;
+
+            border-color: transparent;
+
+            box-shadow: 0 12px 30px -15px rgba(220, 38, 38, 0.8);
+
+        }
+
+        .btn-danger:hover {
+
+            background: linear-gradient(135deg, #ef4444, #f97316);
+
+            transform: translateY(-1px);
+
+        }
+
+        .btn-outline {
+
+            background: rgba(255, 255, 255, 0.85);
+
+            color: #0f172a;
+
+            border-color: rgba(148, 163, 184, 0.65);
+
+        }
+
+        .btn-outline:hover {
+
+            border-color: rgba(14, 116, 144, 0.5);
+
+            color: #0e7490;
+
+            background: rgba(225, 239, 254, 0.65);
+
+        }
+
+        .btn-ghost {
+
+            background: transparent;
+
+            color: #0e7490;
+
+            border-color: transparent;
+
+        }
+
+        .btn-ghost:hover {
+
+            background: rgba(14, 116, 144, 0.08);
+
+            color: #334155;
+
+        }
+
+        .btn:focus-visible {
+
+            outline: 3px solid rgba(14, 116, 144, 0.25);
+
+            outline-offset: 2px;
+
+        }
+
+        .btn:disabled,
+
+        .btn[disabled] {
+
+            opacity: 0.55;
+
+            cursor: not-allowed;
+
+            box-shadow: none;
+
+            transform: none;
+
+        }
+
+        .btn-icon {
+
+            width: 2.25rem;
+
+            height: 2.25rem;
+
+            padding: 0;
+
+            border-radius: 999px;
+
+        }
+
+        .btn-link {
+
+            background: transparent;
+
+            border-color: transparent;
+
+            color: #0ea5e9;
+
+            padding: 0;
+
+        }
+
+        .btn-link:hover {
+
+            color: #0284c7;
+
+            text-decoration: underline;
+
+        }
+
+        button.btn svg {
+
+            width: 1.1rem;
+
+            height: 1.1rem;
+
+        }
+
     </style>
 
 </head>
@@ -165,10 +367,10 @@
                         <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
                         <input type="password" id="login-password" class="w-full p-3 border border-gray-300 rounded-lg" required>
                     </div>
-                    <button type="submit" class="w-full py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700">Entrar</button>
+                    <button type="submit" class="btn btn-primary btn-lg w-full">Entrar</button>
                 </form>
                 <p class="text-center text-sm text-gray-600 mt-4">
-                    ¿No tienes cuenta? <button id="show-register-form" class="font-medium text-cyan-600 hover:underline">Regístrate</button>
+                    ¿No tienes cuenta? <button id="show-register-form" class="btn btn-link btn-sm">Regístrate</button>
                 </p>
                  <p id="login-status" class="text-red-500 text-sm mt-4 text-center hidden"></p>
             </div>
@@ -189,10 +391,10 @@
                         <label for="register-password-confirm" class="block text-sm font-medium text-gray-700 mb-1">Confirmar Contraseña</label>
                         <input type="password" id="register-password-confirm" class="w-full p-3 border border-gray-300 rounded-lg" required>
                     </div>
-                    <button type="submit" class="w-full py-3 bg-cyan-600 text-white font-semibold rounded-lg hover:bg-cyan-700">Registrar</button>
+                    <button type="submit" class="btn btn-primary btn-lg w-full">Registrar</button>
                 </form>
                 <p class="text-center text-sm text-gray-600 mt-4">
-                    ¿Ya tienes cuenta? <button id="show-login-form" class="font-medium text-cyan-600 hover:underline">Inicia Sesión</button>
+                    ¿Ya tienes cuenta? <button id="show-login-form" class="btn btn-link btn-sm">Inicia Sesión</button>
                 </p>
                 <p id="register-status" class="text-red-500 text-sm mt-4 text-center hidden"></p>
             </div>
@@ -215,7 +417,7 @@
 
                 <span class="font-bold">ID de Usuario:</span> <span id="user-id"></span>
 
-                <button id="logout-button" class="ml-4 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-lg hover:bg-red-600">Cerrar Sesión</button>
+                <button id="logout-button" class="ml-4 btn btn-danger btn-sm">Cerrar Sesión</button>
 
             </div>
 
@@ -229,11 +431,11 @@
 
         <div id="admin-toggle-container" class="mb-6 hidden space-y-2"> <!-- Oculto por defecto -->
 
-            <button id="toggle-order-creation-button" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-white bg-cyan-600 hover:bg-cyan-700 transition duration-300">
+            <button id="toggle-order-creation-button" class="btn btn-primary btn-md w-full">
                 Mostrar Calculadora de Órdenes
             </button>
 
-            <button id="toggle-admin-button" class="w-full py-2 px-4 text-sm font-medium rounded-lg text-gray-700 bg-gray-200 hover:bg-gray-300 transition duration-300">
+            <button id="toggle-admin-button" class="btn btn-outline btn-md w-full text-slate-700">
                 Mostrar Panel de Configuración
             </button>
 
@@ -341,7 +543,7 @@
 
 
 
-                <button id="save-margins-button" class="mt-4 w-full py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition duration-300">
+                <button id="save-margins-button" class="btn btn-secondary btn-md w-full mt-4">
 
                     Guardar Márgenes
 
@@ -407,7 +609,7 @@
 
                 
 
-                <button id="save-accounts-button" class="mt-4 w-full py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition duration-300">
+                <button id="save-accounts-button" class="btn btn-secondary btn-md w-full mt-4">
 
                     Guardar Nueva Cuenta
 
@@ -508,7 +710,7 @@
 
                         <div class="text-center py-2">
 
-                            <button id="swap-button" class="p-2 bg-gray-200 text-gray-600 rounded-full hover:bg-cyan-500 hover:text-white transition duration-200">
+                            <button id="swap-button" class="btn btn-outline btn-icon text-gray-600">
 
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 
@@ -560,7 +762,7 @@
 
                         <!-- Botn de Simulacin de Transaccin (Ahora Botn de Pago) -->
 
-                        <button id="payment-button" class="mt-6 w-full px-4 py-2.5 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300 transform active:scale-95 disabled:opacity-60 text-center">
+                        <button id="payment-button" class="btn btn-primary btn-lg w-full mt-6 transition-transform duration-200">
 
                             Pagar y Ver Detalles de Transferencia
 
@@ -683,13 +885,13 @@
                         <p class="text-xs text-gray-500">Sube el comprobante de tu transferencia para validar la operacion y continuar con el pago.</p>
                         <div class="flex flex-col md:flex-row gap-3">
                             <input id="receipt-upload" type="file" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500" accept="image/*,.pdf">
-                            <button type="button" id="upload-receipt-button" class="px-3 py-1 bg-cyan-600 text-white text-xs font-semibold rounded-lg hover:bg-cyan-700 transition duration-300 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <button type="button" id="upload-receipt-button" class="btn btn-primary btn-sm">
                                 Subir comprobante y confirmar orden
                             </button>
                         </div>
                         <p id="receipt-upload-status" class="text-xs text-gray-500 hidden"></p>
                         <p class="text-xs text-gray-500">Si necesitas asistencia adicional, tambien puedes compartirlo por WhatsApp.</p>
-                        <a href="https://wa.me/56930072631?text=Hola%2C%20adjunto%20el%20comprobante%20de%20mi%20transferencia.%20Nombre:%20[tu%20nombre]%20Monto:%20[monto]" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300">
+                        <a href="https://wa.me/56930072631?text=Hola%2C%20adjunto%20el%20comprobante%20de%20mi%20transferencia.%20Nombre:%20[tu%20nombre]%20Monto:%20[monto]" target="_blank" rel="noopener" class="btn btn-primary btn-md gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.57 2 2.04 6.54 2.04 12c0 2.1.55 4.05 1.6 5.77L2 22l4.35-1.61c1.63 1.12 3.55 1.71 5.7 1.71 5.46 0 10-4.54 10-10s-4.53-10-9.99-10Zm5.87 14.52c-.25.7-1.47 1.34-2.02 1.43-.52.1-1.19.18-1.92-.12-.44-.17-1-.32-1.73-.63-3.05-1.32-5.03-4.41-5.18-4.62-.15-.21-1.24-1.65-1.24-3.15s.79-2.25 1.08-2.56c.25-.28.67-.4 1.08-.4.13 0 .25.01.36.01.32.01.48.03.69.54.25.6.85 2.07.92 2.22.07.15.11.32.02.5-.08.17-.12.28-.24.44-.12.15-.26.33-.37.45-.12.12-.24.26-.1.5.14.25.63 1.04 1.35 1.69.93.83 1.71 1.09 1.96 1.21.25.13.4.11.55-.06.14-.17.63-.73.8-.98.17-.24.34-.2.57-.12.23.08 1.49.7 1.74.83.26.13.43.19.49.3.06.12.06.7-.2 1.4Z"/></svg>
                             Enviar por WhatsApp
                         </a>
@@ -699,7 +901,7 @@
 
 <p class="text-xs text-gray-500 mt-4 text-center">Una vez realizada la transferencia, sube tu comprobante para confirmar la orden. Si lo prefieres, tambien puedes compartirlo por WhatsApp (+56 9 3007 2631).</p>
 
-<button id="close-modal-button" class="mt-6 w-full px-4 py-2.5 bg-cyan-600 text-white text-sm font-semibold rounded-lg hover:bg-cyan-700 transition duration-300 text-center">
+<button id="close-modal-button" class="btn btn-secondary btn-lg w-full mt-6">
 
                 Entendido / Cerrar
 
@@ -712,7 +914,7 @@
     <!-- VISOR DE IMÁGENES MODAL (OCULTO POR DEFECTO) -->
     <div id="image-viewer-modal" class="modal-overlay hidden">
         <div class="modal-content relative max-w-3xl w-full">
-            <button id="close-image-viewer-button" class="absolute -top-3 -right-3 bg-white rounded-full p-1 text-gray-700 hover:bg-gray-200 z-10">
+            <button id="close-image-viewer-button" class="btn btn-outline btn-icon absolute -top-3 -right-3 z-10 bg-white/90">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
