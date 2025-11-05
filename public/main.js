@@ -896,6 +896,16 @@ function renderTransactionHistory(transactions) {
                 </button>
             </div>`
             : '';
+        const userUploadMarkup = (!tx.userReceiptUrl && tx.status !== 'Cancelada' && tx.status !== 'Completado')
+            ? `<div class="history-upload-section pt-2 border-t border-dashed border-gray-200 space-y-2">
+                <p class="text-xs text-gray-600">Sube tu comprobante para completar esta orden.</p>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <input type="file" class="history-receipt-input flex-1 text-xs sm:text-sm border border-gray-300 rounded-lg px-3 py-2" accept="image/*,.pdf" data-transaction-id="${escapeHtml(tx.id || '')}">
+                    <button class="history-upload-btn btn btn-primary btn-sm shrink-0" data-transaction-id="${escapeHtml(tx.id || '')}">Subir comprobante</button>
+                </div>
+                <p class="history-upload-status text-xs text-gray-500 hidden"></p>
+            </div>`
+            : '';
         item.innerHTML = `
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <p class="font-semibold text-gray-800 text-sm sm:text-base">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
@@ -904,6 +914,7 @@ function renderTransactionHistory(transactions) {
             <p class="text-xs text-gray-500">Tasa: ${tx.rateApplied ? tx.rateApplied.toFixed(4) : 'N/A'} - ${date} ${time}</p>
             ${destinationDetailsMarkup ? `<div class="pt-2 border-t border-gray-200 space-y-2">${destinationDetailsMarkup}</div>` : ''}
             ${receiptActionsMarkup}
+            ${userUploadMarkup}
             <div class="flex flex-wrap items-center gap-2">
                 ${cancelButtonMarkup}
             </div>
@@ -942,6 +953,59 @@ async function handleHistoryContainerClick(event) {
     if (viewButton) {
         event.preventDefault();
         handleViewReceiptButton(viewButton);
+        return;
+    }
+    const uploadButton = event.target.closest('.history-upload-btn');
+    if (uploadButton) {
+        event.preventDefault();
+        const transactionId = uploadButton.getAttribute('data-transaction-id');
+        if (!transactionId) return;
+        const section = uploadButton.closest('.history-upload-section');
+        const fileInput = section?.querySelector('.history-receipt-input');
+        const statusElement = section?.querySelector('.history-upload-status');
+        const file = fileInput?.files?.[0];
+        if (!file) {
+            if (statusElement) {
+                statusElement.textContent = 'Selecciona un archivo.';
+                statusElement.className = 'history-upload-status text-xs text-red-600';
+                statusElement.classList.remove('hidden');
+            }
+            return;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+            if (statusElement) {
+                statusElement.textContent = 'El archivo supera los 8 MB.';
+                statusElement.className = 'history-upload-status text-xs text-red-600';
+                statusElement.classList.remove('hidden');
+            }
+            return;
+        }
+        if (statusElement) {
+            statusElement.textContent = 'Subiendo comprobante...';
+            statusElement.className = 'history-upload-status text-xs text-gray-500';
+            statusElement.classList.remove('hidden');
+        }
+        uploadButton.disabled = true;
+        uploadReceiptFromHistory(transactionId, file)
+            .then(() => {
+                if (statusElement) {
+                    statusElement.textContent = 'Comprobante subido. Tu orden esta pendiente de revision.';
+                    statusElement.className = 'history-upload-status text-xs text-green-600';
+                    statusElement.classList.remove('hidden');
+                }
+                if (fileInput) fileInput.value = '';
+            })
+            .catch(error => {
+                console.error('Error al subir comprobante desde historial:', error);
+                if (statusElement) {
+                    statusElement.textContent = error.message || 'No se pudo subir el comprobante.';
+                    statusElement.className = 'history-upload-status text-xs text-red-600';
+                    statusElement.classList.remove('hidden');
+                }
+            })
+            .finally(() => {
+                uploadButton.disabled = false;
+            });
         return;
     }
     const cancelButton = event.target.closest('.cancel-transaction-btn');
@@ -1150,6 +1214,30 @@ async function handleUserReceiptUpload(event) {
         uploadReceiptButton.disabled = false;
         if (receiptUploadInput) receiptUploadInput.value = '';
     }
+}
+
+
+async function uploadReceiptFromHistory(transactionId, file) {
+    if (!transactionId || !file) throw new Error('Datos insuficientes para subir el comprobante.');
+    if (!storage || !db || !userId) throw new Error('Firebase no inicializado.');
+    const transactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', transactionId);
+    const transactionSnap = await getDoc(transactionRef);
+    if (!transactionSnap.exists()) {
+        throw new Error('La orden no existe.');
+    }
+    const transactionData = transactionSnap.data();
+    if (transactionData.status === 'Completado') {
+        throw new Error('La orden ya fue completada.');
+    }
+    const storagePath = `artifacts/${appId}/users/${userId}/transactions/${transactionId}/receipts/user/${Date.now()}-${file.name}`;
+    const fileRef = storageRef(storage, storagePath);
+    await uploadBytes(fileRef, file);
+    const downloadUrl = await getDownloadURL(fileRef);
+    await updateDoc(transactionRef, {
+        userReceiptUrl: downloadUrl,
+        status: 'Pendiente',
+        userReceiptUploadedAt: serverTimestamp(),
+    });
 }
 
 function setupAdminTransactionsListener() {
@@ -1524,10 +1612,14 @@ async function refreshBinanceBalance() {
     } catch (error) {
         console.error('Error al obtener saldo Binance:', error);
         if (usdtBalanceDisplay) usdtBalanceDisplay.textContent = '--';
-        if (error.message && error.message.includes('404')) {
+        const errorMessage = error?.message || '';
+        const lowerMessage = errorMessage.toLowerCase();
+        if (errorMessage.includes('404')) {
             setUsdtBalanceStatus('Endpoint de Binance no disponible. Verifica la configuración en vercel.json y despliega nuevamente.', true);
+        } else if (lowerMessage.includes('restricted location')) {
+            setUsdtBalanceStatus('Binance bloqueó la consulta desde esta ubicación. Debes habilitar IP permitidas o usar una región autorizada.', true);
         } else {
-            setUsdtBalanceStatus(error.message || 'No se pudo obtener el saldo.', true);
+            setUsdtBalanceStatus(errorMessage || 'No se pudo obtener el saldo.', true);
         }
         throw error;
     } finally {
