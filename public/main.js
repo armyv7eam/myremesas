@@ -446,6 +446,46 @@ function buildDestinationDetailsMarkup(tx, { enableCopy = false } = {}) {
     return blocks.filter(Boolean).join('');
 }
 
+const IMAGE_FILE_REGEX = /\.(png|jpe?g|gif|bmp|webp|svg)$/i;
+
+function isImageLikeUrl(url) {
+    try {
+        const parsed = new URL(url, window.location.href);
+        return IMAGE_FILE_REGEX.test(parsed.pathname.toLowerCase());
+    } catch (error) {
+        console.warn('No se pudo analizar la URL del comprobante:', error);
+        return false;
+    }
+}
+
+function openReceiptViewer(url, title = 'Comprobante') {
+    if (!url) return;
+    if (isImageLikeUrl(url) && imageViewerModal && imageViewerImg && imageViewerTitle) {
+        imageViewerImg.src = url;
+        imageViewerTitle.textContent = title;
+        imageViewerModal.classList.remove('hidden');
+    } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+    }
+}
+
+function closeReceiptViewer() {
+    if (!imageViewerModal) return;
+    imageViewerModal.classList.add('hidden');
+    if (imageViewerImg) imageViewerImg.src = '';
+}
+
+function handleViewReceiptButton(button) {
+    if (!button) return;
+    const url = button.getAttribute('data-url');
+    if (!url) {
+        alert('El comprobante no está disponible.');
+        return;
+    }
+    const title = button.getAttribute('data-title') || 'Comprobante';
+    openReceiptViewer(url, title);
+}
+
 function getMarginValue(key) {
     const value = marginConfig[key];
     return (typeof value === 'number' && !Number.isNaN(value)) ? value : DEFAULT_MARGIN_CONFIG[key];
