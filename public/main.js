@@ -44,9 +44,13 @@ const MARGIN_CONFIG_COLLECTION = 'config';
 const MARGIN_CONFIG_DOC_ID = 'pricing';
 let marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 let marginConfigUnsubscribe = null;
+const DEFAULT_CHART_SYMBOL = 'FX_IDC:USDCLP';
+let currentChartSymbol = DEFAULT_CHART_SYMBOL;
+let tradingViewScriptPromise = null;
 
 // --- DECLARACIN DE VARIABLES DEL DOM ---
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails, binanceBalanceCard, usdtBalanceDisplay, refreshUsdtBalanceButton, usdtBalanceStatus;
+let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails, binanceBalanceCard, usdtBalanceDisplay, refreshUsdtBalanceButton, usdtBalanceStatus, marketChartContainer, marketChartStatus;
+let chartSymbolButtons = [];
 
 let currentTransactionId = null;
 let currentTransactionPath = null;
@@ -131,6 +135,9 @@ function initializeDOM() {
     usdtBalanceDisplay = document.getElementById('usdt-balance-display');
     refreshUsdtBalanceButton = document.getElementById('refresh-usdt-balance');
     usdtBalanceStatus = document.getElementById('usdt-balance-status');
+    marketChartContainer = document.getElementById('tradingview_chart');
+    marketChartStatus = document.getElementById('chart-status');
+    chartSymbolButtons = Array.from(document.querySelectorAll('.chart-symbol-btn')) || [];
     if (paymentButton) paymentButton.type = 'button';
     applyMarginConfigToUI();
     authContainer = document.getElementById('auth-container');
@@ -446,7 +453,91 @@ function buildDestinationDetailsMarkup(tx, { enableCopy = false } = {}) {
     return blocks.filter(Boolean).join('');
 }
 
-function getCurrentTransactionDocRef() {
+funfunction setChartStatus(message, isError = false) {
+    if (!marketChartStatus) return;
+    if (!message) {
+        marketChartStatus.textContent = '';
+        marketChartStatus.classList.add('hidden');
+        marketChartStatus.classList.remove('text-red-600');
+        marketChartStatus.classList.add('text-gray-500');
+        return;
+    }
+    marketChartStatus.textContent = message;
+    marketChartStatus.classList.remove('hidden');
+    marketChartStatus.classList.toggle('text-red-600', isError);
+    marketChartStatus.classList.toggle('text-gray-500', !isError);
+}
+
+function highlightChartButton(symbol) {
+    if (!chartSymbolButtons || !chartSymbolButtons.length) return;
+    chartSymbolButtons.forEach((button) => {
+        const isActive = button.dataset.chartSymbol === symbol;
+        button.classList.toggle('btn-primary', isActive);
+        button.classList.toggle('btn-outline', !isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function ensureTradingViewScript() {
+    if (window.TradingView && typeof window.TradingView.widget === 'function') {
+        return Promise.resolve();
+    }
+    if (tradingViewScriptPromise) return tradingViewScriptPromise;
+    tradingViewScriptPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://s3.tradingview.com/tv.js';
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('No se pudo cargar el gr?fico de TradingView.'));
+        document.head.appendChild(script);
+    });
+    return tradingViewScriptPromise;
+}
+
+function renderTradingViewChart(symbol = currentChartSymbol) {
+    if (!marketChartContainer) return;
+    currentChartSymbol = symbol;
+    setChartStatus('Cargando gr?fico en vivo...', false);
+    ensureTradingViewScript()
+        .then(() => {
+            if (!window.TradingView || typeof window.TradingView.widget !== 'function') {
+                throw new Error('Widget TradingView no disponible.');
+            }
+            marketChartContainer.innerHTML = '';
+            new window.TradingView.widget({
+                autosize: true,
+                symbol,
+                interval: '5',
+                timezone: 'America/Santiago',
+                theme: 'light',
+                style: '1',
+                locale: 'es',
+                enable_publishing: false,
+                backgroundColor: 'rgba(255,255,255,1)',
+                gridColor: 'rgba(240, 244, 248, 1)',
+                hide_side_toolbar: false,
+                hide_top_toolbar: false,
+                withdateranges: true,
+                range: '1D',
+                allow_symbol_change: false,
+                studies: ['RSI@tv-basicstudies'],
+                container_id: 'tradingview_chart',
+            });
+            setChartStatus('', false);
+        })
+        .catch((error) => {
+            console.error('Error al inicializar TradingView:', error);
+            setChartStatus('No se pudo cargar el gr?fico. Intenta nuevamente.', true);
+        });
+}
+
+function setupMarketChart() {
+    if (!marketChartContainer) return;
+    highlightChartButton(currentChartSymbol);
+    renderTradingViewChart(currentChartSymbol);
+}
+
+ction getCurrentTransactionDocRef() {
     if (currentTransactionRef) return currentTransactionRef;
     if (!db || !currentTransactionId || !userId) return null;
     currentTransactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', currentTransactionId);
@@ -1515,6 +1606,16 @@ function registerStaticEventListeners() {
         const button = event.target.closest('.copy-btn');
         if (button) copyToClipboard(button.dataset.copy, button);
     });
+    if (chartSymbolButtons && chartSymbolButtons.length) {
+        chartSymbolButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const symbol = button.dataset.chartSymbol;
+                if (!symbol || symbol === currentChartSymbol) return;
+                highlightChartButton(symbol);
+                renderTradingViewChart(symbol);
+            });
+        });
+    }
     if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.addEventListener('click', () => {
         refreshBinanceBalance().catch(error => console.error('Error al actualizar saldo Binance:', error));
     });
@@ -1674,6 +1775,7 @@ async function bootstrapApp() {
     try {
         initializeDOM();
         registerStaticEventListeners();
+        setupMarketChart();
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') closeReceiptViewer();
         });

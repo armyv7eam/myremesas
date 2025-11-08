@@ -671,6 +671,28 @@
         </div>
 
 
+        <section id="market-chart-section" class="mt-10">
+            <div class="p-6 bg-white rounded-xl card-shadow space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-widest text-cyan-600">Mercado en vivo</p>
+                        <h2 class="text-2xl font-semibold text-gray-800 mt-1">Actividad del precio</h2>
+                        <p class="text-sm text-gray-500">Velas con movimiento continuo impulsadas por TradingView para monitorear el tipo de cambio y referencias cripto.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="btn btn-primary btn-sm chart-symbol-btn" data-chart-symbol="FX_IDC:USDCLP">USDT / CLP</button>
+                        <button class="btn btn-outline btn-sm chart-symbol-btn" data-chart-symbol="BINANCE:BTCUSDT">BTC / USDT</button>
+                        <button class="btn btn-outline btn-sm chart-symbol-btn" data-chart-symbol="BINANCE:ETHUSDT">ETH / USDT</button>
+                        <button class="btn btn-outline btn-sm chart-symbol-btn" data-chart-symbol="BINANCE:WLDUSDT">WLD / USDT</button>
+                    </div>
+                </div>
+                <div>
+                    <div id="tradingview_chart" class="rounded-xl border border-gray-200" style="min-height:420px;"></div>
+                    <p id="chart-status" class="text-xs text-gray-500 mt-2 hidden"></p>
+                </div>
+            </div>
+        </section>
+
         <!-- Contenedor Principal: Calculadora y Historial -->
 
         <div id="order-creation-section">
