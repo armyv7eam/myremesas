@@ -536,8 +536,7 @@ function setupMarketChart() {
     highlightChartButton(currentChartSymbol);
     renderTradingViewChart(currentChartSymbol);
 }
-
-ction getCurrentTransactionDocRef() {
+function getCurrentTransactionDocRef() {
     if (currentTransactionRef) return currentTransactionRef;
     if (!db || !currentTransactionId || !userId) return null;
     currentTransactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', currentTransactionId);
@@ -1796,4 +1795,6 @@ if (document.readyState === 'loading') {
 } else {
     bootstrapApp();
 }
+
+
 
