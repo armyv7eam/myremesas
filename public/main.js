@@ -1,4 +1,4 @@
-Ôªøimport { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
@@ -154,7 +154,7 @@ function initializeDOM() {
 async function initializeFirebase() {
     try {
         if (!firebaseConfig) {
-            authStatus.textContent = "Error: Configuraci√≥n de Firebase no disponible.";
+            authStatus.textContent = "Error: ConfiguraciÛn de Firebase no disponible.";
             return;
         }
         const app = initializeApp(firebaseConfig);
@@ -172,7 +172,7 @@ async function initializeFirebase() {
                     if (authFormsSection) authFormsSection.classList.add('hidden');
                     logoutButton.classList.remove('hidden');
                 } else {
-                    userIdDisplay.textContent = `An√≥nimo (${userId.substring(0, 8)}...)`;
+                    userIdDisplay.textContent = `AnÛnimo (${userId.substring(0, 8)}...)`;
                     if (authFormsSection) authFormsSection.classList.remove('hidden');
                     logoutButton.classList.add('hidden');
                 }
@@ -213,13 +213,13 @@ async function initializeFirebase() {
                 }
                 userId = null;
                 isCurrentUserAdmin = false;
-                if(authStatus) authStatus.textContent = "Por favor, inicie sesi√≥n o reg√≠strese.";
+                if(authStatus) authStatus.textContent = "Por favor, inicie sesiÛn o regÌstrese.";
                 if(userIdContainer) userIdContainer.classList.add('hidden');
                 if(authFormsSection) authFormsSection.classList.remove('hidden');
                 if(logoutButton) logoutButton.classList.add('hidden');
                 if (adminPanel) adminPanel.classList.add('hidden');
                 if (adminToggleContainer) adminToggleContainer.classList.add('hidden');
-                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesi√≥n para ver su historial.</p>';
+                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesiÛn para ver su historial.</p>';
                 if (adminTransactionsSection) adminTransactionsSection.classList.add('hidden');
                 authContainer.classList.remove('hidden');
                 appContainer.classList.add('hidden');
@@ -250,7 +250,7 @@ function setupAuthEventListeners() {
                 statusElement.classList.add('hidden');
                 await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
-                console.error("Error de inicio de sesi√≥n:", error);
+                console.error("Error de inicio de sesiÛn:", error);
                 statusElement.textContent = `Error: ${error.message.replace("Firebase: ", "")}`;
                 statusElement.classList.remove('hidden');
             }
@@ -264,7 +264,7 @@ function setupAuthEventListeners() {
             const confirmPassword = document.getElementById('register-password-confirm').value;
             const statusElement = document.getElementById('register-status');
             if (password !== confirmPassword) {
-                statusElement.textContent = "Las contrase√±as no coinciden.";
+                statusElement.textContent = "Las contraseÒas no coinciden.";
                 statusElement.classList.remove('hidden');
                 return;
             }
@@ -479,7 +479,7 @@ function handleViewReceiptButton(button) {
     if (!button) return;
     const url = button.getAttribute('data-url');
     if (!url) {
-        alert('El comprobante no est√° disponible.');
+        alert('El comprobante no est· disponible.');
         return;
     }
     const title = button.getAttribute('data-title') || 'Comprobante';
@@ -539,7 +539,7 @@ function setupMarginConfigListener() {
         applyMarginConfigToUI();
         calculateExchange();
     }, (error) => {
-        console.error('Error al escuchar m√°rgenes:', error);
+        console.error('Error al escuchar m·rgenes:', error);
         marginConfig = { ...DEFAULT_MARGIN_CONFIG };
         applyMarginConfigToUI();
         calculateExchange();
@@ -549,7 +549,7 @@ function setupMarginConfigListener() {
 async function saveMarginConfig(event) {
     if (event) event.preventDefault();
     if (!isAuthReady || !db || !ADMIN_UIDS.includes(userId)) {
-        showMarginStatus('No autorizado para actualizar m√°rgenes.', true);
+        showMarginStatus('No autorizado para actualizar m·rgenes.', true);
         return;
     }
     try {
@@ -558,7 +558,7 @@ async function saveMarginConfig(event) {
             discountClpVes: readPercentInput(marginClpVesInput, 'Descuento CLP -> VES', marginConfig.discountClpVes),
             marginUsdtClp: readPercentInput(marginUsdtClpInput, 'Margen USDT -> CLP', marginConfig.marginUsdtClp),
         };
-        showMarginStatus('Guardando m√°rgenes...');
+        showMarginStatus('Guardando m·rgenes...');
         if (saveMarginsButton) {
             saveMarginsButton.disabled = true;
             saveMarginsButton.textContent = 'Guardando...';
@@ -568,14 +568,14 @@ async function saveMarginConfig(event) {
         marginConfig = newConfig;
         applyMarginConfigToUI();
         calculateExchange();
-        showMarginStatus('M√°rgenes guardados correctamente.');
+        showMarginStatus('M·rgenes guardados correctamente.');
         setTimeout(hideMarginStatus, 3000);
     } catch (validationError) {
         showMarginStatus(validationError.message, true);
     } finally {
         if (saveMarginsButton) {
             saveMarginsButton.disabled = false;
-            saveMarginsButton.textContent = 'Guardar M√°rgenes';
+            saveMarginsButton.textContent = 'Guardar M·rgenes';
         }
     }
 }
@@ -586,14 +586,14 @@ function readPercentInput(inputElement, label, fallbackDecimal) {
     if (raw === '') return fallbackDecimal;
     const numeric = parseFloat(raw);
     if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
-        throw new Error(`${label} debe ser un n√∫mero entre 0 y 100.`);
+        throw new Error(`${label} debe ser un n˙mero entre 0 y 100.`);
     }
     return numeric / 100;
 }
 
 async function saveAdminAccounts() {
     if (!isAuthReady || !db) {
-        accountStatus.textContent = "Error: Conexi√≥n no lista.";
+        accountStatus.textContent = "Error: ConexiÛn no lista.";
         return;
     }
     const accountData = {
@@ -614,7 +614,7 @@ async function saveAdminAccounts() {
         const collectionPath = `artifacts/${appId}/public/data/admin_accounts`;
         await addDoc(collection(db, collectionPath), { ...accountData, updatedBy: userId, timestamp: serverTimestamp() });
         adminBankNameInput.value = '';
-        adminAccountHolderInput.value = 'Ender Javier Pi√±a Rojas';
+        adminAccountHolderInput.value = 'Ender Javier PiÒa Rojas';
         adminAccountNumberInput.value = '';
         adminRutInput.value = '26728535-7';
         adminAccountTypeInput.value = '';
@@ -631,7 +631,7 @@ async function saveAdminAccounts() {
 
 async function deleteAdminAccount(docId, accountName) {
     if (!isAuthReady || !db) {
-        accountStatus.textContent = "Error: Conexi√≥n no lista.";
+        accountStatus.textContent = "Error: ConexiÛn no lista.";
         return;
     }
     try {
@@ -710,12 +710,12 @@ async function fetchDynamicRates() {
             throw new Error(data.message || "Respuesta de la API con formato inesperado.");
         }
     } catch (error) {
-        console.warn("Fallo en la conexi√≥n con la API. Usando tasas de referencia fijas.", error);
+        console.warn("Fallo en la conexiÛn con la API. Usando tasas de referencia fijas.", error);
         wldUsdtDisplay.textContent = `WLD/USDT: ${liveRates.WLD_to_USDT.toFixed(4)} (Fijo)`;
         clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP (Fijo)`;
         usdtClpP2pWldDisplay.textContent = `USDT/CLP: ${liveRates.USDT_to_CLP.toFixed(2)} CLP / USDT (Fijo)`;
         vesUsdtP2pDisplay.textContent = `USDT/VES: 1 USDT = ${liveRates.USDT_to_VES.toFixed(2)} VES (Fijo)`;
-        rateFetchStatus.textContent = 'Fallo de conexi√≥n. Usando tasas de Referencia.';
+        rateFetchStatus.textContent = 'Fallo de conexiÛn. Usando tasas de Referencia.';
     }
     calculateExchange();
 }
@@ -755,7 +755,7 @@ function calculateExchange(enablePaymentButton = true) {
     const rates = calculateFullRatesInternal();
     if (isNaN(amountSend) || amountSend <= 0) {
         amountReceiveDisplay.textContent = formatCurrency(0, currencyReceive);
-        rateDisplay.textContent = "Ingrese un monto v√°lido.";
+        rateDisplay.textContent = "Ingrese un monto v·lido.";
         paymentButton.disabled = true;
         errorMessage.classList.add('hidden');
         return;
@@ -767,7 +767,7 @@ function calculateExchange(enablePaymentButton = true) {
         rateDisplay.textContent = `Intercambio ${currencySend} a ${currencyReceive} no disponible.`;
         paymentButton.disabled = true;
         errorMessage.classList.remove('hidden');
-        errorMessage.textContent = `Error: El intercambio de ${currencySend} a ${currencyReceive} no es una ruta v√°lida.`;
+        errorMessage.textContent = `Error: El intercambio de ${currencySend} a ${currencyReceive} no es una ruta v·lida.`;
         return;
     }
     if (enablePaymentButton) paymentButton.disabled = false;
@@ -814,7 +814,7 @@ async function recordTransaction(amountSend, currencySend, amountReceive, curren
         const pathSegments = ['artifacts', appId, 'users', userId, 'transactions', docRef.id];
         return { id: docRef.id, path: pathSegments.join('/'), ref: docRef, segments: pathSegments };
     } catch (error) {
-        console.error('Error al registrar transacci√≥n:', error);
+        console.error('Error al registrar transacciÛn:', error);
         return null;
     }
 }
@@ -908,7 +908,7 @@ function renderTransactionHistory(transactions) {
     });
 }
 async function cancelUserTransaction(transactionId) {
-    if (!transactionId || !db || !userId) throw new Error('Transacci√≥n no disponible.');
+    if (!transactionId || !db || !userId) throw new Error('TransacciÛn no disponible.');
     const transactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', transactionId);
     const transactionSnap = await getDoc(transactionRef);
     if (!transactionSnap.exists()) {
@@ -997,7 +997,7 @@ async function handleHistoryContainerClick(event) {
     if (!cancelButton) return;
     const transactionId = cancelButton.dataset.transactionId;
     if (!transactionId) return;
-    const confirmed = window.confirm('¬øDeseas cancelar esta orden? Esta acci√≥n no se puede deshacer.');
+    const confirmed = window.confirm('øDeseas cancelar esta orden? Esta acciÛn no se puede deshacer.');
     if (!confirmed) return;
     const originalText = cancelButton.textContent;
     cancelButton.disabled = true;
@@ -1050,7 +1050,7 @@ async function showPaymentModal() {
     }
     const transactionRecord = await recordTransaction(amountSend, currencySend, amountSend * rate, currencyReceive, extraMetadata);
     if (!transactionRecord) {
-        console.error('No se pudo registrar la transacci√≥n.');
+        console.error('No se pudo registrar la transacciÛn.');
         return;
     }
     currentTransactionId = transactionRecord.id;
@@ -1083,7 +1083,7 @@ async function showPaymentModal() {
         adminAccountSelect.classList.add('hidden');
         selectedAdminAccountDetails.classList.add('hidden');
         noAccountsMessage.classList.remove('hidden');
-        noAccountsMessage.innerHTML = '<p class="text-center text-gray-600 p-4">La direcci√≥n de la Wallet ser√° proporcionada por el administrador.</p>';
+        noAccountsMessage.innerHTML = '<p class="text-center text-gray-600 p-4">La direcciÛn de la Wallet ser· proporcionada por el administrador.</p>';
     }
     paymentModal.classList.remove('hidden');
 }
@@ -1161,7 +1161,7 @@ async function handleUserReceiptUpload(event) {
     }
     const transactionRef = getCurrentTransactionDocRef();
     if (!transactionRef) {
-        receiptUploadStatus.textContent = 'No se encontr√≥ la orden actual.';
+        receiptUploadStatus.textContent = 'No se encontrÛ la orden actual.';
         receiptUploadStatus.className = 'text-xs text-red-600';
         return;
     }
@@ -1189,7 +1189,7 @@ async function handleUserReceiptUpload(event) {
             status: 'Pendiente',
             userReceiptUploadedAt: serverTimestamp(),
         });
-        receiptUploadStatus.textContent = 'Comprobante subido. Tu orden est√° pendiente de revisi√≥n.';
+        receiptUploadStatus.textContent = 'Comprobante subido. Tu orden est· pendiente de revisiÛn.';
         receiptUploadStatus.className = 'text-xs text-green-600';
     } catch (error) {
         console.error('Error al subir comprobante:', error);
@@ -1351,7 +1351,7 @@ function handleAdminTransactionsListClick(event) {
     if (cancelButton) {
         const transactionPath = cancelButton.getAttribute('data-transaction-path');
         if (!transactionPath) return;
-        const confirmed = window.confirm('¬øDeseas cancelar esta orden? Esta acci√≥n no se puede deshacer.');
+        const confirmed = window.confirm('øDeseas cancelar esta orden? Esta acciÛn no se puede deshacer.');
         if (!confirmed) return;
         const originalText = cancelButton.textContent;
         cancelButton.disabled = true;
@@ -1383,7 +1383,7 @@ function handleAdminTransactionsListClick(event) {
     const hasUserReceipt = card?.getAttribute('data-user-has-receipt') === 'true';
     if (!hasUserReceipt) {
         if (statusElement) {
-            statusElement.textContent = 'El cliente a√∫n no ha cargado su comprobante.';
+            statusElement.textContent = 'El cliente a˙n no ha cargado su comprobante.';
             statusElement.className = 'admin-upload-status text-xs text-red-600';
         }
         return;
@@ -1425,7 +1425,7 @@ async function uploadAdminReceipt(transactionPath, file) {
     }
     const transactionData = transactionSnap.data();
     if (!transactionData.userReceiptUrl) {
-        throw new Error('El cliente a√∫n no ha cargado su comprobante.');
+        throw new Error('El cliente a˙n no ha cargado su comprobante.');
     }
     const storagePath = `${transactionPath}/receipts/admin/${Date.now()}-${file.name}`;
     const fileRef = storageRef(storage, storagePath);
@@ -1588,7 +1588,7 @@ async function refreshBinanceBalance() {
         const detailParts = [`Libre: ${free.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`];
         if (locked > 0) detailParts.push(`Bloqueado: ${locked.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`);
         if (withdrawing > 0) detailParts.push(`En retiro: ${withdrawing.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`);
-        const detailMessage = detailParts.join(' ‚Ä¢ ');
+        const detailMessage = detailParts.join(' ï ');
         if (detailMessage) {
             setUsdtBalanceStatus(detailMessage, false);
         } else {
@@ -1600,9 +1600,9 @@ async function refreshBinanceBalance() {
         const errorMessage = error?.message || '';
         const lowerMessage = errorMessage.toLowerCase();
         if (errorMessage.includes('404')) {
-            setUsdtBalanceStatus('Endpoint de Binance no disponible. Verifica la configuraci√≥n en vercel.json y despliega nuevamente.', true);
+            setUsdtBalanceStatus('Endpoint de Binance no disponible. Verifica la configuraciÛn en vercel.json y despliega nuevamente.', true);
         } else if (lowerMessage.includes('restricted location')) {
-            setUsdtBalanceStatus('Binance bloque√≥ la consulta desde esta ubicaci√≥n. Debes habilitar IP permitidas o usar una regi√≥n autorizada.', true);
+            setUsdtBalanceStatus('Binance bloqueÛ la consulta desde esta ubicaciÛn. Debes habilitar IP permitidas o usar una regiÛn autorizada.', true);
         } else {
             setUsdtBalanceStatus(errorMessage || 'No se pudo obtener el saldo.', true);
         }
@@ -1666,9 +1666,9 @@ async function bootstrapApp() {
         await initializeFirebase();
         setTimeout(() => fetchDynamicRates().catch(err => console.error('Error al obtener tasas:', err)), 500);
     } catch (error) {
-        console.error('Error al iniciar la aplicaci√≥n:', error);
+        console.error('Error al iniciar la aplicaciÛn:', error);
         if (authStatus) {
-            authStatus.textContent = 'No se pudo iniciar la aplicaci√≥n.';
+            authStatus.textContent = 'No se pudo iniciar la aplicaciÛn.';
             authStatus.classList.remove('hidden');
         }
     }
@@ -1679,6 +1679,7 @@ if (document.readyState === 'loading') {
 } else {
     bootstrapApp();
 }
+
 
 
 
