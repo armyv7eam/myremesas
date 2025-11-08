@@ -453,7 +453,7 @@ function buildDestinationDetailsMarkup(tx, { enableCopy = false } = {}) {
     return blocks.filter(Boolean).join('');
 }
 
-funfunction setChartStatus(message, isError = false) {
+function setChartStatus(message, isError = false) {
     if (!marketChartStatus) return;
     if (!message) {
         marketChartStatus.textContent = '';
@@ -1796,3 +1796,4 @@ if (document.readyState === 'loading') {
 } else {
     bootstrapApp();
 }
+
