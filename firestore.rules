@@ -47,6 +47,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // 5. Cuentas beneficiarias (favoritos) de los usuarios
+    // Un usuario puede gestionar (leer, crear, actualizar, borrar) sus propias
+    // cuentas beneficiarias. Los administradores no necesitan acceso aquí.
+    match /artifacts/{appId}/users/{userId}/beneficiaries/{beneficiaryId} {
+      allow read, write: if isOwner(userId);
+    }
+
     // 4. Regla de denegación explícita para el resto de las rutas
     // Deniega el acceso a cualquier otra ruta que no haya sido definida explícitamente.
     match /{path=**} {

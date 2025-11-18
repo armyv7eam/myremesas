@@ -3,11 +3,17 @@
   "builds": [
     { "src": "api/rates.js", "use": "@vercel/node" },
     { "src": "api/binance-balance.js", "use": "@vercel/node" },
+    { "src": "api/orders.js", "use": "@vercel/node" },
+    { "src": "api/beneficiaries.js", "use": "@vercel/node" },
     { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/rates", "dest": "/api/rates.js" },
     { "src": "/api/binance-balance", "dest": "/api/binance-balance.js" },
+    { "src": "/api/orders", "dest": "/api/orders.js" },
+    { "src": "/api/orders/(.*)", "dest": "/api/orders.js" },
+    { "src": "/api/beneficiaries", "dest": "/api/beneficiaries.js" },
+    { "src": "/api/beneficiaries/(.*)", "dest": "/api/beneficiaries.js" },
     { "src": "/(.*)", "dest": "/public/$1" }
   ]
 }
