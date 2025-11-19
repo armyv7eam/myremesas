@@ -1,27 +1,27 @@
 
 export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
+    // Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
+    // MY_KV_NAMESPACE: KVNamespace;
+    //
+    // Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
+    // MY_DURABLE_OBJECT: DurableObjectNamespace;
+    //
+    // Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
+    // MY_BUCKET: R2Bucket;
+    //
+    // Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
+    // MY_SERVICE: Fetcher;
+    //
+    // Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
+    // MY_QUEUE: Queue;
     BINANCE_API_KEY: string;
     BINANCE_API_SECRET: string;
 }
 
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		const url = new URL(request.url);
-        
+    async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+        const url = new URL(request.url);
+
         // Handle CORS
         if (request.method === "OPTIONS") {
             return new Response(null, {
@@ -33,14 +33,14 @@ export default {
             });
         }
 
-		if (url.pathname === '/binance') {
+        if (url.pathname === '/binance') {
             const asset = url.searchParams.get('asset') || 'USDT';
             const apiUrl = 'https://api.binance.com/sapi/v1/capital/config/getall';
-            
+
             const timestamp = Date.now();
             const recvWindow = 5000;
             const queryString = `timestamp=${timestamp}&recvWindow=${recvWindow}`;
-            
+
             // We need to sign the request
             // Note: In a real worker, you'd need to use crypto.subtle or a library to sign.
             // However, for this proxy to work simply as a pass-through for the backend, 
@@ -51,19 +51,19 @@ export default {
             // if (useProxy) { ... axios.get(proxyUrl ... }
             // It seems the backend expects the proxy to handle the authentication if it's just a GET.
             // BUT, the backend has the secrets. The proxy might not have them unless we bind them.
-            
+
             // Let's look at the backend code again.
             // It calls `${process.env.BINANCE_PROXY_URL}/binance?asset=${asset}`
             // It does NOT pass the signature. So the PROXY must sign it.
             // This means the PROXY needs the secrets.
-            
+
             // I will implement the signing logic here using Web Crypto API available in Workers.
 
             const apiKey = env.BINANCE_API_KEY;
             const apiSecret = env.BINANCE_API_SECRET;
 
             if (!apiKey || !apiSecret) {
-                 return new Response(JSON.stringify({ success: false, message: "Proxy credentials not configured" }), {
+                return new Response(JSON.stringify({ success: false, message: "Proxy credentials not configured" }), {
                     status: 500,
                     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
                 });
@@ -89,21 +89,26 @@ export default {
             const finalUrl = `${apiUrl}?${queryString}&signature=${signature}`;
 
             try {
+                console.log(`Fetching from Binance: ${finalUrl}`);
                 const response = await fetch(finalUrl, {
                     headers: {
                         "X-MBX-APIKEY": apiKey
                     }
                 });
-                
-                const data = await response.json();
-                
+
+                console.log(`Binance response status: ${response.status}`);
+
                 if (!response.ok) {
-                     return new Response(JSON.stringify({ success: false, message: "Binance API Error", data }), {
+                    const errorText = await response.text();
+                    console.error(`Binance API Error: ${errorText}`);
+                    return new Response(JSON.stringify({ success: false, message: "Binance API Error", details: errorText }), {
                         status: response.status,
                         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
                     });
                 }
-                
+
+                const data = await response.json();
+
                 // Filter for the asset
                 // The backend expects the full array or the filtered object?
                 // Backend says: responseData = data; // La respuesta del proxy ya tiene el formato que necesitamos
@@ -111,20 +116,21 @@ export default {
                 // Wait, if responseData = data, and data is the array from Binance...
                 // But later it does: const assetInfo = data.find... 
                 // Fails if data is not an array.
-                
+
                 // Let's return the full array as Binance does, so the backend logic works as is.
                 return new Response(JSON.stringify(data), {
                     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
                 });
 
             } catch (e: any) {
-                return new Response(JSON.stringify({ success: false, message: e.message }), {
+                console.error(`Proxy Internal Error: ${e.message}`);
+                return new Response(JSON.stringify({ success: false, message: e.message, stack: e.stack }), {
                     status: 500,
                     headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
                 });
             }
-		}
+        }
 
-		return new Response('Not Found', { status: 404 });
-	},
+        return new Response('Not Found', { status: 404 });
+    },
 } satisfies ExportedHandler<Env>;

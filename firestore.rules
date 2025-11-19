@@ -34,9 +34,7 @@ service cloud.firestore {
     // Un usuario solo puede ver/crear/actualizar sus propias transacciones.
     // Un administrador puede ver/actualizar cualquier transacción.
     match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
-      allow read, update: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow delete: if isAdmin();
+      allow read, write: if isOwner(userId) || isAdmin();
     }
 
     // 3. Configuración de precios (márgenes)

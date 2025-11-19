@@ -19,41 +19,58 @@ module.exports = async (req, res) => {
     return res.status(405).json({ success: false, message: "Method not allowed" });
   }
 
-  const apiKey = process.env.BINANCE_API_KEY;
-  const apiSecret = process.env.BINANCE_API_SECRET;
-
-  if (!apiKey || !apiSecret) {
-    return res.status(500).json({
-      success: false,
-      message: "Credenciales de Binance no configuradas. Define BINANCE_API_KEY y BINANCE_API_SECRET.",
-    });
-  }
+  // Usar el proxy de Cloudflare si está configurado, si no, usar la API directa.
+  const useProxy = !!process.env.BINANCE_PROXY_URL;
 
   const asset = (req.query.asset || "USDT").toUpperCase();
 
-  const params = {
-    timestamp: Date.now(),
-    recvWindow: 5000,
-  };
-
-  const queryString = new URLSearchParams(params).toString();
-  const signature = crypto.createHmac("sha256", apiSecret).update(queryString).digest("hex");
-
   try {
-    const { data } = await axios.get("https://api.binance.com/sapi/v1/capital/config/getall", {
-      params: { ...params, signature },
-      headers: {
-        "X-MBX-APIKEY": apiKey,
-      },
-      timeout: 8000,
-    });
+    let responseData;
 
-    if (!Array.isArray(data)) {
-      return res.status(502).json({
-        success: false,
-        message: "Respuesta inesperada de Binance.",
-        data,
+    if (useProxy) {
+      // --- Lógica para llamar al Proxy de Cloudflare ---
+      const proxyUrl = `${process.env.BINANCE_PROXY_URL}/binance?asset=${asset}`;
+      console.log(`Usando proxy de Cloudflare: ${proxyUrl}`);
+      const { data } = await axios.get(proxyUrl, { timeout: 8000 });
+      responseData = data; // La respuesta del proxy ya tiene el formato que necesitamos
+    } else {
+      // --- Lógica original para llamar directamente a Binance (para desarrollo local) ---
+      console.log("Usando API directa de Binance (entorno local o sin proxy configurado).");
+      const apiKey = process.env.BINANCE_API_KEY;
+      const apiSecret = process.env.BINANCE_API_SECRET;
+
+      if (!apiKey || !apiSecret) {
+        return res.status(500).json({
+          success: false,
+          message: "Credenciales de Binance no configuradas. Define BINANCE_API_KEY y BINANCE_API_SECRET.",
+        });
+      }
+
+      const params = { timestamp: Date.now(), recvWindow: 5000 };
+      const queryString = new URLSearchParams(params).toString();
+      const signature = crypto.createHmac("sha256", apiSecret).update(queryString).digest("hex");
+
+      const { data: binanceData } = await axios.get("https://api.binance.com/sapi/v1/capital/config/getall", {
+        params: { ...params, signature },
+        headers: { "X-MBX-APIKEY": apiKey },
+        timeout: 8000,
       });
+
+      if (!Array.isArray(binanceData)) {
+        return res.status(502).json({ success: false, message: "Respuesta inesperada de Binance.", data: binanceData });
+      }
+
+      // Formatear la respuesta para que sea igual a la del proxy
+      const assetInfo = binanceData.find((item) => item.coin === asset);
+      const free = parseFloat(assetInfo?.free || "0");
+      const locked = parseFloat(assetInfo?.locked || "0");
+      const withdrawing = parseFloat(assetInfo?.withdrawing || "0");
+
+      responseData = {
+        success: true,
+        asset,
+        balance: assetInfo ? { free, locked, withdrawing, total: free + locked + withdrawing } : null,
+      };
     }
 
     const assetInfo = data.find((item) => item.coin === asset);
