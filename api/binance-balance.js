@@ -73,31 +73,46 @@ module.exports = async (req, res) => {
       };
     }
 
-    const assetInfo = data.find((item) => item.coin === asset);
-    if (!assetInfo) {
-      return res.status(200).json({
+    // Handle proxy response (already formatted) vs direct API response (raw array)
+    let finalResponse;
+
+    if (useProxy) {
+      // Proxy returns raw Binance array, need to process it
+      if (!Array.isArray(responseData)) {
+        return res.status(502).json({ success: false, message: "Respuesta inesperada del proxy.", data: responseData });
+      }
+
+      const assetInfo = responseData.find((item) => item.coin === asset);
+      if (!assetInfo) {
+        return res.status(200).json({
+          success: true,
+          asset,
+          balance: null,
+          message: `El activo ${asset} no se encontró en la cuenta.`,
+        });
+      }
+
+      const free = parseFloat(assetInfo.free || "0");
+      const locked = parseFloat(assetInfo.locked || "0");
+      const withdrawing = parseFloat(assetInfo.withdrawing || "0");
+      const total = free + locked + withdrawing;
+
+      finalResponse = {
         success: true,
         asset,
-        balance: null,
-        message: `El activo ${asset} no se encontró en la cuenta.`,
-      });
+        balance: {
+          free,
+          locked,
+          withdrawing,
+          total,
+        },
+      };
+    } else {
+      // Direct API already formatted the response
+      finalResponse = responseData;
     }
 
-    const free = parseFloat(assetInfo.free || "0");
-    const locked = parseFloat(assetInfo.locked || "0");
-    const withdrawing = parseFloat(assetInfo.withdrawing || "0");
-    const total = free + locked + withdrawing;
-
-    return res.status(200).json({
-      success: true,
-      asset,
-      balance: {
-        free,
-        locked,
-        withdrawing,
-        total,
-      },
-    });
+    return res.status(200).json(finalResponse);
   } catch (error) {
     const status = error.response?.status;
     const message = error.response?.data?.msg || error.message;
