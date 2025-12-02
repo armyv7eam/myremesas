@@ -50,7 +50,7 @@ module.exports = async (req, res) => {
       const queryString = new URLSearchParams(params).toString();
       const signature = crypto.createHmac("sha256", apiSecret).update(queryString).digest("hex");
 
-      const { data: binanceData } = await axios.get("https://api.binance.com/sapi/v1/capital/config/getall", {
+      const { data: binanceData } = await axios.get("https://api1.binance.com/sapi/v1/capital/config/getall", {
         params: { ...params, signature },
         headers: { "X-MBX-APIKEY": apiKey },
         timeout: 8000,

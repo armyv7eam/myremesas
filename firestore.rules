@@ -37,6 +37,12 @@ service cloud.firestore {
       allow read, write: if isOwner(userId) || isAdmin();
     }
 
+    // 2b. CollectionGroup para transacciones (usado por admin panel)
+    // Permite a los administradores consultar todas las transacciones usando collectionGroup
+    match /{path=**}/transactions/{transactionId} {
+      allow read: if isAdmin();
+    }
+
     // 3. Configuración de precios (márgenes)
     // Cualquiera puede leer los márgenes para la calculadora.
     // Solo los administradores pueden cambiarlos.
