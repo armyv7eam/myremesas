@@ -59,6 +59,27 @@ let authContainer, appContainer, authFormsSection, registerForm, loginForm, logo
 let registerStatus, loginStatus;
 let usdtDestinationSaveTimeout = null;
 let vesDestinationSaveTimeout = null;
+/**
+ * Redondea un nÃºmero con el nÃºmero especificado de decimales (redondeo matemÃ¡tico estÃ¡ndar)
+ * @param {number} value - Valor a redondear
+ * @param {number} decimals - NÃºmero de decimales (default: 2)
+ * @returns {number} Valor redondeado
+ */
+function roundToDecimals(value, decimals = 2) {
+    const multiplier = Math.pow(10, decimals);
+    return Math.round(value * multiplier) / multiplier;
+}
+
+/**
+ * Formatea un nÃºmero con redondeo estÃ¡ndar y lo convierte a string con decimales fijos
+ * @param {number} value - Valor a formatear
+ * @param {number} decimals - NÃºmero de decimales (default: 2)
+ * @returns {string} Valor formateado
+ */
+function formatRounded(value, decimals = 2) {
+    return roundToDecimals(value, decimals).toFixed(decimals);
+}
+
 
 function initializeDOM() {
     userIdDisplay = document.getElementById('user-id');
@@ -154,7 +175,7 @@ function initializeDOM() {
 async function initializeFirebase() {
     try {
         if (!firebaseConfig) {
-            authStatus.textContent = "Error: Configuración de Firebase no disponible.";
+            authStatus.textContent = "Error: Configuraciï¿½n de Firebase no disponible.";
             return;
         }
         const app = initializeApp(firebaseConfig);
@@ -172,7 +193,7 @@ async function initializeFirebase() {
                     if (authFormsSection) authFormsSection.classList.add('hidden');
                     logoutButton.classList.remove('hidden');
                 } else {
-                    userIdDisplay.textContent = `Anónimo (${userId.substring(0, 8)}...)`;
+                    userIdDisplay.textContent = `Anï¿½nimo (${userId.substring(0, 8)}...)`;
                     if (authFormsSection) authFormsSection.classList.remove('hidden');
                     logoutButton.classList.add('hidden');
                 }
@@ -213,13 +234,13 @@ async function initializeFirebase() {
                 }
                 userId = null;
                 isCurrentUserAdmin = false;
-                if(authStatus) authStatus.textContent = "Por favor, inicie sesión o regístrese.";
+                if(authStatus) authStatus.textContent = "Por favor, inicie sesiï¿½n o regï¿½strese.";
                 if(userIdContainer) userIdContainer.classList.add('hidden');
                 if(authFormsSection) authFormsSection.classList.remove('hidden');
                 if(logoutButton) logoutButton.classList.add('hidden');
                 if (adminPanel) adminPanel.classList.add('hidden');
                 if (adminToggleContainer) adminToggleContainer.classList.add('hidden');
-                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesión para ver su historial.</p>';
+                if (historyContainer) historyContainer.innerHTML = '<p class="text-gray-500 text-sm p-2">Inicie sesiï¿½n para ver su historial.</p>';
                 if (adminTransactionsSection) adminTransactionsSection.classList.add('hidden');
                 authContainer.classList.remove('hidden');
                 appContainer.classList.add('hidden');
@@ -250,7 +271,7 @@ function setupAuthEventListeners() {
                 statusElement.classList.add('hidden');
                 await signInWithEmailAndPassword(auth, email, password);
             } catch (error) {
-                console.error("Error de inicio de sesión:", error);
+                console.error("Error de inicio de sesiï¿½n:", error);
                 statusElement.textContent = `Error: ${error.message.replace("Firebase: ", "")}`;
                 statusElement.classList.remove('hidden');
             }
@@ -264,7 +285,7 @@ function setupAuthEventListeners() {
             const confirmPassword = document.getElementById('register-password-confirm').value;
             const statusElement = document.getElementById('register-status');
             if (password !== confirmPassword) {
-                statusElement.textContent = "Las contraseñas no coinciden.";
+                statusElement.textContent = "Las contraseï¿½as no coinciden.";
                 statusElement.classList.remove('hidden');
                 return;
             }
@@ -298,19 +319,25 @@ function setupAuthEventListeners() {
 }
 
 function formatCurrency(value, currencyCode) {
+    // Aplicar redondeo estÃ¡ndar antes de formatear
     if (currencyCode === 'WLD') {
-        return `${value.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 8 })} WLD`;
+        const rounded = roundToDecimals(value, 4);
+        return `${rounded.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} WLD`;
     }
     if (currencyCode === 'USDT') {
-         return `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USDT`;
+        const rounded = roundToDecimals(value, 2);
+        return `${rounded.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDT`;
     }
     if (currencyCode === 'VES') {
-         return value.toLocaleString('es-VE', { style: 'currency', currency: 'VES', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const rounded = roundToDecimals(value, 2);
+        return rounded.toLocaleString('es-VE', { style: 'currency', currency: 'VES', minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     if (currencyCode === 'CLP') {
-         return value.toLocaleString('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const rounded = Math.round(value); // CLP no usa decimales
+        return rounded.toLocaleString('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0, maximumFractionDigits: 0 });
     }
-    return value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const rounded = roundToDecimals(value, 2);
+    return rounded.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function copyToClipboard(text, element) {
@@ -479,7 +506,7 @@ function handleViewReceiptButton(button) {
     if (!button) return;
     const url = button.getAttribute('data-url');
     if (!url) {
-        alert('El comprobante no está disponible.');
+        alert('El comprobante no estï¿½ disponible.');
         return;
     }
     const title = button.getAttribute('data-title') || 'Comprobante';
@@ -539,7 +566,7 @@ function setupMarginConfigListener() {
         applyMarginConfigToUI();
         calculateExchange();
     }, (error) => {
-        console.error('Error al escuchar márgenes:', error);
+        console.error('Error al escuchar mï¿½rgenes:', error);
         marginConfig = { ...DEFAULT_MARGIN_CONFIG };
         applyMarginConfigToUI();
         calculateExchange();
@@ -549,7 +576,7 @@ function setupMarginConfigListener() {
 async function saveMarginConfig(event) {
     if (event) event.preventDefault();
     if (!isAuthReady || !db || !ADMIN_UIDS.includes(userId)) {
-        showMarginStatus('No autorizado para actualizar márgenes.', true);
+        showMarginStatus('No autorizado para actualizar mï¿½rgenes.', true);
         return;
     }
     try {
@@ -558,7 +585,7 @@ async function saveMarginConfig(event) {
             discountClpVes: readPercentInput(marginClpVesInput, 'Descuento CLP -> VES', marginConfig.discountClpVes),
             marginUsdtClp: readPercentInput(marginUsdtClpInput, 'Margen USDT -> CLP', marginConfig.marginUsdtClp),
         };
-        showMarginStatus('Guardando márgenes...');
+        showMarginStatus('Guardando mï¿½rgenes...');
         if (saveMarginsButton) {
             saveMarginsButton.disabled = true;
             saveMarginsButton.textContent = 'Guardando...';
@@ -568,14 +595,14 @@ async function saveMarginConfig(event) {
         marginConfig = newConfig;
         applyMarginConfigToUI();
         calculateExchange();
-        showMarginStatus('Márgenes guardados correctamente.');
+        showMarginStatus('Mï¿½rgenes guardados correctamente.');
         setTimeout(hideMarginStatus, 3000);
     } catch (validationError) {
         showMarginStatus(validationError.message, true);
     } finally {
         if (saveMarginsButton) {
             saveMarginsButton.disabled = false;
-            saveMarginsButton.textContent = 'Guardar Márgenes';
+            saveMarginsButton.textContent = 'Guardar Mï¿½rgenes';
         }
     }
 }
@@ -586,14 +613,14 @@ function readPercentInput(inputElement, label, fallbackDecimal) {
     if (raw === '') return fallbackDecimal;
     const numeric = parseFloat(raw);
     if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
-        throw new Error(`${label} debe ser un número entre 0 y 100.`);
+        throw new Error(`${label} debe ser un nï¿½mero entre 0 y 100.`);
     }
     return numeric / 100;
 }
 
 async function saveAdminAccounts() {
     if (!isAuthReady || !db) {
-        accountStatus.textContent = "Error: Conexión no lista.";
+        accountStatus.textContent = "Error: Conexiï¿½n no lista.";
         return;
     }
     const accountData = {
@@ -614,7 +641,7 @@ async function saveAdminAccounts() {
         const collectionPath = `artifacts/${appId}/public/data/admin_accounts`;
         await addDoc(collection(db, collectionPath), { ...accountData, updatedBy: userId, timestamp: serverTimestamp() });
         adminBankNameInput.value = '';
-        adminAccountHolderInput.value = 'Ender Javier Piña Rojas';
+        adminAccountHolderInput.value = 'Ender Javier Piï¿½a Rojas';
         adminAccountNumberInput.value = '';
         adminRutInput.value = '26728535-7';
         adminAccountTypeInput.value = '';
@@ -631,7 +658,7 @@ async function saveAdminAccounts() {
 
 async function deleteAdminAccount(docId, accountName) {
     if (!isAuthReady || !db) {
-        accountStatus.textContent = "Error: Conexión no lista.";
+        accountStatus.textContent = "Error: Conexiï¿½n no lista.";
         return;
     }
     try {
@@ -700,22 +727,22 @@ async function fetchDynamicRates() {
             const newWldRate = parseFloat(data.WLD_to_USDT);
             if (!isNaN(newWldRate)) liveRates.WLD_to_USDT = newWldRate;
             
-            wldUsdtDisplay.textContent = `WLD/USDT (${data.meta?.wld_source || '...'}): ${liveRates.WLD_to_USDT.toFixed(4)}`;
-            clpUsdtP2pDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP`;
-            usdtClpP2pWldDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): ${liveRates.USDT_to_CLP.toFixed(2)} CLP / USDT`;
-            vesUsdtP2pDisplay.textContent = `USDT/VES (${data.meta?.ves_source || '...'}): 1 USDT = ${liveRates.USDT_to_VES.toFixed(2)} VES`;
+            wldUsdtDisplay.textContent = `WLD/USDT (${data.meta?.wld_source || '...'}): ${formatRounded(liveRates.WLD_to_USDT, 4)}`;
+            clpUsdtP2pDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): 1 USDT = ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP`;
+            usdtClpP2pWldDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP / USDT`;
+            vesUsdtP2pDisplay.textContent = `USDT/VES (${data.meta?.ves_source || '...'}): 1 USDT = ${formatRounded(liveRates.USDT_to_VES, 2)} VES`;
             rateFetchStatus.textContent = 'Tasas actualizadas.';
 
         } else {
             throw new Error(data.message || "Respuesta de la API con formato inesperado.");
         }
     } catch (error) {
-        console.warn("Fallo en la conexión con la API. Usando tasas de referencia fijas.", error);
-        wldUsdtDisplay.textContent = `WLD/USDT: ${liveRates.WLD_to_USDT.toFixed(4)} (Fijo)`;
-        clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${liveRates.USDT_to_CLP.toFixed(2)} CLP (Fijo)`;
-        usdtClpP2pWldDisplay.textContent = `USDT/CLP: ${liveRates.USDT_to_CLP.toFixed(2)} CLP / USDT (Fijo)`;
-        vesUsdtP2pDisplay.textContent = `USDT/VES: 1 USDT = ${liveRates.USDT_to_VES.toFixed(2)} VES (Fijo)`;
-        rateFetchStatus.textContent = 'Fallo de conexión. Usando tasas de Referencia.';
+        console.warn("Fallo en la conexiï¿½n con la API. Usando tasas de referencia fijas.", error);
+        wldUsdtDisplay.textContent = `WLD/USDT: ${formatRounded(liveRates.WLD_to_USDT, 4)} (Fijo)`;
+        clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP (Fijo)`;
+        usdtClpP2pWldDisplay.textContent = `USDT/CLP: ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP / USDT (Fijo)`;
+        vesUsdtP2pDisplay.textContent = `USDT/VES: 1 USDT = ${formatRounded(liveRates.USDT_to_VES, 2)} VES (Fijo)`;
+        rateFetchStatus.textContent = 'Fallo de conexiï¿½n. Usando tasas de Referencia.';
     }
     calculateExchange();
 }
@@ -739,7 +766,7 @@ function calculateFullRatesInternal() {
         fullRates['USDT_to_CLP'] = finalUsdtToClp;
         fullRates['CLP_to_USDT'] = 1 / finalUsdtToClp;
         if (usdtClpMarginDisplay) {
-            usdtClpMarginDisplay.textContent = `1 USDT = ${finalUsdtToClp.toFixed(2)} CLP (Margen +${formatPercent(marginUsdtClp)}%)`;
+            usdtClpMarginDisplay.textContent = `1 USDT = ${formatRounded(finalUsdtToClp, 2)} CLP (Margen +${formatPercent(marginUsdtClp)}%)`;
         }
     }
     fullRates['USDT_to_VES'] = USDT_to_VES;
@@ -755,7 +782,7 @@ function calculateExchange(enablePaymentButton = true) {
     const rates = calculateFullRatesInternal();
     if (isNaN(amountSend) || amountSend <= 0) {
         amountReceiveDisplay.textContent = formatCurrency(0, currencyReceive);
-        rateDisplay.textContent = "Ingrese un monto válido.";
+        rateDisplay.textContent = "Ingrese un monto vï¿½lido.";
         paymentButton.disabled = true;
         errorMessage.classList.add('hidden');
         return;
@@ -767,17 +794,17 @@ function calculateExchange(enablePaymentButton = true) {
         rateDisplay.textContent = `Intercambio ${currencySend} a ${currencyReceive} no disponible.`;
         paymentButton.disabled = true;
         errorMessage.classList.remove('hidden');
-        errorMessage.textContent = `Error: El intercambio de ${currencySend} a ${currencyReceive} no es una ruta válida.`;
+        errorMessage.textContent = `Error: El intercambio de ${currencySend} a ${currencyReceive} no es una ruta vï¿½lida.`;
         return;
     }
     if (enablePaymentButton) paymentButton.disabled = false;
     errorMessage.classList.add('hidden');
     const amountReceive = amountSend * rate;
-    let rateText = `Tasa: 1 ${currencySend} = ${rate.toFixed(currencyReceive === 'WLD' ? 8 : 4)} ${currencyReceive}`;
+    let rateText = `Tasa: 1 ${currencySend} = ${formatRounded(rate, currencyReceive === 'WLD' ? 8 : 4)} ${currencyReceive}`;
     if (currencySend === currencyReceive) {
         rateText = 'Intercambio 1:1';
     } else if (currencySend === 'CLP' && currencyReceive === 'USDT') {
-        rateText = `Tasa: 1 USDT = ${(1 / rate).toFixed(2)} CLP`;
+        rateText = `Tasa: 1 USDT = ${formatRounded(1 / rate, 2)} CLP`;
     }
     amountReceiveDisplay.textContent = formatCurrency(amountReceive, currencyReceive);
     rateDisplay.textContent = rateText;
@@ -814,7 +841,7 @@ async function recordTransaction(amountSend, currencySend, amountReceive, curren
         const pathSegments = ['artifacts', appId, 'users', userId, 'transactions', docRef.id];
         return { id: docRef.id, path: pathSegments.join('/'), ref: docRef, segments: pathSegments };
     } catch (error) {
-        console.error('Error al registrar transacción:', error);
+        console.error('Error al registrar transacciï¿½n:', error);
         return null;
     }
 }
@@ -896,7 +923,7 @@ function renderTransactionHistory(transactions) {
                 <p class="font-semibold text-gray-800 text-sm sm:text-base">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
                 <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${badgeClasses}">${escapeHtml(tx.status || 'N/A')}</span>
             </div>
-            <p class="text-xs text-gray-500">Tasa: ${tx.rateApplied ? tx.rateApplied.toFixed(4) : 'N/A'} - ${date} ${time}</p>
+            <p class="text-xs text-gray-500">Tasa: ${tx.rateApplied ? formatRounded(tx.rateApplied, 4) : 'N/A'} - ${date} ${time}</p>
             ${destinationDetailsMarkup ? `<div class="pt-2 border-t border-gray-200 space-y-2">${destinationDetailsMarkup}</div>` : ''}
             ${receiptActionsMarkup}
             ${userUploadMarkup}
@@ -908,7 +935,7 @@ function renderTransactionHistory(transactions) {
     });
 }
 async function cancelUserTransaction(transactionId) {
-    if (!transactionId || !db || !userId) throw new Error('Transacción no disponible.');
+    if (!transactionId || !db || !userId) throw new Error('Transacciï¿½n no disponible.');
     const transactionRef = doc(db, 'artifacts', appId, 'users', userId, 'transactions', transactionId);
     const transactionSnap = await getDoc(transactionRef);
     if (!transactionSnap.exists()) {
@@ -997,7 +1024,7 @@ async function handleHistoryContainerClick(event) {
     if (!cancelButton) return;
     const transactionId = cancelButton.dataset.transactionId;
     if (!transactionId) return;
-    const confirmed = window.confirm('¿Deseas cancelar esta orden? Esta acción no se puede deshacer.');
+    const confirmed = window.confirm('ï¿½Deseas cancelar esta orden? Esta acciï¿½n no se puede deshacer.');
     if (!confirmed) return;
     const originalText = cancelButton.textContent;
     cancelButton.disabled = true;
@@ -1050,7 +1077,7 @@ async function showPaymentModal() {
     }
     const transactionRecord = await recordTransaction(amountSend, currencySend, amountSend * rate, currencyReceive, extraMetadata);
     if (!transactionRecord) {
-        console.error('No se pudo registrar la transacción.');
+        console.error('No se pudo registrar la transacciï¿½n.');
         return;
     }
     currentTransactionId = transactionRecord.id;
@@ -1083,7 +1110,7 @@ async function showPaymentModal() {
         adminAccountSelect.classList.add('hidden');
         selectedAdminAccountDetails.classList.add('hidden');
         noAccountsMessage.classList.remove('hidden');
-        noAccountsMessage.innerHTML = '<p class="text-center text-gray-600 p-4">La dirección de la Wallet será proporcionada por el administrador.</p>';
+        noAccountsMessage.innerHTML = '<p class="text-center text-gray-600 p-4">La direcciï¿½n de la Wallet serï¿½ proporcionada por el administrador.</p>';
     }
     paymentModal.classList.remove('hidden');
 }
@@ -1161,7 +1188,7 @@ async function handleUserReceiptUpload(event) {
     }
     const transactionRef = getCurrentTransactionDocRef();
     if (!transactionRef) {
-        receiptUploadStatus.textContent = 'No se encontró la orden actual.';
+        receiptUploadStatus.textContent = 'No se encontrï¿½ la orden actual.';
         receiptUploadStatus.className = 'text-xs text-red-600';
         return;
     }
@@ -1189,7 +1216,7 @@ async function handleUserReceiptUpload(event) {
             status: 'Pendiente',
             userReceiptUploadedAt: serverTimestamp(),
         });
-        receiptUploadStatus.textContent = 'Comprobante subido. Tu orden está pendiente de revisión.';
+        receiptUploadStatus.textContent = 'Comprobante subido. Tu orden estï¿½ pendiente de revisiï¿½n.';
         receiptUploadStatus.className = 'text-xs text-green-600';
     } catch (error) {
         console.error('Error al subir comprobante:', error);
@@ -1311,7 +1338,7 @@ function createAdminTransactionCard(tx) {
         <div class="space-y-2">
             ${createCopyRow('Monto enviado', formatCurrency(tx.amountSend || 0, tx.currencySend || 'CLP'))}
             ${createCopyRow('Monto destino', formatCurrency(tx.amountReceive || 0, tx.currencyReceive || 'CLP'))}
-            ${tx.rateApplied ? createCopyRow('Tasa aplicada', tx.rateApplied.toFixed(4)) : ''}
+            ${tx.rateApplied ? createCopyRow('Tasa aplicada', formatRounded(tx.rateApplied, 4)) : ''}
         </div>
         ${destinationDetailsMarkup ? `<div class="border-t border-dashed border-gray-200 pt-3 space-y-2">${destinationDetailsMarkup}</div>` : ''}
         <div class="space-y-2 text-xs text-gray-600">
@@ -1351,7 +1378,7 @@ function handleAdminTransactionsListClick(event) {
     if (cancelButton) {
         const transactionPath = cancelButton.getAttribute('data-transaction-path');
         if (!transactionPath) return;
-        const confirmed = window.confirm('¿Deseas cancelar esta orden? Esta acción no se puede deshacer.');
+        const confirmed = window.confirm('ï¿½Deseas cancelar esta orden? Esta acciï¿½n no se puede deshacer.');
         if (!confirmed) return;
         const originalText = cancelButton.textContent;
         cancelButton.disabled = true;
@@ -1383,7 +1410,7 @@ function handleAdminTransactionsListClick(event) {
     const hasUserReceipt = card?.getAttribute('data-user-has-receipt') === 'true';
     if (!hasUserReceipt) {
         if (statusElement) {
-            statusElement.textContent = 'El cliente aún no ha cargado su comprobante.';
+            statusElement.textContent = 'El cliente aï¿½n no ha cargado su comprobante.';
             statusElement.className = 'admin-upload-status text-xs text-red-600';
         }
         return;
@@ -1425,7 +1452,7 @@ async function uploadAdminReceipt(transactionPath, file) {
     }
     const transactionData = transactionSnap.data();
     if (!transactionData.userReceiptUrl) {
-        throw new Error('El cliente aún no ha cargado su comprobante.');
+        throw new Error('El cliente aï¿½n no ha cargado su comprobante.');
     }
     const storagePath = `${transactionPath}/receipts/admin/${Date.now()}-${file.name}`;
     const fileRef = storageRef(storage, storagePath);
@@ -1567,7 +1594,7 @@ async function refreshBinanceBalance() {
     setUsdtBalanceStatus('Consultando saldo...', false);
     if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.disabled = true;
     try {
-        const response = await fetch('https://binancebalance-vc5nt4u3va-uc.a.run.app?asset=USDT');
+        const response = await fetch('https://binancebalance-775892034675.us-central1.run.app?asset=USDT');
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload.success) {
             throw new Error(payload.message || `HTTP ${response.status}`);
@@ -1583,12 +1610,12 @@ async function refreshBinanceBalance() {
         const withdrawing = Number(balance.withdrawing || 0);
         const total = Number(balance.total != null ? balance.total : free + locked + withdrawing);
         if (usdtBalanceDisplay) {
-            usdtBalanceDisplay.textContent = `${total.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} ${payload.asset || 'USDT'}`;
+            usdtBalanceDisplay.textContent = `${roundToDecimals(total, 2).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${payload.asset || 'USDT'}`;
         }
-        const detailParts = [`Libre: ${free.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`];
-        if (locked > 0) detailParts.push(`Bloqueado: ${locked.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`);
-        if (withdrawing > 0) detailParts.push(`En retiro: ${withdrawing.toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`);
-        const detailMessage = detailParts.join(' • ');
+        const detailParts = [`Libre: ${roundToDecimals(free, 2).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`];
+        if (locked > 0) detailParts.push(`Bloqueado: ${roundToDecimals(locked, 2).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        if (withdrawing > 0) detailParts.push(`En retiro: ${roundToDecimals(withdrawing, 2).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
+        const detailMessage = detailParts.join(' ï¿½ ');
         if (detailMessage) {
             setUsdtBalanceStatus(detailMessage, false);
         } else {
@@ -1600,9 +1627,9 @@ async function refreshBinanceBalance() {
         const errorMessage = error?.message || '';
         const lowerMessage = errorMessage.toLowerCase();
         if (errorMessage.includes('404')) {
-            setUsdtBalanceStatus('Endpoint de Binance no disponible. Verifica la configuración en vercel.json y despliega nuevamente.', true);
+            setUsdtBalanceStatus('Endpoint de Binance no disponible. Verifica la configuraciï¿½n en vercel.json y despliega nuevamente.', true);
         } else if (lowerMessage.includes('restricted location')) {
-            setUsdtBalanceStatus('Binance bloqueó la consulta desde esta ubicación. Debes habilitar IP permitidas o usar una región autorizada.', true);
+            setUsdtBalanceStatus('Binance bloqueï¿½ la consulta desde esta ubicaciï¿½n. Debes habilitar IP permitidas o usar una regiï¿½n autorizada.', true);
         } else {
             setUsdtBalanceStatus(errorMessage || 'No se pudo obtener el saldo.', true);
         }
@@ -1666,9 +1693,9 @@ async function bootstrapApp() {
         await initializeFirebase();
         setTimeout(() => fetchDynamicRates().catch(err => console.error('Error al obtener tasas:', err)), 500);
     } catch (error) {
-        console.error('Error al iniciar la aplicación:', error);
+        console.error('Error al iniciar la aplicaciï¿½n:', error);
         if (authStatus) {
-            authStatus.textContent = 'No se pudo iniciar la aplicación.';
+            authStatus.textContent = 'No se pudo iniciar la aplicaciï¿½n.';
             authStatus.classList.remove('hidden');
         }
     }
