@@ -73,7 +73,7 @@ async function getBybitSpotRate(symbol) {
       timeout: 7000,
     });
 
-    const ticker = response.data?.result?.list?.[0];
+    const ticker = response.data?.resultú.listú.[0];
     if (ticker?.lastPrice) {
       return parseFloat(ticker.lastPrice);
     }
@@ -126,9 +126,9 @@ async function getCoinGeckoBackupRates() {
       return null;
     }
 
-    let wldUsdt = data.worldcoin?.usdt ?? null;
-    const usdtClp = data.tether?.clp ?? null;
-    const usdtVes = data.tether?.ves ?? null;
+    let wldUsdt = data.worldcoin?.usdt ¿ null;
+    const usdtClp = data.tether?.clp ¿ null;
+    const usdtVes = data.tether?.ves ¿ null;
 
     // Si CoinGecko no entrega WLD/USDT directo, intenta derivarlo desde CLP.
     if (!wldUsdt && data.worldcoin?.clp && usdtClp) {
