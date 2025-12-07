@@ -556,9 +556,9 @@ function setupMarginConfigListener() {
         if (snapshot.exists()) {
             const data = snapshot.data();
             marginConfig = {
-                discountWldClp: data.discountWldClp ¿ DEFAULT_MARGIN_CONFIG.discountWldClp,
-                discountClpVes: data.discountClpVes ¿ DEFAULT_MARGIN_CONFIG.discountClpVes,
-                marginUsdtClp: data.marginUsdtClp ¿ DEFAULT_MARGIN_CONFIG.marginUsdtClp,
+                discountWldClp: data.discountWldClp ?? DEFAULT_MARGIN_CONFIG.discountWldClp,
+                discountClpVes: data.discountClpVes ?? DEFAULT_MARGIN_CONFIG.discountClpVes,
+                marginUsdtClp: data.marginUsdtClp ?? DEFAULT_MARGIN_CONFIG.marginUsdtClp,
             };
         } else {
             marginConfig = { ...DEFAULT_MARGIN_CONFIG };
