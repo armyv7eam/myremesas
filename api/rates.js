@@ -126,9 +126,9 @@ async function getCoinGeckoBackupRates() {
       return null;
     }
 
-    let wldUsdt = data.worldcoin?.usdt ¿ null;
-    const usdtClp = data.tether?.clp ¿ null;
-    const usdtVes = data.tether?.ves ¿ null;
+    let wldUsdt = data.worldcoin?.usdt ?? null;
+    const usdtClp = data.tether?.clp ?? null;
+    const usdtVes = data.tether?.ves ?? null;
 
     // Si CoinGecko no entrega WLD/USDT directo, intenta derivarlo desde CLP.
     if (!wldUsdt && data.worldcoin?.clp && usdtClp) {
