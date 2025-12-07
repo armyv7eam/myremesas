@@ -609,7 +609,7 @@ async function saveMarginConfig(event) {
 
 function readPercentInput(inputElement, label, fallbackDecimal) {
     if (!inputElement) return fallbackDecimal;
-    const raw = (inputElement.value ¿ '').toString().replace(',', '.').trim();
+    const raw = (inputElement.value ??  '').toString().replace(',', '.').trim();
     if (raw === '') return fallbackDecimal;
     const numeric = parseFloat(raw);
     if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100) {
@@ -1492,7 +1492,7 @@ async function cancelTransactionAsAdmin(transactionPath) {
 }
 
 function escapeHtml(value) {
-    return String(value ¿ '').replace(/[&<>'"/]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'})[s]);
+    return String(value ??  '').replace(/[&<>'"/]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'})[s]);
 }
 
 function createCopyRow(label, value) {
