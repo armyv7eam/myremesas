@@ -73,7 +73,7 @@ async function getBybitSpotRate(symbol) {
       timeout: 7000,
     });
 
-    const ticker = response.data?.resultú.listú.[0];
+    const ticker = response.data?.result?.list?.[0];
     if (ticker?.lastPrice) {
       return parseFloat(ticker.lastPrice);
     }
