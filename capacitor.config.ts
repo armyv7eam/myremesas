@@ -11,7 +11,9 @@ const config: CapacitorConfig = {
   plugins: {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
+      // @ts-ignore
       iconColor: '#8cb33e',
+      // @ts-ignore
       smallIcon: 'ic_stat_notification'
     }
   }

@@ -67,3 +67,20 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Capacitor and Android
+android/
+ios/
+*.apk
+*.aab
+
+# Firebase Android Configuration
+google-services.json
+
+# Sensitive files
+serviceAccountKey.json
+
+# IDE and Agent Metadata
+.agent/
+.idea/
+.vscode/

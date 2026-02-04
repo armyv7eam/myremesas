@@ -111,6 +111,19 @@ async function getUserTokens(userId: string): Promise<string[]> {
  * Send push notification when a new order is created
  * Notifies admin users about new orders
  */
+
+// ... (previous imports)
+
+
+// ... (existing code)
+
+
+
+/**
+ * Send push notification when a new order is created
+ * Notifies admin users about new orders
+ * AND sends confirmation email to client
+ */
 export const notifyNewOrder = onDocumentCreated("orders/{orderId}", async (event) => {
   const orderData = event.data?.data();
   if (!orderData) return null;
@@ -118,12 +131,18 @@ export const notifyNewOrder = onDocumentCreated("orders/{orderId}", async (event
   const orderId = event.params.orderId;
   logger.info("New order created", { orderId });
 
+  // 1. Send Email Confirmation
+  // REMOVED per user request: Email only sent on Payment Confirmation.
+  // sendOrderConfirmation(orderId, orderData).catch(err => logger.error("Email send failed", err));
+
   try {
     const tokenList = await getAdminTokens();
     if (tokenList.length === 0) {
       logger.info("No admin tokens found, skipping notification");
       return null;
     }
+    // ... (rest of the existing function)
+
 
     const amount = orderData.destinationAmount || orderData.vesAmount || 0;
     const bank = orderData.bank || 'N/A';
@@ -195,6 +214,8 @@ export const notifyOrderUpdate = onDocumentUpdated("orders/{orderId}", async (ev
 
     if (afterData.status === "Pagado") {
       notificationBody = `El pedido de ${clientName} ha sido procesado y pagado. ${afterData.vesAmount || 0} VES`;
+
+
     } else if (afterData.status === "Cancelado") {
       notificationBody = `El pedido de ${clientName} ha sido cancelado.`;
     } else if (afterData.status === "Pendiente de pago") {

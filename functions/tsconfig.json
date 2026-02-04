@@ -7,11 +7,15 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2021",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "*.js"
   ],
   "exclude": [
     "node_modules"
