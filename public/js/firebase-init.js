@@ -4,6 +4,12 @@
 document.addEventListener('DOMContentLoaded', function () {
     // Wait a bit for google-services.json to be processed
     setTimeout(function () {
+        // Check if Firebase SDK is loaded
+        if (typeof firebase === 'undefined') {
+            console.warn('Firebase SDK not loaded in firebase-init.js');
+            return;
+        }
+
         // Check if Firebase is already initialized (from google-services.json)
         if (!firebase.apps.length) {
             // If not, initialize with web config

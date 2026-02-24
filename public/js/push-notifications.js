@@ -73,6 +73,12 @@
         console.log('Initializing Push Notifications for web platform...');
 
         try {
+            // Check if Firebase is loaded
+            if (typeof firebase === 'undefined' || !firebase.messaging) {
+                console.warn('Firebase Messaging SDK not loaded');
+                return;
+            }
+
             // Check if Firebase Messaging is supported
             if (!firebase.messaging.isSupported()) {
                 console.warn('Firebase Messaging is not supported in this browser');

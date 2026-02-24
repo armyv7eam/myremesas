@@ -8,6 +8,18 @@
         } catch (e) { window.IS_DEMO = ((location.hostname === '127.0.0.1' || location.hostname === 'localhost') && location.port === '5000'); }
     })();
     // --- Firebase Initialization ---
+    if (typeof firebase === 'undefined') {
+        console.error('Firebase SDK not loaded.');
+        // Create a mock or stop execution to prevent crash
+        if (document.body) {
+            const errorBanner = document.createElement('div');
+            errorBanner.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;text-align:center;padding:10px;z-index:9999;font-weight:bold;';
+            errorBanner.textContent = 'Error: No hay conexión a internet. Firebase no se pudo cargar.';
+            document.body.appendChild(errorBanner);
+        }
+        return;
+    }
+
     const db = firebase.firestore();
     const auth = window.authWrapper; // Using native Firebase authentication wrapper
     const storage = firebase.storage();
@@ -320,9 +332,12 @@
         const forgotPasswordLink = document.getElementById('forgot-password-link');
 
         // Store Status Elements (New)
-        const storeStatusIndicator = document.getElementById('store-status-indicator');
-        const openStoreBtn = document.getElementById('open-store-btn');
-        const closeStoreBtn = document.getElementById('close-store-btn');
+        // Store Status Elements (New)
+        const storeStatusIndicator = document.getElementById('admin-store-status-indicator');
+        const storeStatusText = document.getElementById('admin-store-status-text');
+        // Legacy buttons (removed as they are no longer in use)
+        const openStoreBtn = null;
+        const closeStoreBtn = null;
         const storeStatusMessage = document.getElementById('store-status-message');
         const storeClosedMessage = document.getElementById('store-closed-message');
 
@@ -1200,14 +1215,21 @@
         const updateStoreStatusView = () => {
             // Update the admin toggle switch UI
             if (storeStatusIndicator) {
-                storeStatusIndicator.textContent = isStoreOpen ? 'Abierta' : 'Cerrada';
-                storeStatusIndicator.classList.toggle('bg-green-200', isStoreOpen);
-                storeStatusIndicator.classList.toggle('text-green-800', isStoreOpen);
-                storeStatusIndicator.classList.toggle('bg-red-200', !isStoreOpen);
-                storeStatusIndicator.classList.toggle('text-red-800', !isStoreOpen);
+                // Update text
+                if (storeStatusText) {
+                    storeStatusText.textContent = isStoreOpen ? 'Tienda Abierta' : 'Tienda Cerrada';
+                    storeStatusText.classList.toggle('text-green-400', isStoreOpen);
+                    storeStatusText.classList.toggle('text-red-400', !isStoreOpen);
+                }
 
-                openStoreBtn.classList.toggle('hidden', isStoreOpen);
-                closeStoreBtn.classList.toggle('hidden', !isStoreOpen);
+                // Update indicator dot (Green for Open, Red for Closed)
+                if (isStoreOpen) {
+                    storeStatusIndicator.classList.remove('bg-red-500', 'shadow-[0_0_8px_rgba(239,68,68,0.6)]');
+                    storeStatusIndicator.classList.add('bg-green-500', 'shadow-[0_0_8px_rgba(34,197,94,0.6)]');
+                } else {
+                    storeStatusIndicator.classList.remove('bg-green-500', 'shadow-[0_0_8px_rgba(34,197,94,0.6)]');
+                    storeStatusIndicator.classList.add('bg-red-500', 'shadow-[0_0_8px_rgba(239,68,68,0.6)]');
+                }
             }
 
             // Update the user view
@@ -1569,156 +1591,7 @@
          * @param {firebase.firestore.DocumentSnapshot} doc - The order document snapshot.
          * @returns {string} The HTML string for the order card.
          */
-        const renderOrder = (doc) => {
-            const order = doc.data();
-            const orderId = doc.id;
-            const orderIdTag = orderId.slice(-5);
-            const createdAt = order.createdAt ? formatInChileanTime(order.createdAt.toDate(), { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            const clpAmount = (order.clpAmount || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' });
-            const destinationAmount = (order.destinationAmount || 0).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            const destinationCurrency = order.destinationCurrency || 'VES';
 
-            let details = `
-          <p class="text-sm"><span class="font-semibold">Correo:</span> ${order.email || 'N/A'}</p>
-      `;
-            switch (order.type) {
-                case 'transferencia':
-                    details += `
-                  <p class="text-sm"><span class="font-semibold">Banco:</span> ${order.bank || 'N/A'}</p>
-                  ${order.accountType ? `<p class="text-sm"><span class="font-semibold">Tipo:</span> ${order.accountType}</p>` : ''}
-                  <p class="text-sm truncate"><span class="font-semibold">Cuenta:</span> ${order.accountNumber || 'N/A'}</p>
-              `;
-                    break;
-                case 'pago-movil':
-                    details += `
-                  <p class="text-sm"><span class="font-semibold">Teléfono:</span> ${order.phone || 'N/A'}</p>
-                  <p class="text-sm"><span class="font-semibold">Banco:</span> ${order.bank || 'N/A'}</p>
-              `;
-                    break;
-                case 'recarga-saldo':
-                    details += `<p class="text-sm"><span class="font-semibold">Teléfono:</span> ${order.phone || 'N/A'}</p>`;
-                    break;
-            }
-
-            let statusBadge = '';
-            let actionButtons = '';
-            let typeTag = '';
-            let debtorButton = '';
-
-            switch (order.type) {
-                case 'transferencia':
-                    typeTag = `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">Transferencia</span>`;
-                    break;
-                case 'pago-movil':
-                    typeTag = `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-purple-600 bg-purple-200">Pago Móvil</span>`;
-                    break;
-                case 'recarga-saldo':
-                    typeTag = `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-teal-600 bg-teal-200">Recarga</span>`;
-                    break;
-            }
-
-            switch (order.status) {
-                case 'Pendiente de pago':
-                    statusBadge = `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-amber-600 bg-amber-200">${order.status}</span>`;
-
-                    const clientProofButton = order.clientProofUrl
-                        ? `<a href="${order.clientProofUrl}" target="_blank" rel="noopener noreferrer" class="bg-blue-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-600">Ver Comprobante CLP</a>`
-                        : '';
-
-                    actionButtons = `
-                  ${clientProofButton}
-                  <button data-id="${orderId}" class="copy-order-btn bg-blue-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-blue-600">Copiar</button>
-                  <button data-id="${orderId}" class="mark-paid-btn bg-green-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-green-600">Pagar</button>
-                  <button data-id="${orderId}" class="cancel-order-btn bg-red-500 text-white px-3 py-1 rounded-lg text-sm hover:bg-red-600">Cancelar</button>
-              `;
-                    break;
-                case 'Pagado':
-                    statusBadge = `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">${order.status}</span>`;
-                    if (order.proofUrl) {
-                        if (isNativePlatform() || (navigator.share && navigator.canShare)) {
-                            actionButtons = `
-                        <button data-proof-url="${order.proofUrl}" data-client-name="${order.clientName}" class="share-proof-btn flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg>
-                            <span>Compartir Archivo</span>
-                        </button>`;
-                        } else {
-                            const shareText = encodeURIComponent(`Comprobante de pago para ${order.clientName}`);
-                            const shareUrl = encodeURIComponent(order.proofUrl);
-                            actionButtons = `
-                        <a href="https://wa.me/?text=${shareText}%20${shareUrl}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.068-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
-                            <span>Compartir Enlace</span>
-                        </a>`;
-                        }
-                    }
-
-                    const isDebtor = !!order.isDebtor;
-                    const debtorButtonText = isDebtor ? 'Quitar Deudor' : 'Marcar Deudor';
-                    const debtorButtonClasses = isDebtor
-                        ? 'bg-orange-500 text-white' // Active state
-                        : 'bg-orange-100 text-orange-700'; // Inactive state
-
-                    debtorButton = `
-                  <button data-id="${orderId}" data-is-debtor="${isDebtor}" class="debtor-toggle-btn ${debtorButtonClasses} px-3 py-1 rounded-lg text-sm font-semibold hover:opacity-80 transition-opacity">
-                      ${debtorButtonText}
-                  </button>
-              `;
-                    break;
-                case 'Cancelado':
-                    statusBadge = `<span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-red-600 bg-red-200">${order.status}</span>`;
-                    break;
-            }
-
-            const createdByTagHtml = order.createdByTag ? `<span class="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded" title="Creado por">C:${order.createdByTag}</span>` : '';
-            const paidByTagHtml = order.paidByTag ? `<span class="font-mono text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded" title="Pagado por">P:${order.paidByTag}</span>` : '';
-
-            return `
-          <div class="p-3 rounded-xl shadow-sm bg-white border ${order.isDuplicate ? 'border-red-300 bg-red-50' : (order.isDebtor ? 'border-orange-300' : 'border-gray-200')}" data-status="${order.status}" data-order-id="${orderId}">
-              <div class="flex justify-between items-start mb-1">
-                  <div class="flex items-start gap-2">
-                      ${order.status === 'Pendiente de pago' ? `
-                      <div class="mt-0.5">
-                          <input type="checkbox" class="batch-pay-checkbox h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" data-order-id="${orderId}">
-                      </div>` : ''}
-                      <div class="leading-tight">
-                          <p class="font-bold text-gray-800 text-sm">${order.clientName}</p>
-                          <p class="text-xs text-gray-500">CI: ${order.cedula}</p>
-                      </div>
-                  </div>
-                  <div class="flex flex-col items-end gap-1 text-right">
-                    <div class="flex items-center gap-1">${createdByTagHtml}<span class="font-mono text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">ID: ${orderIdTag}</span></div>
-                    ${statusBadge}
-                    ${typeTag}
-                  </div>
-              </div>
-              <div class="my-1.5 p-1.5 bg-gray-50 rounded space-y-0.5 text-xs">
-                  ${details}
-              </div>
-              <div class="flex justify-between items-center mt-2">
-                  <div class="leading-tight">
-                      <p class="font-semibold text-blue-600 text-sm">${clpAmount}</p>
-                      <p class="font-bold text-green-600 text-sm">${destinationAmount} ${destinationCurrency}</p>
-                  </div>
-                  <div class="text-[10px] text-gray-400">${createdAt}</div>
-              </div>
-              ${order.status === 'Pagado' ? `
-                <div class="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center gap-2">
-                    <div class="flex items-center gap-1 overflow-hidden">
-                        ${paidByTagHtml}
-                    </div>
-                    <div class="flex items-center gap-2 shrink-0">
-                        ${debtorButton}
-                        ${actionButtons}
-                    </div>
-                </div>
-              ` : `
-                <div class="flex justify-end items-center space-x-2 mt-2">
-                    ${actionButtons}
-                </div>
-              `}
-          </div>
-      `;
-        };
 
         /** Applies the current filter to the visible orders. */
         const applyOrderFilter = () => {
@@ -1857,8 +1730,7 @@
                     const existingCard = document.querySelector(`[data-order-id="${doc.id}"]`);
                     if (existingCard) existingCard.remove(); // Remove old card to re-render
 
-                    const mockDoc = { id: doc.id, data: () => order };
-                    const orderHtml = renderOrder(mockDoc);
+                    const orderHtml = window.renderOrder(order, doc.id);
                     if (order.status === 'Pagado') {
                         ordersListPaid.innerHTML += orderHtml;
                         paidCount++;
@@ -3546,7 +3418,17 @@
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
+            // --- NEW: Calculate Balance After for History ---
+            // We use the global 'accountsData' cache to get the PRE-OPERATION balance.
+            // Note: In high-concurrency partial updates, this might be slightly off, but acceptable for admin history.
+            const currentAccount = accountsData.find(acc => acc.id === accountId);
+            const currentBalance = currentAccount ? (currentAccount.balance || 0) : 0;
             const increment = type === 'add' ? amount : -amount; // VES increment
+            const balanceAfter = currentBalance + increment;
+
+            historyData.balanceAfter = balanceAfter;
+            // ------------------------------------------------
+
             batch.set(balanceHistoryRef, historyData);
 
             // Increment the specific account's balance
@@ -4205,6 +4087,12 @@
                         balance: firebase.firestore.FieldValue.increment(-totalDebit)
                     }, { merge: true });
 
+                    // --- NEW: Calculate Balance After ---
+                    // Assumption: selectedAccount.balance is the balance BEFORE this transaction.
+                    // Fallback to 0 if balance is missing to avoid NaN
+                    const currentBalance = selectedAccount.balance || 0;
+                    const balanceAfter = currentBalance - totalDebit;
+
                     // Create history for payment
                     batch.set(paymentHistoryRef, {
                         amount: baseAmount,
@@ -4212,7 +4100,8 @@
                         note: `Pago pedido ${orderId.slice(-5)} (${orderData.destinationCurrency})`,
                         timestamp: paymentTimestamp,
                         holder: sourceHolder, // Origen del pago
-                        bank: destinationBank // CRITICAL: Banco de DESTINO del pedido
+                        bank: destinationBank, // CRITICAL: Banco de DESTINO del pedido
+                        balanceAfter: balanceAfter
                     });
 
                     // Create history for fee if it exists
@@ -4223,7 +4112,8 @@
                             note: `Comisión pedido ${orderId.slice(-5)}`,
                             timestamp: paymentTimestamp,
                             holder: sourceHolder, // Origen del pago
-                            bank: destinationBank // CRITICAL: Banco de DESTINO del pedido
+                            bank: destinationBank, // CRITICAL: Banco de DESTINO del pedido
+                            balanceAfter: balanceAfter
                         });
                     }
 
@@ -4237,6 +4127,7 @@
                             timestamp: paymentTimestamp,
                             holder: sourceHolder, // Origen del pago
                             bank: destinationBank, // CRITICAL: Banco de DESTINO del pedido
+                            balanceAfter: balanceAfter
                         });
                     }
                     if (tilloCommissionVes > 0) {
@@ -4248,6 +4139,7 @@
                             timestamp: paymentTimestamp,
                             holder: sourceHolder,
                             bank: destinationBank,
+                            balanceAfter: balanceAfter
                         });
                     }
 
@@ -4268,8 +4160,8 @@
 
                 // --- NEW: Manually add historical paid order to today's view ---
                 if (paymentData.isHistorical) {
-                    const mockDoc = { id: orderId, data: () => ({ ...orderData, status: 'Pagado', proofUrl, paidByTag: adminTag }) };
-                    const orderHtml = renderOrder(mockDoc);
+                    const orderDataWithStatus = { ...orderData, status: 'Pagado', proofUrl, paidByTag: adminTag };
+                    const orderHtml = window.renderOrder(orderDataWithStatus, orderId);
                     ordersListPaid.innerHTML += orderHtml;
                     // Manually update the paid summary
                     const currentPaidCount = parseInt(paidSummaryDisplay.textContent.split(' ')[0]) || 0;
@@ -4527,10 +4419,13 @@
             noHistoricalOrdersMessage.classList.add('hidden');
             exportExcelBtn.disabled = true;
 
-            const startDateString = start.toISOString().slice(0, 10);
-            const endDateString = end.toISOString().slice(0, 10);
-            const queryStart = new Date(`${startDateString}T00:00:00-04:00`);
-            const queryEnd = new Date(`${endDateString}T23:59:59-04:00`);
+            const startDateString = start.toISOString().split('T')[0];
+            const endDateString = end.toISOString().split('T')[0];
+            // Fix: Construct dates in local time (browser timezone) instead of hardcoding -04:00
+            const queryStart = new Date(`${startDateString}T00:00:00`);
+            const queryEnd = new Date(`${endDateString}T23:59:59.999`);
+
+            console.log('[Debug] handleHistoricalSearch Adjusted Range:', { queryStart, queryEnd });
 
             const activeStatusBtn = historicalStatusFilters.querySelector('button.active');
             const statusFilter = activeStatusBtn ? activeStatusBtn.dataset.status : 'Todos';
@@ -4600,9 +4495,7 @@
                         if (duplicateIds.has(orderData.id)) {
                             orderData.isDuplicate = true;
                         }
-                        // We need to simulate a doc snapshot for renderOrder
-                        const mockDoc = { id: orderData.id, data: () => orderData };
-                        historicalOrdersHtml += renderOrder(mockDoc);
+                        historicalOrdersHtml += window.renderOrder(orderData, orderData.id);
                         historicalOrdersData.push(orderData);
                         if (orderData.status === 'Pagado') {
                             totalCLP += orderData.clpAmount || 0;
@@ -4673,8 +4566,7 @@
                 if (matchingOrders.length > 0) {
                     let historicalOrdersHtml = '';
                     matchingOrders.forEach(orderData => {
-                        const mockDoc = { id: orderData.id, data: () => orderData };
-                        historicalOrdersHtml += renderOrder(mockDoc);
+                        historicalOrdersHtml += window.renderOrder(orderData, orderData.id);
                     });
                     historicalOrdersList.innerHTML = historicalOrdersHtml;
                     historicalSearchSummary.textContent = `Se encontraron ${matchingOrders.length} pedido(s) en los últimos 90 días.`;
@@ -4844,14 +4736,24 @@
         /** Fetches and displays the CLP balance history. */
         async function handleClpBalanceHistorySearch(startDate, endDate) {
             console.log('[Debug] handleClpBalanceHistorySearch triggered with:', { start: startDate, end: endDate });
-            if (!startDate || !endDate) return;
+            if (!startDate || !endDate) {
+                // Default to today if dates are missing
+                startDate = getChileanDateForPicker(new Date());
+                endDate = getChileanDateForPicker(new Date());
 
-            // Ensure start date is at beginning of day, end date at end of day
-            const queryStart = new Date(startDate);
-            queryStart.setHours(0, 0, 0, 0);
+                // Update inputs if they exist (visual feedback)
+                if (clpBalanceHistoryStart) clpBalanceHistoryStart.value = startDate;
+                if (clpBalanceHistoryEnd) clpBalanceHistoryEnd.value = endDate;
+            }
 
-            const queryEnd = new Date(endDate);
-            queryEnd.setHours(23, 59, 59, 999);
+            // Fix: Ensure we are using the correct local day derived from the UTC-normalized input
+            const sDate = startDate.toISOString().split('T')[0];
+            const eDate = endDate.toISOString().split('T')[0];
+
+            const queryStart = new Date(`${sDate}T00:00:00`);
+            const queryEnd = new Date(`${eDate}T23:59:59.999`);
+
+            console.log('[Debug] handleClpBalanceHistorySearch Adjusted Range:', { queryStart, queryEnd });
 
             clpBalanceHistoryList.innerHTML = '<tr><td colspan="5" class="text-center p-4">Cargando...</td></tr>';
 
@@ -4915,7 +4817,22 @@
                         `;
                         clpBalanceHistoryList.appendChild(row);
                     });
-                    clpBalanceHistorySummary.innerHTML = `<span class="text-green-600 font-bold">Total Abonos: ${formatClp(totalCredit)}</span> | <span class="text-red-600 font-bold">Total Cargos: ${formatClp(totalDebit)}</span>`;
+                    const rateVES = exchangeRates['purchaseRateVES'] || exchangeRates['CLP_VES'] || 0;
+                    const totalClpBalance = exchangeRates.totalClpBalance || 0;
+                    const equivalentVes = rateVES > 0 ? (totalClpBalance / rateVES) : 0;
+
+                    clpBalanceHistorySummary.innerHTML = `
+                        <div class="flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+                            <div>
+                                <span class="text-green-600 font-bold">Total Abonos: ${formatClp(totalCredit)}</span> | 
+                                <span class="text-red-600 font-bold">Total Cargos: ${formatClp(totalDebit)}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-gray-600 font-bold">Saldo Total CLP: ${formatClp(totalClpBalance)}</span>
+                                <span class="text-xs text-gray-500 block">≈ ${equivalentVes.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} VES (Tasa: ${rateVES})</span>
+                            </div>
+                        </div>
+                    `;
                 }
             }, error => {
                 console.error("Error fetching CLP balance history:", error);
@@ -4947,18 +4864,185 @@
             exportExcelBtn.addEventListener('click', exportHistoricalOrdersToExcel);
         }
 
+        // NEW: Reports View VES History Logic
+        let balanceHistoryListenerReports = null;
+        const balanceHistoryListReports = document.getElementById('balance-history-list-reports');
+        const balanceHistoryStartInputReports = document.getElementById('balance-history-start-reports');
+        const balanceHistoryEndInputReports = document.getElementById('balance-history-end-reports');
+        const balanceHistoryTodayBtnReports = document.getElementById('balance-history-today-reports');
+        const balanceHistoryYesterdayBtnReports = document.getElementById('balance-history-yesterday-reports');
+        const balanceHistory7DaysBtnReports = document.getElementById('balance-history-7days-reports');
+        const balanceHistoryPrevDayBtnReports = document.getElementById('balance-history-prev-day-btn-reports');
+        const balanceHistoryNextDayBtnReports = document.getElementById('balance-history-next-day-btn-reports');
+        const balanceHistorySearchBtnReports = document.getElementById('balance-history-search-btn-reports');
+        const balanceHistoryHeaderReports = document.getElementById('balance-history-header-reports');
+        const noBalanceHistoryMessageReports = document.getElementById('no-balance-history-message-reports');
+        const exportBalanceExcelBtnReports = document.getElementById('export-balance-excel-btn-reports');
+
+        async function fetchAndRenderBalanceHistoryReports(startDate, endDate) {
+            if (!isAdmin) return;
+
+            if (!startDate || !endDate) {
+                startDate = getChileanDateForPicker(new Date());
+                endDate = getChileanDateForPicker(new Date());
+                if (balanceHistoryStartInputReports) balanceHistoryStartInputReports.value = startDate;
+                if (balanceHistoryEndInputReports) balanceHistoryEndInputReports.value = endDate;
+            }
+
+            if (balanceHistoryListReports) balanceHistoryListReports.innerHTML = '<tr><td colspan="6" class="text-center p-4">Cargando...</td></tr>';
+
+            const sDate = startDate.toISOString().split('T')[0];
+            const eDate = endDate.toISOString().split('T')[0];
+            const queryStart = new Date(`${sDate}T00:00:00`);
+            const queryEnd = new Date(`${eDate}T23:59:59.999`);
+
+            let query = db.collection('balance_history')
+                .where('timestamp', '>=', queryStart)
+                .where('timestamp', '<=', queryEnd)
+                .orderBy('timestamp', 'desc');
+
+            if (balanceHistoryListenerReports) {
+                balanceHistoryListenerReports();
+            }
+
+            balanceHistoryListenerReports = query.onSnapshot(snapshot => {
+                if (balanceHistoryListReports) balanceHistoryListReports.innerHTML = '';
+                if (snapshot.empty) {
+                    if (noBalanceHistoryMessageReports) noBalanceHistoryMessageReports.classList.remove('hidden');
+                    if (balanceHistoryHeaderReports) balanceHistoryHeaderReports.classList.add('hidden');
+                } else {
+                    if (noBalanceHistoryMessageReports) noBalanceHistoryMessageReports.classList.add('hidden');
+                    if (balanceHistoryHeaderReports) balanceHistoryHeaderReports.classList.remove('hidden');
+
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const row = document.createElement('tr');
+                        row.classList.add('border-b', 'hover:bg-gray-50');
+
+                        let amountClass = 'text-gray-800';
+                        let credit = '-';
+                        let debit = '-';
+
+                        const isCredit = data.type === 'add' || data.type === 'credit' || data.type === 'deposit';
+                        const isDebit = data.type === 'subtract' || data.type === 'debit' || data.type === 'withdraw' ||
+                            data.type === 'fee' || data.type === 'admin_commission' || data.type === 'tillo_commission';
+
+                        if (isCredit) {
+                            amountClass = 'text-green-600 font-medium';
+                            credit = formatCurrency(data.amount);
+                        } else if (isDebit) {
+                            amountClass = 'text-red-600 font-medium';
+                            debit = formatCurrency(data.amount);
+                        }
+
+                        const dateObj = data.timestamp ? data.timestamp.toDate() : new Date();
+
+                        row.innerHTML = `
+                            <td class="p-2 whitespace-nowrap">${formatDateForTable(dateObj)}</td>
+                            <td class="p-2">${data.note || 'Sin descripción'}</td>
+                            <td class="p-2">${data.bank || '-'}</td>
+                             <td class="p-2 text-right text-red-600">${debit}</td>
+                            <td class="p-2 text-right text-green-600">${credit}</td>
+                            <td class="p-2 text-right font-bold text-blue-600">${data.balanceAfter !== undefined ? formatCurrency(data.balanceAfter) : '-'}</td>
+                        `;
+                        if (balanceHistoryListReports) balanceHistoryListReports.appendChild(row);
+                    });
+                }
+            }, error => {
+                console.error("Error fetching balance history reports:", error);
+            });
+        }
+
+        if (balanceHistoryTodayBtnReports) {
+            balanceHistoryTodayBtnReports.addEventListener('click', () => {
+                const today = getChileanDateForPicker(new Date());
+                balanceHistoryStartInputReports.valueAsDate = today;
+                balanceHistoryEndInputReports.valueAsDate = today;
+                fetchAndRenderBalanceHistoryReports(today, today);
+                setActiveChip(document.querySelectorAll('#history-section-ves-reports .filter-chip'), balanceHistoryTodayBtnReports);
+            });
+            // Initial load
+            balanceHistoryTodayBtnReports.click();
+        }
+
+        if (balanceHistoryYesterdayBtnReports) {
+            balanceHistoryYesterdayBtnReports.addEventListener('click', () => {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const chileYesterday = getChileanDateForPicker(yesterday);
+                balanceHistoryStartInputReports.valueAsDate = chileYesterday;
+                balanceHistoryEndInputReports.valueAsDate = chileYesterday;
+                fetchAndRenderBalanceHistoryReports(chileYesterday, chileYesterday);
+                setActiveChip(document.querySelectorAll('#history-section-ves-reports .filter-chip'), balanceHistoryYesterdayBtnReports);
+            });
+        }
+
+        if (balanceHistory7DaysBtnReports) {
+            balanceHistory7DaysBtnReports.addEventListener('click', () => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 6);
+                const chileStart = getChileanDateForPicker(start);
+                const chileEnd = getChileanDateForPicker(end);
+                balanceHistoryStartInputReports.valueAsDate = chileStart;
+                balanceHistoryEndInputReports.valueAsDate = chileEnd;
+                fetchAndRenderBalanceHistoryReports(chileStart, chileEnd);
+                setActiveChip(document.querySelectorAll('#history-section-ves-reports .filter-chip'), balanceHistory7DaysBtnReports);
+            });
+        }
+
+        if (balanceHistorySearchBtnReports) {
+            balanceHistorySearchBtnReports.addEventListener('click', () => {
+                fetchAndRenderBalanceHistoryReports(balanceHistoryStartInputReports.value, balanceHistoryEndInputReports.value);
+            });
+        }
+
+        if (balanceHistoryPrevDayBtnReports) {
+            balanceHistoryPrevDayBtnReports.addEventListener('click', () => {
+                // Simple logic to subtract 1 day from current start date
+                let current = new Date(balanceHistoryStartInputReports.value);
+                current.setDate(current.getDate() - 1);
+                const dateStr = getChileanDateForPicker(current);
+                balanceHistoryStartInputReports.value = dateStr;
+                balanceHistoryEndInputReports.value = dateStr;
+                fetchAndRenderBalanceHistoryReports(dateStr, dateStr);
+            });
+        }
+
+        if (balanceHistoryNextDayBtnReports) {
+            balanceHistoryNextDayBtnReports.addEventListener('click', () => {
+                let current = new Date(balanceHistoryStartInputReports.value);
+                current.setDate(current.getDate() + 1);
+                const dateStr = getChileanDateForPicker(current);
+                balanceHistoryStartInputReports.value = dateStr;
+                balanceHistoryEndInputReports.value = dateStr;
+                fetchAndRenderBalanceHistoryReports(dateStr, dateStr);
+            });
+        }
+
         async function fetchAndRenderBalanceHistory(startDate, endDate) {
             if (!isAdmin) return;
+
+            if (!startDate || !endDate) {
+                // Default to today if dates are missing
+                startDate = getChileanDateForPicker(new Date());
+                endDate = getChileanDateForPicker(new Date());
+
+                // Update inputs if they exist (visual feedback)
+                if (balanceHistoryStartInput) balanceHistoryStartInput.value = startDate;
+                if (balanceHistoryEndInput) balanceHistoryEndInput.value = endDate;
+            }
+
             // Removed redundant console log to reduce noise
             balanceHistoryList.innerHTML = '<tr><td colspan="6" class="text-center p-4">Cargando...</td></tr>';
 
             // Ensure start date is at beginning of day, end date at end of day
             // Create new Date objects to avoid mutating inputs
-            const queryStart = new Date(startDate);
-            queryStart.setHours(0, 0, 0, 0);
-
-            const queryEnd = new Date(endDate);
-            queryEnd.setHours(23, 59, 59, 999);
+            // Fix: Use reliable local time construction
+            const sDate = startDate.toISOString().split('T')[0];
+            const eDate = endDate.toISOString().split('T')[0];
+            const queryStart = new Date(`${sDate}T00:00:00`);
+            const queryEnd = new Date(`${eDate}T23:59:59.999`);
 
             // Corrected collection name to 'balance_history' and using Date objects
             let query = db.collection('balance_history')
@@ -5044,6 +5128,8 @@
                 fetchAndRenderBalanceHistory(today, today);
                 setActiveChip(balanceHistoryRangeButtons, balanceHistoryTodayBtn);
             });
+            // Initial load for Accounts view
+            balanceHistoryTodayBtn.click();
         }
 
         if (balanceHistoryYesterdayBtn) {
@@ -5853,9 +5939,14 @@
 
                 batch.update(fromAccountRef, { balance: firebase.firestore.FieldValue.increment(-totalDebit) });
                 batch.update(toAccountRef, { balance: firebase.firestore.FieldValue.increment(amount) });
-                batch.set(db.collection('balance_history').doc(), { amount, type: 'subtract', note: `Transferencia a ${toHolder}`, timestamp: serverTimestamp, holder: fromHolder, bank: fromBank });
-                if (fee > 0) batch.set(db.collection('balance_history').doc(), { amount: fee, type: 'fee', note: `Comisión por transferencia interna`, timestamp: serverTimestamp, holder: fromHolder, bank: fromBank });
-                batch.set(db.collection('balance_history').doc(), { amount, type: 'add', note: `Transferencia desde ${fromHolder}`, timestamp: serverTimestamp, holder: toHolder, bank: toBank });
+
+                // --- NEW: Calculate Balance After ---
+                const fromBalanceAfter = fromAccount.balance - totalDebit;
+                const toBalanceAfter = toAccount.balance + amount;
+
+                batch.set(db.collection('balance_history').doc(), { amount, type: 'subtract', note: `Transferencia a ${toHolder}`, timestamp: serverTimestamp, holder: fromHolder, bank: fromBank, balanceAfter: fromBalanceAfter });
+                if (fee > 0) batch.set(db.collection('balance_history').doc(), { amount: fee, type: 'fee', note: `Comisión por transferencia interna`, timestamp: serverTimestamp, holder: fromHolder, bank: fromBank, balanceAfter: fromBalanceAfter }); // Fee is part of totalDebit, so balanceAfter is same or we could split hairs, but effectively totalDebit is removed.
+                batch.set(db.collection('balance_history').doc(), { amount, type: 'add', note: `Transferencia desde ${fromHolder}`, timestamp: serverTimestamp, holder: toHolder, bank: toBank, balanceAfter: toBalanceAfter });
 
                 await batch.commit();
                 // The accountsListener will automatically refresh the payment modal.
@@ -6266,6 +6357,9 @@
                 const historyHolder = historyHolderRaw || 'Sin titular';
                 const historyBank = historyBankRaw || 'Sin banco';
 
+                // --- NEW: Running Balance Tracking ---
+                let runningBalance = sourceAccount.balance;
+
                 // 2. Prepare batch updates for Firestore
                 batchProcessData.createdOrders.forEach((order, index) => {
                     const orderRef = db.collection('orders').doc(order.id);
@@ -6279,13 +6373,16 @@
                     const tilloCommission = roundUpToTwoDecimals(order.destinationAmount * TILLO_COMMISSION_RATE);
                     const totalCommission = adminCommission + tilloCommission;
                     const debit = order.destinationAmount + fee + totalCommission;
+
+                    // Update running balance locally for history
+                    runningBalance -= debit;
                     totalDebitVes += debit;
 
                     // History records for each order
-                    firestoreBatch.set(db.collection('balance_history').doc(), { amount: order.destinationAmount, type: 'subtract', note: `Pago lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank });
-                    if (fee > 0) firestoreBatch.set(db.collection('balance_history').doc(), { amount: fee, type: 'fee', note: `Comisión lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank });
-                    if (adminCommission > 0) firestoreBatch.set(db.collection('balance_history').doc(), { amount: adminCommission, type: 'admin_commission', note: `Comisión Admin lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank });
-                    if (tilloCommission > 0) firestoreBatch.set(db.collection('balance_history').doc(), { amount: tilloCommission, type: 'tillo_commission', note: `Mano Tillo lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank });
+                    firestoreBatch.set(db.collection('balance_history').doc(), { amount: order.destinationAmount, type: 'subtract', note: `Pago lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank, balanceAfter: runningBalance });
+                    if (fee > 0) firestoreBatch.set(db.collection('balance_history').doc(), { amount: fee, type: 'fee', note: `Comisión lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank, balanceAfter: runningBalance });
+                    if (adminCommission > 0) firestoreBatch.set(db.collection('balance_history').doc(), { amount: adminCommission, type: 'admin_commission', note: `Comisión Admin lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank, balanceAfter: runningBalance });
+                    if (tilloCommission > 0) firestoreBatch.set(db.collection('balance_history').doc(), { amount: tilloCommission, type: 'tillo_commission', note: `Mano Tillo lote ${order.id.slice(-5)}`, timestamp: serverTimestamp, holder: historyHolder, bank: historyBank, balanceAfter: runningBalance });
                 });
 
                 // 3. Decrement main account balance
@@ -6647,6 +6744,555 @@
                 }
             });
         }
+
+        // --- Rate Update Modal Logic ---
+        const updateRateModal = document.getElementById('update-rate-modal');
+        const adminUpdateRateBtn = document.getElementById('admin-update-rate-btn');
+        const closeRateModalBtn = document.getElementById('close-rate-modal-btn');
+        const cancelRateBtn = document.getElementById('cancel-rate-btn');
+        const updateRateForm = document.getElementById('update-rate-form');
+        const ratePairSelect = document.getElementById('rate-pair-select');
+        const rateValueInput = document.getElementById('rate-value-input');
+        const currentRateValueDisplay = document.getElementById('current-rate-value-display');
+        const tickerWrap = document.getElementById('admin-rate-display');
+        const currentRateDisplay = document.getElementById('current-rate-display'); // Dashboard card
+        const dashboardPendingCount = document.getElementById('dashboard-pending-count'); // NEW: Pending count display
+
+        // Store all rates locally
+        let exchangeRatesMap = {};
+        let tickerInterval = null; // New: Carousel Refresh Timer
+
+        // 1. Listen to 'config/rate' to sync local state and ticker
+        db.collection('config').doc('rate').onSnapshot(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                // Ensure 'values' map exists, otherwise fallback to legacy singular 'value'
+                exchangeRatesMap = data.values || { 'CLP_VES': data.value || 0 };
+
+                // Update Global Helper State (if used elsewhere)
+                // We default 'currentExchangeRate' to CLP_VES for backward compatibility or the first key
+                currentExchangeRate = exchangeRatesMap['CLP_VES'] || data.value || 0;
+
+                // Update Dashboard Card (Show CLP/VES by default)
+                if (currentRateDisplay) {
+                    currentRateDisplay.textContent = currentExchangeRate.toLocaleString('es-VE', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 5
+                    });
+                }
+
+                updateRateModalUI(); // Update modal if open
+                updateTickerUI();    // Update ticker carousel
+            }
+        });
+
+        // 1.5 NEW: Listen to Pending Orders for Dashboard Count
+        if (dashboardPendingCount) {
+            console.log("Initializing Dashboard Pending Count Listener...");
+            db.collection('orders')
+                .where('status', 'in', ['Pendiente de pago', 'Pendiente']) // Handle potential variations
+                .onSnapshot(snapshot => {
+                    const count = snapshot.size;
+                    console.log("Pending orders count updated:", count);
+                    // Animate the number change
+                    // dashboardPendingCount.textContent = count; 
+                    animateValue(dashboardPendingCount, parseInt(dashboardPendingCount.textContent) || 0, count, 1000);
+                }, error => {
+                    console.error("Error listening to pending orders count:", error);
+                    dashboardPendingCount.textContent = "!";
+                });
+        }
+
+        function animateValue(obj, start, end, duration) {
+            if (start === end) return;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start);
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = end;
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // 2. Open Modal
+        if (adminUpdateRateBtn) {
+            adminUpdateRateBtn.addEventListener('click', () => {
+                updateRateModal.classList.remove('hidden');
+                updateRateModal.classList.add('flex');
+                updateRateModalUI(); // Populate input with current value
+            });
+        }
+
+        // 3. Close Modal
+        const closeRateModal = () => {
+            updateRateModal.classList.add('hidden');
+            updateRateModal.classList.remove('flex');
+        };
+
+        if (closeRateModalBtn) closeRateModalBtn.addEventListener('click', closeRateModal);
+        if (cancelRateBtn) cancelRateBtn.addEventListener('click', closeRateModal);
+
+        // 4. Handle Pair Change
+        if (ratePairSelect) {
+            ratePairSelect.addEventListener('change', updateRateModalUI);
+        }
+
+        // Helper to update input based on selection
+        function updateRateModalUI() {
+            if (!ratePairSelect || !rateValueInput) return;
+            const pair = ratePairSelect.value;
+            const rate = exchangeRatesMap[pair] || 0;
+            rateValueInput.value = rate > 0 ? rate : '';
+            if (currentRateValueDisplay) {
+                currentRateValueDisplay.textContent = rate > 0 ?
+                    `${rate.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 5 })} VES` : '--';
+            }
+        }
+
+        // 5. Handle Form Submit
+        if (updateRateForm) {
+            updateRateForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const pair = ratePairSelect.value;
+                const newValue = parseFloat(rateValueInput.value);
+
+                if (isNaN(newValue) || newValue <= 0) {
+                    showCustomAlert("Por favor ingrese una tasa válida.");
+                    return;
+                }
+
+                showMessageWithToast(`Actualizando tasa ${pair}...`);
+
+                try {
+                    // Update specific pair in the 'values' map using dot notation for specific field update?
+                    // No, safe to merge 'values' object.
+                    // We need to construct the update object dynamically.
+                    const updateData = {};
+                    updateData[`values.${pair}`] = newValue;
+
+                    // Also update legacy 'value' if it's CLP_VES logic, for backward compatibility
+                    if (pair === 'CLP_VES') {
+                        updateData['value'] = newValue;
+                    }
+
+                    await db.collection('config').doc('rate').update(updateData);
+
+                    showMessageWithToast("¡Tasa actualizada correctamente!");
+                    closeRateModal();
+                } catch (error) {
+                    console.error("Error updating rate:", error);
+                    // If document doesn't exist or 'values' field missing, we might need set with merge
+                    if (error.code === 'not-found' || error.message.includes('No document to update')) {
+                        await db.collection('config').doc('rate').set({
+                            values: { [pair]: newValue },
+                            value: newValue // default
+                        }, { merge: true });
+                        showMessageWithToast("¡Tasa creada y actualizada!");
+                        closeRateModal();
+                    } else {
+                        showCustomAlert("Error al actualizar: " + error.message);
+                    }
+                }
+            });
+        }
+
+        // 6. Update Ticker UI (Carousel Mode)
+        function updateTickerUI() {
+            if (!tickerWrap) return;
+
+            const getFlag = (code) => {
+                // Windows often renders flag emojis as letters (e.g. "CL", "CO"). 
+                // We wrap them in a specific font stack to try to force emoji rendering if available,
+                // otherwise the letters serve as the country code.
+                if (code.includes('CLP')) return '🇨🇱';
+                if (code.includes('COP')) return '🇨🇴';
+                if (code.includes('PEN')) return '🇵🇪';
+                if (code.includes('VES')) return '🇻🇪'; // Changed to Venezuelan Flag
+                if (code.includes('USD')) return '🇺🇸';
+                if (code.includes('EUR')) return '🇪🇺';
+                return '🌐';
+            };
+
+            // Generate ticker items (HTML strings)
+            const items = Object.entries(exchangeRatesMap).map(([key, val]) => {
+                let displayHtml = '';
+                const formatRate = (v) => v.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+
+                // Style wrapper for flags to be large and distinct
+                const flagStyle = 'font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; font-size: 1.2em; margin-right: 8px;';
+
+                if (key.includes('_') || key.includes('/')) {
+                    const separator = key.includes('_') ? '_' : '/';
+                    const parts = key.split(separator);
+                    const fromCode = parts[0];
+                    const toCode = parts[1];
+                    const fromFlag = getFlag(fromCode);
+                    const toFlag = getFlag(toCode);
+
+                    // Layout: Flag Code / Flag Code : Rate
+                    displayHtml = `
+                        <div class="flex items-center justify-center space-x-2 animate-fade-in-up">
+                            <span style="${flagStyle}">${fromFlag}</span>
+                            <span class="font-bold text-gray-200">${fromCode}</span>
+                            <span class="text-gray-500 mx-1">➜</span>
+                            <span style="${flagStyle}">${toFlag}</span>
+                            <span class="font-bold text-gray-200">${toCode}</span>
+                            <span class="ml-3 text-3xl font-bold text-green-400 bg-green-900/20 px-3 py-1 rounded-lg border border-green-500/30 shadow-[0_0_10px_rgba(74,222,128,0.2)]">
+                                ${formatRate(val)}
+                            </span>
+                        </div>
+                    `;
+                } else {
+                    const flag = getFlag(key);
+                    displayHtml = `
+                        <div class="flex items-center justify-center space-x-3 animate-fade-in-up">
+                            <span style="${flagStyle}">${flag}</span>
+                            <span class="text-xl font-bold text-gray-200">${key}</span>
+                            <span class="text-gray-500">:</span>
+                            <span class="text-4xl font-bold text-green-400 bg-green-900/20 px-4 py-1 rounded-lg border border-green-500/30 shadow-[0_0_15px_rgba(74,222,128,0.3)]">
+                                ${formatRate(val)}
+                            </span>
+                        </div>
+                    `;
+                }
+                return displayHtml;
+            });
+
+            // If empty, show loading
+            if (items.length === 0) {
+                tickerWrap.innerHTML = '<span class="text-gray-500 animate-pulse">Esperando tasas...</span>';
+                return;
+            }
+
+            // Carousel Logic
+            if (tickerInterval) clearInterval(tickerInterval);
+
+            let currentIndex = 0;
+            const showItem = () => {
+                // Ensure index is valid
+                if (currentIndex >= items.length) currentIndex = 0;
+                tickerWrap.innerHTML = items[currentIndex];
+            };
+
+            showItem(); // Show first immediately
+
+            if (items.length > 1) {
+                tickerInterval = setInterval(() => {
+                    currentIndex = (currentIndex + 1) % items.length;
+                    showItem();
+                }, 4000); // 4 seconds per slide
+            }
+        }
+
+        // Helper for toast (reusing logic if available, else standalone)
+        function showMessageWithToast(msg) {
+            if (typeof showToastNotification === 'function') {
+                showToastNotification(msg);
+            } else {
+                alert(msg);
+            }
+        }
+        // --- Bank Notification Listener & Approval ---
+        function setupBankNotificationListener() {
+            const approvalModal = document.getElementById('bank-approval-modal');
+            const approvalForm = document.getElementById('bank-approval-form');
+            const rejectBtn = document.getElementById('bank-approval-reject');
+            const rateInput = document.getElementById('bank-approval-rate');
+            const totalClpDisplay = document.getElementById('bank-approval-total-clp');
+
+            // Elements to show info
+            const bankDisplay = document.getElementById('bank-approval-bank');
+            const amountDisplay = document.getElementById('bank-approval-amount');
+            const senderDisplay = document.getElementById('bank-approval-sender');
+            const messageDisplay = document.getElementById('bank-approval-message');
+
+            let currentNotificationData = null;
+
+            // 1. Listen for Bridge Event
+            window.addEventListener('bankNotificationReceived', (event) => {
+                console.log("Raw event received:", event);
+                // Parse Data
+                let data = event.detail;
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch (e) { console.error("Error parsing notification data", e); return; }
+                }
+
+                console.log("Bank Notification Intercepted:", data);
+                currentNotificationData = data;
+
+                // --- ADVANCED PARSING (Multi-Bank & Multi-Format) ---
+                let amount = 0;
+                let reference = null;
+                let sender = "Desconocido";
+
+                const text = data.text; // Short alias
+
+                // Define Patterns
+                const patterns = [
+                    // 1. BDV Transferencia: "Recibiste una transferencia BDV de NOMBRE por Bs.100.000,00 bajo el número de operación 0591..."
+                    {
+                        type: 'BDV_Transfer',
+                        regex: /de\s+([A-Z\s]+)\s+por\s+(?:Bs\.?|VES)\s?([\d.,]+).*número de operación\s*(\d+)/i,
+                        map: { sender: 1, amount: 2, ref: 3 }
+                    },
+                    // 2. BDV Pago Móvil: "Recibiste un PagomovilBDV por Bs.470,00 del 0414-9792037 Ref: 1136..."
+                    {
+                        type: 'BDV_PagoMovil',
+                        regex: /por\s+(?:Bs\.?|VES)\s?([\d.,]+)\s+del\s+(\d{4}-?\d{7}).*Ref[:.]?\s*(\d+)/i,
+                        map: { amount: 1, sender: 2, ref: 3 }
+                    },
+                    // 3. Mercantil Tpago: "Tpago recibido de: NOMBRE (CI...) por Bs 1.200,00. Ref:..."
+                    {
+                        type: 'Mercantil_Tpago',
+                        regex: /de:?\s*([A-Z\s]+).*por\s+(?:Bs\.?|VES)\s?([\d.,]+).*Ref[:.]?\s*(\d+)/i,
+                        map: { sender: 1, amount: 2, ref: 3 }
+                    },
+                    // 4. Generic Fallback
+                    {
+                        type: 'Generic',
+                        regex: /(?:Bs\.?|VES)\s?([\d.,]+).*Ref[:.]?\s*(\d+)/i,
+                        map: { amount: 1, ref: 2 }
+                    }
+                ];
+
+                // Execute Matching
+                for (const p of patterns) {
+                    const match = text.match(p.regex);
+                    if (match) {
+                        console.log(`Matched Pattern: ${p.type}`);
+
+                        // Extract Amount
+                        if (p.map.amount && match[p.map.amount]) {
+                            let numStr = match[p.map.amount].replace(/\./g, '').replace(',', '.');
+                            amount = parseFloat(numStr);
+                        }
+
+                        // Extract Sender
+                        if (p.map.sender && match[p.map.sender]) {
+                            sender = match[p.map.sender].trim().toUpperCase();
+                        }
+
+                        // Extract Reference
+                        if (p.map.ref && match[p.map.ref]) {
+                            reference = match[p.map.ref];
+                        }
+
+                        if (amount > 0 && (sender !== "Desconocido" || p.type === 'Generic')) break; // Stop if good match
+                    }
+                }
+
+                // --- VALIDATION: SENDER WHITELIST ---
+                // Authorized Names and Phones
+                const VALID_SENDERS = [
+                    "ENDER JAVIER PINA ROJAS",
+                    "ENDER PINA ROJAS",
+                    "VANESSA CAROLINA MORALES SOLER",
+                    "0412-9629001", "04129629001" // Phone format variations
+                ];
+
+                // Check if the extracted sender (Name or Phone) is in the whitelist or contains part of it
+                const isSenderValid = VALID_SENDERS.some(valid => {
+                    const s = sender.replace(/-/g, ''); // Remove dashes for comparison
+                    const v = valid.replace(/-/g, '');
+                    return s.includes(v) || v.includes(s);
+                });
+
+                // --- UI UPDATE ---
+                // Pre-fill Modal
+                bankDisplay.textContent = data.bank || "Banco";
+                amountDisplay.textContent = amount.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+                senderDisplay.textContent = sender;
+                messageDisplay.textContent = data.text;
+
+                // Store Current Data
+                currentNotificationData = { ...data, amountVal: amount, reference: reference };
+
+                // Set Default Rate using global exchangeRates or fallback
+                const currentRate = (exchangeRates && exchangeRates.purchaseRateVES) ? exchangeRates.purchaseRateVES : 0.0450;
+                rateInput.value = currentRate;
+                updateCalculatedTotal();
+
+                // Handle Sender Validity
+                const approveBtn = document.querySelector('#bank-approval-form button[type="submit"]');
+                const modalTitle = document.querySelector('#bank-approval-modal h3');
+
+                if (!isSenderValid) {
+                    senderDisplay.classList.add('text-red-500', 'font-bold');
+                    senderDisplay.innerHTML = `${sender} <br><span class="text-xs">(No Autorizado)</span>`;
+                    modalTitle.textContent = "⚠️ Remitente No Autorizado";
+                    modalTitle.classList.add('text-red-500');
+                    if (approveBtn) {
+                        approveBtn.disabled = true;
+                        approveBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                        approveBtn.title = "Solo se aceptan pagos de Ender Javier Pina Rojas";
+                    }
+                } else {
+                    senderDisplay.classList.remove('text-red-500', 'font-bold');
+                    senderDisplay.classList.add('text-gray-300');
+                    modalTitle.textContent = "¡Depósito Detectado!";
+                    modalTitle.classList.remove('text-red-500');
+                    if (approveBtn) {
+                        approveBtn.disabled = false;
+                        approveBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        approveBtn.title = "";
+                    }
+                }
+
+                // --- DUPLICATE CHECK ---
+                if (reference) {
+                    console.log("Checking for duplicate reference:", reference);
+                    const checkForDuplicate = async () => {
+                        const dupQuery = await db.collection('balance_history')
+                            .where('reference', '==', reference)
+                            .limit(1)
+                            .get();
+
+                        if (!dupQuery.empty) {
+                            console.warn("Reference already processed:", reference);
+                            showMessageWithToast(`El pago Ref: ${reference} ya fue procesado anteriormente.`);
+                            return;
+                        }
+
+                        // If valid sender + no duplicate => Show Modal
+                        // If invalid sender => Show Modal (Blocked)
+                        approvalModal.classList.remove('hidden');
+                        approvalModal.classList.add('flex');
+                        playNotificationSound();
+                    };
+                    checkForDuplicate();
+                } else {
+                    // Show modal even if ref missing (unlikely with this regex)
+                    approvalModal.classList.remove('hidden');
+                    approvalModal.classList.add('flex');
+                    playNotificationSound();
+                }
+
+            });
+
+            function playNotificationSound() {
+                try {
+                    const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                    audio.play().catch(e => console.log('Audio play failed', e));
+                } catch (e) { }
+            }
+
+            // 2. Logic Handling
+            function updateCalculatedTotal() {
+                let amountVal = 0;
+                if (currentNotificationData && currentNotificationData.amountVal) {
+                    amountVal = currentNotificationData.amountVal;
+                }
+                const rate = parseFloat(rateInput.value) || 0;
+                const totalClp = rate > 0 ? (amountVal / rate) : 0;
+                totalClpDisplay.textContent = `${formatClp(totalClp)}`;
+            }
+
+            if (rateInput) rateInput.addEventListener('input', updateCalculatedTotal);
+
+            if (rejectBtn) rejectBtn.addEventListener('click', () => {
+                approvalModal.classList.add('hidden');
+                approvalModal.classList.remove('flex');
+            });
+
+            if (approvalForm) approvalForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (!currentNotificationData) return;
+
+                // Map Bank Name to local Account ID
+                const targetBankName = currentNotificationData.bank === 'BDV' ? 'Venezuela' : 'Mercantil';
+                // Use global accountsData to find a matching account
+                const targetAccount = accountsData.find(acc => acc.bank.toLowerCase().includes(targetBankName.toLowerCase()));
+
+                if (!targetAccount) {
+                    alert(`No se encontró una cuenta registrada para ${targetBankName}. Verifica que tengas una cuenta creada con ese banco.`);
+                    return;
+                }
+
+                const amountVal = currentNotificationData.amountVal;
+                const reference = currentNotificationData.reference;
+
+                // DOUBLE CHECK: Validate Reference again just before commit (Race Condition mitigation)
+                if (reference) {
+                    const dupCheck = await db.collection('balance_history').where('reference', '==', reference).limit(1).get();
+                    if (!dupCheck.empty) {
+                        alert(`¡Atención! El pago Ref: ${reference} fue aprobado por otro administrador hace un momento.`);
+                        approvalModal.classList.add('hidden');
+                        approvalModal.classList.remove('flex');
+                        return;
+                    }
+                }
+
+                const rate = parseFloat(rateInput.value);
+                const clpAmount = rate > 0 ? (amountVal / rate) : 0;
+
+                try {
+                    const batch = db.batch();
+                    const accountRef = db.collection('accounts').doc(targetAccount.id);
+                    const balanceHistoryRef = db.collection('balance_history').doc();
+                    // const clpBalanceHistoryRef = db.collection('clp_balance_history').doc();
+                    const configRateRef = db.collection('config').doc('rate');
+
+                    // 1. History (VES) with Balance After Fix
+                    const currentBalance = targetAccount.balance || 0;
+                    const balanceAfter = currentBalance + amountVal;
+
+                    batch.set(balanceHistoryRef, {
+                        amount: amountVal,
+                        type: 'add', // Credit
+                        holder: targetAccount.holder,
+                        bank: targetAccount.bank,
+                        note: `Auto-Carga: ${currentNotificationData.text}`,
+                        reference: reference, // Save Ref for future checks
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        balanceAfter: balanceAfter
+                    });
+
+                    // 2. Account Balance
+                    batch.set(accountRef, {
+                        balance: firebase.firestore.FieldValue.increment(amountVal)
+                    }, { merge: true });
+
+                    // 3. Global CLP Balance & Purchase Rate
+                    // We DO NOT update totalClpBalance for every deposit unless it's strictly business money?
+                    // The user said: "ejecute los calculos y registros en CLP"
+                    // Assuming this deposit adds to the Fund.
+                    batch.update(configRateRef, {
+                        totalClpBalance: firebase.firestore.FieldValue.increment(clpAmount),
+                        purchaseRateVES: rate
+                    });
+
+                    /* Optional: Add to CLP History if needed, leaving out for now if not explicitly requested to avoid duplicity
+                    const clpBalanceHistoryRef = db.collection('clp_balance_history').doc();
+                    batch.set(clpBalanceHistoryRef, {
+                         amount: clpAmount,
+                         type: 'add',
+                         note: `Carga Auto (${amountVal.toLocaleString('es-VE')} VES @ ${rate})`,
+                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                         adminTag: 'AUTO'
+                    });
+                    */
+
+                    await batch.commit();
+
+                    showMessageWithToast('¡Carga Automática Aprobada Exitosamente!');
+                    approvalModal.classList.add('hidden');
+                    approvalModal.classList.remove('flex');
+
+                } catch (error) {
+                    console.error("Auto-load error", error);
+                    alert("Error al cargar saldo: " + error.message);
+                }
+            });
+        }
+
+        // Initialize listener
+        setupBankNotificationListener();
 
     }); // End of DOMContentLoaded
 

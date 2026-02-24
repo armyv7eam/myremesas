@@ -136,18 +136,47 @@ export const renderOrder = (order, orderId) => {
     let typeClass = 'bg-gray-100 text-gray-600';
     let detailText = '';
 
+    // Helper for styles
+    const labelStyle = 'text-gray-400 font-medium text-[9px] uppercase mr-1';
+    const valStyle = 'text-gray-700 font-bold text-[10px]';
+    const rowStyle = 'flex flex-wrap gap-x-2 leading-tight';
+
     switch (order.type) {
         case 'transferencia':
             typeLabel = 'TRANSF'; typeClass = 'bg-blue-50 text-blue-600';
-            detailText = `${order.bank || ''} • ${order.accountNumber ? '...' + order.accountNumber.slice(-4) : ''}`;
+            detailText = `
+                <div class="${rowStyle}">
+                    <span><span class="${labelStyle}">Banco:</span><span class="${valStyle}">${order.bank || '-'}</span></span>
+                    <span><span class="${labelStyle}">Tipo:</span><span class="${valStyle}">${order.accountType || '-'}</span></span>
+                </div>
+                <div class="${rowStyle}">
+                    <span><span class="${labelStyle}">Cta:</span><span class="${valStyle} select-all">${order.accountNumber || '-'}</span></span>
+                </div>
+                <div class="${rowStyle}">
+                    <span><span class="${labelStyle}">ID:</span><span class="${valStyle} select-all">${order.cedula || '-'}</span></span>
+                </div>
+            `;
             break;
         case 'pago-movil':
             typeLabel = 'P.MÓVIL'; typeClass = 'bg-purple-50 text-purple-600';
-            detailText = `${order.bank || ''} • ${order.phone || ''}`;
+            detailText = `
+                <div class="${rowStyle}">
+                    <span><span class="${labelStyle}">Banco:</span><span class="${valStyle}">${order.bank || '-'}</span></span>
+                    <span><span class="${labelStyle}">Telf:</span><span class="${valStyle} select-all">${order.phone || '-'}</span></span>
+                </div>
+                <div class="${rowStyle}">
+                    <span><span class="${labelStyle}">ID:</span><span class="${valStyle} select-all">${order.cedula || '-'}</span></span>
+                </div>
+            `;
             break;
         case 'recarga-saldo':
             typeLabel = 'RECARGA'; typeClass = 'bg-teal-50 text-teal-600';
-            detailText = `${order.phone || ''}`;
+            detailText = `
+                <div class="${rowStyle}">
+                     <span><span class="${labelStyle}">Telf:</span><span class="${valStyle} select-all">${order.phone || '-'}</span></span>
+                     <span><span class="${labelStyle}">Op:</span><span class="${valStyle}">${order.operator || '-'}</span></span>
+                </div>
+            `;
             break;
     }
 
@@ -157,7 +186,8 @@ export const renderOrder = (order, orderId) => {
     let debtorButton = '';
 
     const isDebtor = !!order.isDebtor;
-    const debtorClass = isDebtor ? 'border-orange-400 bg-orange-50' : 'border-gray-100 bg-white';
+    const isDuplicate = !!order.isDuplicate;
+    const debtorClass = isDebtor ? 'border-orange-400 bg-orange-50' : (isDuplicate ? 'border-red-300 bg-red-50' : 'border-gray-100 bg-white');
 
     switch (order.status) {
         case 'Pendiente de pago':
@@ -169,7 +199,7 @@ export const renderOrder = (order, orderId) => {
             // Compact Action Buttons
             actionButtons = `
               ${clientProofBtn}
-              <button data-id="${orderId}" class="copy-order-btn text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200" title="Copiar">📋</button>
+              <button data-id="${orderId}" class="copy-order-btn text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200" title="Copiar Datos">📋</button>
               <button data-id="${orderId}" class="mark-paid-btn text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 font-bold">PAGAR</button>
               <button data-id="${orderId}" class="cancel-order-btn text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200">✕</button>
             `;
@@ -213,16 +243,19 @@ export const renderOrder = (order, orderId) => {
       <div class="p-2 border-b border-gray-100 ${debtorClass} group" data-status="${order.status}" data-order-id="${orderId}">
           <div class="flex justify-between items-start">
                <!-- Left: Client, ID, Type -->
-               <div class="flex flex-col gap-0.5 max-w-[60%]">
+               <div class="flex flex-col gap-1 w-full max-w-[65%]">
                    <div class="flex items-center gap-1.5 flex-wrap">
                         ${order.status === 'Pendiente de pago' ? `<input type="checkbox" class="batch-pay-checkbox h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" data-order-id="${orderId}">` : ''}
                         <span class="font-bold text-gray-800 text-sm truncate">${order.clientName}</span>
                         <span class="text-[10px] text-gray-400">#${orderIdTag}</span>
+                         <span class="text-[9px] font-mono px-1 py-0.5 rounded-sm ${typeClass} uppercase tracking-wide">${typeLabel}</span>
                    </div>
-                   <div class="flex items-center gap-1">
-                        <span class="text-[9px] font-mono px-1 py-0.5 rounded-sm ${typeClass} uppercase tracking-wide">${typeLabel}</span>
-                        <span class="text-[10px] text-gray-500 truncate max-w-[120px]">${detailText}</span>
+                   
+                   <!-- Expanded Detail Container (No Truncate) -->
+                   <div class="text-[10px] text-gray-500 bg-gray-50 rounded p-1.5 border border-gray-100 leading-snug break-words">
+                        ${detailText}
                    </div>
+
                    <div class="flex items-center gap-1 mt-0.5">
                        <span class="text-[10px] text-gray-400">${dateStr}</span>
                        ${createdBy}
@@ -231,7 +264,7 @@ export const renderOrder = (order, orderId) => {
                </div>
 
                <!-- Right: Amounts, Payment Status, Actions -->
-               <div class="flex flex-col items-end gap-0.5">
+               <div class="flex flex-col items-end gap-0.5 pl-2">
                     <div class="font-bold text-gray-900 text-sm">${destinationAmount} <span class="text-[10px] text-gray-500 font-normal">${destinationCurrency}</span></div>
                     <div class="text-[11px] text-gray-400">${clpAmount}</div>
                     
@@ -247,3 +280,8 @@ export const renderOrder = (order, orderId) => {
       </div>
   `;
 };
+// Expose to window for legacy app.js support
+if (typeof window !== 'undefined') {
+    window.renderOrder = renderOrder;
+    window.renderUserOrder = renderUserOrder;
+}
