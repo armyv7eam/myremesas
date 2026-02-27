@@ -6,6 +6,7 @@ console.log("Executing api/rates.js with Final Hybrid API (CriptoYa + CoinGecko)
 const CRIPTOYA_API_BASE_URL = "https://criptoya.com/api";
 const COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price";
 const BINANCE_SPOT_PRICE_URL = "https://api.binance.com/api/v3/ticker/price";
+const BINANCE_P2P_SEARCH_URL = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search";
 const BYBIT_TICKER_URL = "https://api.bybit.com/v5/market/tickers";
 const GATE_TICKER_URL = "https://api.gateio.ws/api/v4/spot/tickers";
 
@@ -15,6 +16,69 @@ const FALLBACK_RATES = {
   USDT_to_CLP_P2P: 963.00,
   VES_to_USDT_P2P: 36.00,
 };
+
+const toNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const PAYMENT_METHOD_BANK_TRANSFER_REGEX = /(bank|banc|transfer|transferencia)/i;
+
+const hasBankTransferMethod = (row) => {
+  const methods = Array.isArray(row?.adv?.tradeMethods) ? row.adv.tradeMethods : [];
+  return methods.some((method) => {
+    const name = `${method?.tradeMethodName || ""} ${method?.identifier || ""}`;
+    return PAYMENT_METHOD_BANK_TRANSFER_REGEX.test(name);
+  });
+};
+
+async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [] }) {
+  try {
+    const payload = {
+      page: 1,
+      rows,
+      payTypes,
+      countries: [],
+      publisherType: null,
+      asset: "USDT",
+      fiat,
+      tradeType,
+      transAmount: "",
+    };
+
+    const response = await axios.post(BINANCE_P2P_SEARCH_URL, payload, {
+      timeout: 10000,
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0",
+      },
+    });
+
+    return Array.isArray(response.data?.data) ? response.data.data : [];
+  } catch (error) {
+    const status = error.response?.status;
+    const suffix = status ? ` (HTTP ${status})` : "";
+    console.error(`Error Binance P2P ${tradeType} ${fiat}: ${error.message}${suffix}`);
+    return [];
+  }
+}
+
+async function getBinanceP2PSixthRates() {
+  const [clpBuyRows, vesSellRows] = await Promise.all([
+    getBinanceP2POffers({ fiat: "CLP", tradeType: "BUY" }),
+    getBinanceP2POffers({ fiat: "VES", tradeType: "SELL" }),
+  ]);
+
+  const clpBuy6 = toNumber(clpBuyRows[5]?.adv?.price);
+
+  const vesSellBankRows = vesSellRows.filter(hasBankTransferMethod);
+  const vesSell6Bank = toNumber(vesSellBankRows[5]?.adv?.price);
+
+  return {
+    clpBuy6,
+    vesSell6Bank,
+  };
+}
 
 /**
  * Obtiene la tasa P2P de Binance a través de la API de CriptoYa.
@@ -164,6 +228,7 @@ module.exports = async (req, res) => {
 
   try {
     const [
+      p2pBinance,
       clpRateCriptoYa,
       vesRateCriptoYa,
       wldRateBinance,
@@ -171,6 +236,7 @@ module.exports = async (req, res) => {
       wldRateGate,
       backupRatesCoinGecko,
     ] = await Promise.all([
+      getBinanceP2PSixthRates(),
       getCriptoYaP2PRate("clp"),
       getCriptoYaP2PRate("ves"),
       getBinanceSpotRate("WLDUSDT"),
@@ -179,11 +245,30 @@ module.exports = async (req, res) => {
       getCoinGeckoBackupRates(),
     ]);
 
+    const usdtToClpFromBinance6 = p2pBinance.clpBuy6;
+    const usdtToVesFromBinance6BankSell = p2pBinance.vesSell6Bank;
+
+    const usdtToClp = usdtToClpFromBinance6
+      || clpRateCriptoYa
+      || backupRatesCoinGecko?.usdt_clp
+      || FALLBACK_RATES.USDT_to_CLP_P2P;
+
+    const usdtToVes = usdtToVesFromBinance6BankSell
+      || vesRateCriptoYa
+      || backupRatesCoinGecko?.usdt_ves
+      || FALLBACK_RATES.VES_to_USDT_P2P;
+
     const finalRates = {
       success: true,
       WLD_to_USDT: wldRateBinance || wldRateBybit || wldRateGate || backupRatesCoinGecko?.wld_usdt || FALLBACK_RATES.WLD_to_USDT,
-      USDT_to_CLP_P2P: clpRateCriptoYa || backupRatesCoinGecko?.usdt_clp || FALLBACK_RATES.USDT_to_CLP_P2P,
-      VES_to_USDT_P2P: vesRateCriptoYa || backupRatesCoinGecko?.usdt_ves || FALLBACK_RATES.VES_to_USDT_P2P,
+      USDT_to_CLP_P2P: usdtToClp,
+      USDT_to_CLP_P2P_BUY_6TH: usdtToClpFromBinance6 || null,
+      USDT_CLP_BUY_6TH: usdtToClpFromBinance6 || null,
+      USDT_to_VES_P2P_SELL_6TH_BANK_TRANSFER: usdtToVesFromBinance6BankSell || null,
+      USDT_VES_SELL_6TH_BANK_TRANSFER: usdtToVesFromBinance6BankSell || null,
+      USDT_to_VES_P2P: usdtToVes,
+      // Campo legado: se mantiene por compatibilidad hacia atrás.
+      VES_to_USDT_P2P: usdtToVes,
       meta: {
           wld_source: wldRateBinance
             ? 'Binance Spot'
@@ -192,8 +277,12 @@ module.exports = async (req, res) => {
                 : (wldRateGate
                     ? 'Gate.io Spot'
                     : (backupRatesCoinGecko?.wld_usdt ? 'CoinGecko' : 'Fallback'))),
-          clp_source: clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback'),
-          ves_source: vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback'),
+          clp_source: usdtToClpFromBinance6
+            ? 'Binance P2P BUY #6'
+            : (clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback')),
+          ves_source: usdtToVesFromBinance6BankSell
+            ? 'Binance P2P SELL #6 (Bank Transfer)'
+            : (vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback')),
       }
     };
 
