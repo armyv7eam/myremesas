@@ -264,7 +264,12 @@ module.exports = async (req, res) => {
     ]);
 
     const usdtToClpFromBinance6 = p2pBinance.clpBuy6;
-    const usdtToVesFromBinance6BankSell = p2pBinance.vesSell6Bank;
+    // Tasa directa de Binance P2P VES SELL. Si está bloqueada desde Vercel (geo),
+    // CriptoYa scrape el mismo mercado — usamos esa tasa como equivalente.
+    const usdtToVesFromBinance6BankSell = p2pBinance.vesSell6Bank > 0
+      ? p2pBinance.vesSell6Bank
+      : (vesRateCriptoYa || null);
+    const vesFromDirectBinance = p2pBinance.vesSell6Bank > 0;
 
     const usdtToClp = usdtToClpFromBinance6
       || clpRateCriptoYa
@@ -299,8 +304,10 @@ module.exports = async (req, res) => {
           ? 'Binance P2P BUY #6'
           : (clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback')),
         ves_source: usdtToVesFromBinance6BankSell
-          ? (p2pBinance.vesSellSource || 'Binance P2P SELL #6')
-          : (vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback')),
+          ? (vesFromDirectBinance
+            ? (p2pBinance.vesSellSource || 'Binance P2P SELL #6')
+            : 'Binance P2P via CriptoYa')
+          : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback'),
       }
     };
 
