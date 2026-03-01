@@ -66,13 +66,16 @@ async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [] }
 async function getBinanceP2PSixthRates() {
   const [clpBuyRows, vesSellRows] = await Promise.all([
     getBinanceP2POffers({ fiat: "CLP", tradeType: "BUY" }),
-    getBinanceP2POffers({ fiat: "VES", tradeType: "SELL" }),
+    // Pedimos 50 filas para VES SELL para ampliar el pool de bank-transfer disponibles.
+    getBinanceP2POffers({ fiat: "VES", tradeType: "SELL", rows: 50 }),
   ]);
 
   const clpBuy6 = toNumber(clpBuyRows[5]?.adv?.price);
 
   const vesSellBankRows = vesSellRows.filter(hasBankTransferMethod);
-  const vesSell6Bank = toNumber(vesSellBankRows[5]?.adv?.price);
+  // Si hay ≥6 filas con bank-transfer toma la 6ª; si no, toma la última disponible del pool.
+  const vesTargetRow = vesSellBankRows[5] ?? vesSellBankRows[vesSellBankRows.length - 1];
+  const vesSell6Bank = toNumber(vesTargetRow?.adv?.price);
 
   return {
     clpBuy6,
@@ -270,19 +273,19 @@ module.exports = async (req, res) => {
       // Campo legado: se mantiene por compatibilidad hacia atrás.
       VES_to_USDT_P2P: usdtToVes,
       meta: {
-          wld_source: wldRateBinance
-            ? 'Binance Spot'
-            : (wldRateBybit
-                ? 'Bybit Spot'
-                : (wldRateGate
-                    ? 'Gate.io Spot'
-                    : (backupRatesCoinGecko?.wld_usdt ? 'CoinGecko' : 'Fallback'))),
-          clp_source: usdtToClpFromBinance6
-            ? 'Binance P2P BUY #6'
-            : (clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback')),
-          ves_source: usdtToVesFromBinance6BankSell
-            ? 'Binance P2P SELL #6 (Bank Transfer)'
-            : (vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback')),
+        wld_source: wldRateBinance
+          ? 'Binance Spot'
+          : (wldRateBybit
+            ? 'Bybit Spot'
+            : (wldRateGate
+              ? 'Gate.io Spot'
+              : (backupRatesCoinGecko?.wld_usdt ? 'CoinGecko' : 'Fallback'))),
+        clp_source: usdtToClpFromBinance6
+          ? 'Binance P2P BUY #6'
+          : (clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback')),
+        ves_source: usdtToVesFromBinance6BankSell
+          ? 'Binance P2P SELL #6 (Bank Transfer)'
+          : (vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback')),
       }
     };
 
@@ -295,9 +298,9 @@ module.exports = async (req, res) => {
       message: "Error al procesar tasas, usando valores de referencia.",
       ...FALLBACK_RATES,
       meta: {
-          wld_source: 'Fallback',
-          clp_source: 'Fallback',
-          ves_source: 'Fallback',
+        wld_source: 'Fallback',
+        clp_source: 'Fallback',
+        ves_source: 'Fallback',
       }
     });
   }
