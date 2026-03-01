@@ -66,20 +66,35 @@ async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [] }
 async function getBinanceP2PSixthRates() {
   const [clpBuyRows, vesSellRows] = await Promise.all([
     getBinanceP2POffers({ fiat: "CLP", tradeType: "BUY" }),
-    // Pedimos 50 filas para VES SELL para ampliar el pool de bank-transfer disponibles.
+    // 50 filas para ampliar el pool de filtrado.
     getBinanceP2POffers({ fiat: "VES", tradeType: "SELL", rows: 50 }),
   ]);
 
   const clpBuy6 = toNumber(clpBuyRows[5]?.adv?.price);
 
   const vesSellBankRows = vesSellRows.filter(hasBankTransferMethod);
-  // Si hay ≥6 filas con bank-transfer toma la 6ª; si no, toma la última disponible del pool.
-  const vesTargetRow = vesSellBankRows[5] ?? vesSellBankRows[vesSellBankRows.length - 1];
+
+  let vesTargetRow;
+  let vesSellSource;
+
+  if (vesSellBankRows.length > 0) {
+    // Si hay ofertas con bank-transfer, toma la 6ª o la última disponible.
+    vesTargetRow = vesSellBankRows[5] ?? vesSellBankRows[vesSellBankRows.length - 1];
+    vesSellSource = 'Binance P2P SELL #6 (Bank Transfer)';
+  } else {
+    // En VES los métodos de pago son nombres de bancos (Mercantil, Banesco, etc.)
+    // que no coinciden con el regex bancario. Fallback a la 6ª oferta general.
+    vesTargetRow = vesSellRows[5];
+    vesSellSource = 'Binance P2P SELL #6';
+    console.warn('VES SELL: sin ofertas con método bank-transfer reconocido. Usando 6ª oferta general.');
+  }
+
   const vesSell6Bank = toNumber(vesTargetRow?.adv?.price);
 
   return {
     clpBuy6,
     vesSell6Bank,
+    vesSellSource: vesSell6Bank > 0 ? vesSellSource : null,
   };
 }
 
@@ -284,7 +299,7 @@ module.exports = async (req, res) => {
           ? 'Binance P2P BUY #6'
           : (clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback')),
         ves_source: usdtToVesFromBinance6BankSell
-          ? 'Binance P2P SELL #6 (Bank Transfer)'
+          ? (p2pBinance.vesSellSource || 'Binance P2P SELL #6')
           : (vesRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback')),
       }
     };
