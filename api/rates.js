@@ -22,7 +22,8 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const PAYMENT_METHOD_BANK_TRANSFER_REGEX = /(bank|banc|transfer|transferencia)/i;
+// Bancos venezolanos y métodos de transferencia bancaria más comunes en Binance P2P VES
+const PAYMENT_METHOD_BANK_TRANSFER_REGEX = /(bank|banc|transfer|transferencia|mercantil|banesco|provincial|venezuela|bnc|bangente|fondo|bicentenario|sofitasa|activo|tesoro|exterior|plaza|agrícola|agricola|caribe|occidental|ber|mi\s*banco|100\s*%)/i;
 
 const hasBankTransferMethod = (row) => {
   const methods = Array.isArray(row?.adv?.tradeMethods) ? row.adv.tradeMethods : [];
