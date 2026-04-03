@@ -404,7 +404,7 @@ module.exports = async (req, res) => {
         ves_source: usdtToVesFromBinance6BankSell
           ? (vesFromDirectBinance
             ? (p2pBinance.vesSellSource || `Binance P2P SELL (${VES_SELL_TARGET_AMOUNT} VES)`)
-            : `Binance P2P via CriptoYa (-${(VES_SELL_CRYPTOYA_ADJUSTMENT * 100).toFixed(2)}%)`)
+            : 'Binance P2P via CriptoYa')
           : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback'),
       }
     };
