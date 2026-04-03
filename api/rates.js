@@ -22,8 +22,13 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Bancos venezolanos y métodos de transferencia bancaria más comunes en Binance P2P VES
-const PAYMENT_METHOD_BANK_TRANSFER_REGEX = /(bank|banc|transfer|transferencia|mercantil|banesco|provincial|venezuela|bnc|bangente|fondo|bicentenario|sofitasa|activo|tesoro|exterior|plaza|agrícola|agricola|caribe|occidental|ber|mi\s*banco|100\s*%)/i;
+const PAYMENT_METHOD_BANK_TRANSFER_REGEX = /(bank|banc|transfer|transferencia|mercantil|banesco|provincial|venezuela|bnc|bangente|fondo|bicentenario|sofitasa|activo|tesoro|exterior|plaza|agricola|agrícola|caribe|occidental|mibanco|mi\s*banco|100\s*%)/i;
+const VES_SELL_TARGET_AMOUNT = "50000";
+const VES_SELL_PAY_TYPES = ["BANK"];
+const VES_SELL_CRYPTOYA_ADJUSTMENT = 0.008;
 
 const hasBankTransferMethod = (row) => {
   const methods = Array.isArray(row?.adv?.tradeMethods) ? row.adv.tradeMethods : [];
@@ -33,7 +38,26 @@ const hasBankTransferMethod = (row) => {
   });
 };
 
-async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [] }) {
+const canCoverTargetAmount = (row, targetAmount) => {
+  const min = toNumber(row?.adv?.minSingleTransAmount);
+  const max = toNumber(row?.adv?.dynamicMaxSingleTransAmount || row?.adv?.maxSingleTransAmount);
+  if (targetAmount <= 0) return true;
+  if (min > 0 && targetAmount < min) return false;
+  if (max > 0 && targetAmount > max) return false;
+  return true;
+};
+
+const pickBestMatchingOffer = (rows, { targetAmount, requireBankLikeMethod = false }) => {
+  const filteredRows = rows.filter((row) => {
+    if (!canCoverTargetAmount(row, targetAmount)) return false;
+    if (requireBankLikeMethod && !hasBankTransferMethod(row)) return false;
+    return true;
+  });
+
+  return filteredRows[0] || null;
+};
+
+async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [], transAmount = "" }) {
   try {
     const payload = {
       page: 1,
@@ -44,7 +68,7 @@ async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [] }
       asset: "USDT",
       fiat,
       tradeType,
-      transAmount: "",
+      transAmount,
     };
 
     const response = await axios.post(BINANCE_P2P_SEARCH_URL, payload, {
@@ -64,48 +88,121 @@ async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [] }
   }
 }
 
-async function getBinanceP2PSixthRates() {
-  const [clpBuyRows, vesSellRows] = await Promise.all([
-    getBinanceP2POffers({ fiat: "CLP", tradeType: "BUY" }),
-    // 50 filas para ampliar el pool de filtrado.
-    getBinanceP2POffers({ fiat: "VES", tradeType: "SELL", rows: 50 }),
-  ]);
+async function getBinanceP2POffersWithRetry(options, attempts = 3, delayMs = 400) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const rows = await getBinanceP2POffers(options);
+    if (rows.length > 0) {
+      return rows;
+    }
 
-  const clpBuy6 = toNumber(clpBuyRows[5]?.adv?.price);
-
-  const vesSellBankRows = vesSellRows.filter(hasBankTransferMethod);
-
-  let vesTargetRow;
-  let vesSellSource;
-
-  if (vesSellBankRows.length > 0) {
-    // Si hay ofertas con bank-transfer, toma la 6ª o la última disponible.
-    vesTargetRow = vesSellBankRows[5] ?? vesSellBankRows[vesSellBankRows.length - 1];
-    vesSellSource = 'Binance P2P SELL #6 (Bank Transfer)';
-  } else {
-    // En VES los métodos de pago son nombres de bancos (Mercantil, Banesco, etc.)
-    // que no coinciden con el regex bancario. Fallback a la 6ª oferta general.
-    vesTargetRow = vesSellRows[5];
-    vesSellSource = 'Binance P2P SELL #6';
-    console.warn('VES SELL: sin ofertas con método bank-transfer reconocido. Usando 6ª oferta general.');
+    if (attempt < attempts) {
+      await sleep(delayMs);
+    }
   }
 
-  const vesSell6Bank = toNumber(vesTargetRow?.adv?.price);
+  return [];
+}
+
+async function getBinanceVesSellRate() {
+  const targetAmount = toNumber(VES_SELL_TARGET_AMOUNT);
+
+  const exactBankRows = await getBinanceP2POffersWithRetry({
+    fiat: "VES",
+    tradeType: "SELL",
+    rows: 50,
+    payTypes: VES_SELL_PAY_TYPES,
+    transAmount: VES_SELL_TARGET_AMOUNT,
+  });
+  const exactBankMatch = pickBestMatchingOffer(exactBankRows, { targetAmount });
+  if (exactBankMatch) {
+    return {
+      rate: toNumber(exactBankMatch.adv?.price),
+      source: `Binance P2P SELL (Bank Transfer, ${VES_SELL_TARGET_AMOUNT} VES)`,
+    };
+  }
+
+  const broadRows = await getBinanceP2POffersWithRetry({
+    fiat: "VES",
+    tradeType: "SELL",
+    rows: 50,
+    transAmount: VES_SELL_TARGET_AMOUNT,
+  });
+  const broadBankMatch = pickBestMatchingOffer(broadRows, { targetAmount, requireBankLikeMethod: true });
+  if (broadBankMatch) {
+    return {
+      rate: toNumber(broadBankMatch.adv?.price),
+      source: `Binance P2P SELL (Bank-like fallback, ${VES_SELL_TARGET_AMOUNT} VES)`,
+    };
+  }
+
+  // Ultimo intento: sin transAmount en la request, pero validando localmente que la oferta cubra 50000 VES.
+  const unboundedBankRows = await getBinanceP2POffersWithRetry({
+    fiat: "VES",
+    tradeType: "SELL",
+    rows: 50,
+    payTypes: VES_SELL_PAY_TYPES,
+  });
+  const unboundedBankMatch = pickBestMatchingOffer(unboundedBankRows, { targetAmount });
+  if (unboundedBankMatch) {
+    return {
+      rate: toNumber(unboundedBankMatch.adv?.price),
+      source: `Binance P2P SELL (Bank Transfer fallback, covers ${VES_SELL_TARGET_AMOUNT} VES)`,
+    };
+  }
+
+  const unboundedRows = await getBinanceP2POffersWithRetry({
+    fiat: "VES",
+    tradeType: "SELL",
+    rows: 50,
+  });
+  const unboundedBankLikeMatch = pickBestMatchingOffer(unboundedRows, { targetAmount, requireBankLikeMethod: true });
+  if (unboundedBankLikeMatch) {
+    return {
+      rate: toNumber(unboundedBankLikeMatch.adv?.price),
+      source: `Binance P2P SELL (Bank-like unbounded fallback, covers ${VES_SELL_TARGET_AMOUNT} VES)`,
+    };
+  }
+
+  const unboundedAnyMatch = pickBestMatchingOffer(unboundedRows, { targetAmount });
+  if (unboundedAnyMatch) {
+    return {
+      rate: toNumber(unboundedAnyMatch.adv?.price),
+      source: `Binance P2P SELL (Unbounded fallback, covers ${VES_SELL_TARGET_AMOUNT} VES)`,
+    };
+  }
+
+  console.warn(`VES SELL: Binance no devolvió ofertas utilizables para ${VES_SELL_TARGET_AMOUNT} VES.`);
+  return {
+    rate: 0,
+    source: null,
+  };
+}
+
+async function getBinanceP2PSixthRates() {
+  const clpBuyRows = await getBinanceP2POffersWithRetry({ fiat: "CLP", tradeType: "BUY" });
+
+  const clpBuy6 = toNumber(clpBuyRows[5]?.adv?.price);
+  const vesSell = await getBinanceVesSellRate();
 
   return {
     clpBuy6,
-    vesSell6Bank,
-    vesSellSource: vesSell6Bank > 0 ? vesSellSource : null,
+    vesSell6Bank: vesSell.rate,
+    vesSellSource: vesSell.rate > 0 ? vesSell.source : null,
   };
 }
 
 /**
  * Obtiene la tasa P2P de Binance a través de la API de CriptoYa.
  */
-async function getCriptoYaP2PRate(fiat) {
+const adjustVesCriptoYaRate = (rate) => {
+  if (!rate) return null;
+  return rate * (1 - VES_SELL_CRYPTOYA_ADJUSTMENT);
+};
+
+async function getCriptoYaP2PRate(fiat, volume = 1) {
   try {
     // URL CORRECTA: /api/binancep2p/{coin_to_buy}/{fiat_to_pay_with}/{volume}
-    const url = `${CRIPTOYA_API_BASE_URL}/binancep2p/usdt/${fiat.toLowerCase()}/1`;
+    const url = `${CRIPTOYA_API_BASE_URL}/binancep2p/usdt/${fiat.toLowerCase()}/${volume}`;
     const response = await axios.get(url, { timeout: 7000 });
     // CriptoYa devuelve el precio de COMPRA (ask) para el usuario.
     if (response.data && response.data.ask) {
@@ -246,8 +343,8 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const p2pBinance = await getBinanceP2PSixthRates();
     const [
-      p2pBinance,
       clpRateCriptoYa,
       vesRateCriptoYa,
       wldRateBinance,
@@ -255,9 +352,8 @@ module.exports = async (req, res) => {
       wldRateGate,
       backupRatesCoinGecko,
     ] = await Promise.all([
-      getBinanceP2PSixthRates(),
       getCriptoYaP2PRate("clp"),
-      getCriptoYaP2PRate("ves"),
+      getCriptoYaP2PRate("ves", VES_SELL_TARGET_AMOUNT),
       getBinanceSpotRate("WLDUSDT"),
       getBybitSpotRate("WLDUSDT"),
       getGateSpotRate("WLD_USDT"),
@@ -267,9 +363,10 @@ module.exports = async (req, res) => {
     const usdtToClpFromBinance6 = p2pBinance.clpBuy6;
     // Tasa directa de Binance P2P VES SELL. Si está bloqueada desde Vercel (geo),
     // CriptoYa scrape el mismo mercado — usamos esa tasa como equivalente.
+    const adjustedVesRateCriptoYa = adjustVesCriptoYaRate(vesRateCriptoYa);
     const usdtToVesFromBinance6BankSell = p2pBinance.vesSell6Bank > 0
       ? p2pBinance.vesSell6Bank
-      : (vesRateCriptoYa || null);
+      : (adjustedVesRateCriptoYa || null);
     const vesFromDirectBinance = p2pBinance.vesSell6Bank > 0;
 
     const usdtToClp = usdtToClpFromBinance6
@@ -306,8 +403,8 @@ module.exports = async (req, res) => {
           : (clpRateCriptoYa ? 'CriptoYa' : (backupRatesCoinGecko?.usdt_clp ? 'CoinGecko' : 'Fallback')),
         ves_source: usdtToVesFromBinance6BankSell
           ? (vesFromDirectBinance
-            ? (p2pBinance.vesSellSource || 'Binance P2P SELL #6')
-            : 'Binance P2P via CriptoYa')
+            ? (p2pBinance.vesSellSource || `Binance P2P SELL (${VES_SELL_TARGET_AMOUNT} VES)`)
+            : `Binance P2P via CriptoYa (-${(VES_SELL_CRYPTOYA_ADJUSTMENT * 100).toFixed(2)}%)`)
           : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback'),
       }
     };
