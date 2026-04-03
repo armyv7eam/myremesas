@@ -59,6 +59,8 @@ let authContainer, appContainer, authFormsSection, registerForm, loginForm, logo
 let registerStatus, loginStatus;
 let usdtDestinationSaveTimeout = null;
 let vesDestinationSaveTimeout = null;
+let ratesFetchDebounceTimeout = null;
+let isFetchingDynamicRates = false;
 /**
  * Redondea un número con el número especificado de decimales (redondeo matemático estándar)
  * @param {number} value - Valor a redondear
@@ -78,6 +80,21 @@ function roundToDecimals(value, decimals = 2) {
  */
 function formatRounded(value, decimals = 2) {
     return roundToDecimals(value, decimals).toFixed(decimals);
+}
+
+function renderRateDisplays({ wldSource = 'Referencia', clpSource = 'Referencia', vesSource = 'Referencia', suffix = '' } = {}) {
+    if (wldUsdtDisplay) {
+        wldUsdtDisplay.textContent = `WLD/USDT (${wldSource}): ${formatRounded(liveRates.WLD_to_USDT, 4)}${suffix}`;
+    }
+    if (clpUsdtP2pDisplay) {
+        clpUsdtP2pDisplay.textContent = `USDT/CLP (${clpSource}): 1 USDT = ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP${suffix}`;
+    }
+    if (usdtClpP2pWldDisplay) {
+        usdtClpP2pWldDisplay.textContent = `USDT/CLP (${clpSource}): ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP / USDT${suffix}`;
+    }
+    if (vesUsdtP2pDisplay) {
+        vesUsdtP2pDisplay.textContent = `USDT/VES (${vesSource}): 1 USDT = ${formatRounded(liveRates.USDT_to_VES, 2)} VES${suffix}`;
+    }
 }
 
 
@@ -711,6 +728,8 @@ function renderAdminAccountsList() {
 }
 
 async function fetchDynamicRates() {
+    if (isFetchingDynamicRates) return;
+    isFetchingDynamicRates = true;
     rateFetchStatus.textContent = 'Conectando con API...';
     try {
         const response = await fetch('/api/rates');
@@ -726,11 +745,12 @@ async function fetchDynamicRates() {
 
             const newWldRate = parseFloat(data.WLD_to_USDT);
             if (!isNaN(newWldRate)) liveRates.WLD_to_USDT = newWldRate;
-            
-            wldUsdtDisplay.textContent = `WLD/USDT (${data.meta?.wld_source || '...'}): ${formatRounded(liveRates.WLD_to_USDT, 4)}`;
-            clpUsdtP2pDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): 1 USDT = ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP`;
-            usdtClpP2pWldDisplay.textContent = `USDT/CLP (${data.meta?.clp_source || '...'}): ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP / USDT`;
-            vesUsdtP2pDisplay.textContent = `USDT/VES (${data.meta?.ves_source || '...'}): 1 USDT = ${formatRounded(liveRates.USDT_to_VES, 2)} VES`;
+
+            renderRateDisplays({
+                wldSource: data.meta?.wld_source || 'API',
+                clpSource: data.meta?.clp_source || 'API',
+                vesSource: data.meta?.ves_source || 'API',
+            });
             rateFetchStatus.textContent = 'Tasas actualizadas.';
 
         } else {
@@ -738,13 +758,37 @@ async function fetchDynamicRates() {
         }
     } catch (error) {
         console.warn("Fallo en la conexión con la API. Usando tasas de referencia fijas.", error);
-        wldUsdtDisplay.textContent = `WLD/USDT: ${formatRounded(liveRates.WLD_to_USDT, 4)} (Fijo)`;
-        clpUsdtP2pDisplay.textContent = `USDT/CLP: 1 USDT = ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP (Fijo)`;
-        usdtClpP2pWldDisplay.textContent = `USDT/CLP: ${formatRounded(liveRates.USDT_to_CLP, 2)} CLP / USDT (Fijo)`;
-        vesUsdtP2pDisplay.textContent = `USDT/VES: 1 USDT = ${formatRounded(liveRates.USDT_to_VES, 2)} VES (Fijo)`;
+        renderRateDisplays({ suffix: ' (Fijo)' });
         rateFetchStatus.textContent = 'Fallo de conexión. Usando tasas de Referencia.';
+    } finally {
+        isFetchingDynamicRates = false;
     }
     calculateExchange();
+}
+
+function scheduleDynamicRatesFetch() {
+    if (!amountSendInput) return;
+    const amountSend = parseFloat(amountSendInput.value);
+
+    if (ratesFetchDebounceTimeout) {
+        clearTimeout(ratesFetchDebounceTimeout);
+        ratesFetchDebounceTimeout = null;
+    }
+
+    if (isNaN(amountSend) || amountSend <= 0) {
+        if (rateFetchStatus) {
+            rateFetchStatus.textContent = 'Ingresa un monto para consultar tasas en vivo.';
+        }
+        return;
+    }
+
+    if (rateFetchStatus) {
+        rateFetchStatus.textContent = 'Consultando tasas en vivo...';
+    }
+
+    ratesFetchDebounceTimeout = setTimeout(() => {
+        fetchDynamicRates().catch(err => console.error('Error al obtener tasas:', err));
+    }, 500);
 }
 
 function calculateFullRatesInternal() {
@@ -1505,7 +1549,10 @@ function createCopyRow(label, value) {
 }
 
 function registerStaticEventListeners() {
-    if (amountSendInput) amountSendInput.addEventListener('input', () => calculateExchange());
+    if (amountSendInput) amountSendInput.addEventListener('input', () => {
+        calculateExchange();
+        scheduleDynamicRatesFetch();
+    });
     if (currencySendSelect) currencySendSelect.addEventListener('change', () => calculateExchange());
     if (currencyReceiveSelect) currencyReceiveSelect.addEventListener('change', () => calculateExchange());
     if (swapButton) swapButton.addEventListener('click', () => { swapCurrencies(); calculateExchange(); });
@@ -1685,13 +1732,16 @@ function scheduleVesDestinationPersist() {
 async function bootstrapApp() {
     try {
         initializeDOM();
+        renderRateDisplays();
+        if (rateFetchStatus) {
+            rateFetchStatus.textContent = 'Ingresa un monto para consultar tasas en vivo.';
+        }
         registerStaticEventListeners();
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') closeReceiptViewer();
         });
         calculateExchange();
         await initializeFirebase();
-        setTimeout(() => fetchDynamicRates().catch(err => console.error('Error al obtener tasas:', err)), 500);
     } catch (error) {
         console.error('Error al iniciar la aplicaci�n:', error);
         if (authStatus) {
