@@ -46,7 +46,7 @@ let marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 let marginConfigUnsubscribe = null;
 
 // --- DECLARACIN DE VARIABLES DEL DOM ---
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails, binanceBalanceCard, usdtBalanceDisplay, refreshUsdtBalanceButton, usdtBalanceStatus;
+let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, suggestedRateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails, binanceBalanceCard, usdtBalanceDisplay, refreshUsdtBalanceButton, usdtBalanceStatus;
 
 let currentTransactionId = null;
 let currentTransactionPath = null;
@@ -108,6 +108,7 @@ function initializeDOM() {
     swapButton = document.getElementById('swap-button');
     amountReceiveDisplay = document.getElementById('amount-receive-display');
     rateDisplay = document.getElementById('rate-display');
+    suggestedRateDisplay = document.getElementById('suggested-rate-display');
     paymentButton = document.getElementById('payment-button');
     errorMessage = document.getElementById('error-message');
     historyContainer = document.getElementById('transaction-history');
@@ -827,6 +828,7 @@ function calculateExchange(enablePaymentButton = true) {
     if (isNaN(amountSend) || amountSend <= 0) {
         amountReceiveDisplay.textContent = formatCurrency(0, currencyReceive);
         rateDisplay.textContent = "Ingrese un monto vélido.";
+        if (suggestedRateDisplay) suggestedRateDisplay.textContent = '';
         paymentButton.disabled = true;
         errorMessage.classList.add('hidden');
         return;
@@ -836,6 +838,7 @@ function calculateExchange(enablePaymentButton = true) {
     if (rate == null) {
         amountReceiveDisplay.textContent = "N/A";
         rateDisplay.textContent = `Intercambio ${currencySend} a ${currencyReceive} no disponible.`;
+        if (suggestedRateDisplay) suggestedRateDisplay.textContent = '';
         paymentButton.disabled = true;
         errorMessage.classList.remove('hidden');
         errorMessage.textContent = `Error: El intercambio de ${currencySend} a ${currencyReceive} no es una ruta vélida.`;
@@ -845,13 +848,18 @@ function calculateExchange(enablePaymentButton = true) {
     errorMessage.classList.add('hidden');
     const amountReceive = amountSend * rate;
     let rateText = `Tasa: 1 ${currencySend} = ${formatRounded(rate, currencyReceive === 'WLD' ? 8 : 4)} ${currencyReceive}`;
+    const suggestedRate = rate * 1.05;
+    let suggestedRateText = `Tasa Manzano App sugerida: 1 ${currencySend} = ${formatRounded(suggestedRate, currencyReceive === 'WLD' ? 8 : 4)} ${currencyReceive}`;
     if (currencySend === currencyReceive) {
         rateText = 'Intercambio 1:1';
+        suggestedRateText = 'Tasa Manzano App sugerida: Intercambio 1:1';
     } else if (currencySend === 'CLP' && currencyReceive === 'USDT') {
         rateText = `Tasa: 1 USDT = ${formatRounded(1 / rate, 2)} CLP`;
+        suggestedRateText = `Tasa Manzano App sugerida: 1 USDT = ${formatRounded(1 / suggestedRate, 2)} CLP`;
     }
     amountReceiveDisplay.textContent = formatCurrency(amountReceive, currencyReceive);
     rateDisplay.textContent = rateText;
+    if (suggestedRateDisplay) suggestedRateDisplay.textContent = suggestedRateText;
 }
 
 function swapCurrencies() {
