@@ -635,12 +635,22 @@
         const sellerCommissionHistorySummary = document.getElementById('seller-commission-history-summary');
         const sellerCommissionHistoryList = document.getElementById('seller-commission-history-list');
         const noSellerCommissionHistoryMessage = document.getElementById('no-seller-commission-history-message');
+        const sellerViewHistoryStart = document.getElementById('seller-view-history-start');
+        const sellerViewHistoryEnd = document.getElementById('seller-view-history-end');
+        const sellerViewHistoryTodayBtn = document.getElementById('seller-view-history-today');
+        const sellerViewHistoryYesterdayBtn = document.getElementById('seller-view-history-yesterday');
+        const sellerViewHistory7DaysBtn = document.getElementById('seller-view-history-7days');
+        const sellerViewHistorySearchBtn = document.getElementById('seller-view-history-search-btn');
+        const sellerViewHistorySummary = document.getElementById('seller-view-history-summary');
+        const sellerViewHistoryList = document.getElementById('seller-view-history-list');
+        const sellerViewHistoryEmpty = document.getElementById('seller-view-history-empty');
 
         const historicalStatusButtons = historicalStatusFilters ? Array.from(historicalStatusFilters.querySelectorAll('button')) : [];
         const historicalRangeButtons = [historicalDateTodayBtn, historicalDateYesterdayBtn, historicalDate7DaysBtn].filter(Boolean);
         const balanceHistoryRangeButtons = [balanceHistoryTodayBtn, balanceHistoryYesterdayBtn, balanceHistory7DaysBtn].filter(Boolean);
         const clpBalanceHistoryRangeButtons = [clpBalanceHistoryTodayBtn, clpBalanceHistoryYesterdayBtn, clpBalanceHistory7DaysBtn].filter(Boolean);
         const sellerCommissionRangeButtons = [sellerCommissionHistoryTodayBtn, sellerCommissionHistoryYesterdayBtn, sellerCommissionHistory7DaysBtn].filter(Boolean);
+        const sellerViewHistoryRangeButtons = [sellerViewHistoryTodayBtn, sellerViewHistoryYesterdayBtn, sellerViewHistory7DaysBtn].filter(Boolean);
 
         const setActiveChip = (buttons, activeButton = null) => {
             buttons.forEach(btn => {
@@ -686,6 +696,7 @@
         let historicalOrdersData = []; // To store data for Excel export
         let clpBalanceHistoryData = []; // To store data for CLP balance history export
         let fullClientList = []; // Holds the raw client data
+        let sellerViewHistoryData = []; // Seller-only transaction history rows
 
         const chileTimeZone = 'America/Santiago';
 
@@ -942,6 +953,91 @@
                 clientsCountDisplay.textContent = 'Error';
                 if (error.code === 'failed-precondition') {
                     showCustomAlert('Error: La base de datos requiere un índice para la lista de clientes. Por favor, abre la consola (F12) y crea el índice que solicita Firebase.');
+                }
+            }
+        };
+
+        /** Fetches seller-only orders to build a private client registry for autocomplete. */
+        const fetchAndRenderSellerClients = async (sellerId) => {
+            if (!sellerId) {
+                fullClientList = [];
+                return;
+            }
+
+            try {
+                const snapshot = await db.collection('orders')
+                    .where('sellerId', '==', sellerId)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                const clientsMap = new Map();
+
+                snapshot.forEach(doc => {
+                    const order = doc.data();
+                    if (!order.cedula || !order.clientName) return;
+
+                    const effectiveOrder = {
+                        ...(order.latestOverall || {}),
+                        ...order
+                    };
+
+                    let orderType = effectiveOrder.type;
+                    if (!orderType && effectiveOrder.lastOrders) {
+                        const possibleTypes = ['transferencia', 'pago-movil', 'recarga-saldo'];
+                        for (const type of possibleTypes) {
+                            if (effectiveOrder.lastOrders[type]) {
+                                orderType = type;
+                                Object.assign(effectiveOrder, effectiveOrder.lastOrders[type]);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!orderType) {
+                        if (effectiveOrder.accountNumber) {
+                            orderType = 'transferencia';
+                        } else if (effectiveOrder.phone && effectiveOrder.bank) {
+                            orderType = 'pago-movil';
+                        } else if (effectiveOrder.phone) {
+                            orderType = 'recarga-saldo';
+                        }
+                    }
+
+                    let clientProfile = clientsMap.get(order.cedula) || {
+                        cedula: order.cedula,
+                        clientName: order.clientName,
+                        email: order.email || '',
+                        lastOrders: {},
+                        latestOverall: null,
+                        type: orderType,
+                        accountNumber: effectiveOrder.accountNumber,
+                        phone: effectiveOrder.phone,
+                        bank: effectiveOrder.bank,
+                        accountType: effectiveOrder.accountType
+                    };
+
+                    clientProfile.clientName = order.clientName;
+                    clientProfile.email = order.email || clientProfile.email;
+
+                    if (effectiveOrder.type && !clientProfile.lastOrders[effectiveOrder.type]) {
+                        clientProfile.lastOrders[effectiveOrder.type] = { ...effectiveOrder, id: doc.id };
+                    }
+
+                    if (!clientProfile.latestOverall) {
+                        clientProfile.latestOverall = { ...effectiveOrder, id: doc.id };
+                        clientProfile.id = doc.id;
+                    }
+
+                    clientsMap.set(order.cedula, clientProfile);
+                });
+
+                fullClientList = Array.from(clientsMap.values());
+                console.log(`[SellerClients] ${fullClientList.length} cliente(s) cargados para vendedor ${sellerId}.`);
+            } catch (error) {
+                console.error("Error fetching seller clients:", error);
+                fullClientList = [];
+                if (error.code === 'failed-precondition') {
+                    showCustomAlert('Error: Falta un indice para cargar la base de clientes del vendedor. Revisa la consola (F12) y crea el indice sugerido por Firebase.');
                 }
             }
         };
@@ -2074,6 +2170,97 @@
             });
         };
 
+        /** Fetches and renders seller transaction history for the logged-in seller only. */
+        const handleSellerViewHistorySearch = async () => {
+            if (!currentUser || !isSeller) return;
+            if (!sellerViewHistoryList || !sellerViewHistorySummary || !sellerViewHistoryEmpty) return;
+
+            const startDate = sellerViewHistoryStart ? sellerViewHistoryStart.valueAsDate : null;
+            const endDate = sellerViewHistoryEnd ? sellerViewHistoryEnd.valueAsDate : null;
+            const hasStart = !!startDate;
+            const hasEnd = !!endDate;
+
+            if ((hasStart && !hasEnd) || (!hasStart && hasEnd)) {
+                showCustomAlert('Selecciona ambas fechas para filtrar, o deja ambas vacias para ver todo tu historial.');
+                return;
+            }
+
+            loadingSpinner.classList.remove('hidden');
+            loadingSpinner.classList.add('flex');
+            sellerViewHistoryList.innerHTML = '';
+            sellerViewHistoryEmpty.classList.add('hidden');
+            sellerViewHistorySummary.textContent = '';
+            sellerViewHistoryData = [];
+
+            try {
+                let query = db.collection('seller_commissions')
+                    .where('sellerId', '==', currentUser.uid);
+
+                if (hasStart && hasEnd) {
+                    const startDateString = startDate.toISOString().slice(0, 10);
+                    const endDateString = endDate.toISOString().slice(0, 10);
+                    const queryStart = firebase.firestore.Timestamp.fromDate(new Date(`${startDateString}T00:00:00`));
+                    const queryEnd = firebase.firestore.Timestamp.fromDate(new Date(`${endDateString}T23:59:59.999`));
+                    query = query
+                        .where('timestamp', '>=', queryStart)
+                        .where('timestamp', '<=', queryEnd);
+                }
+
+                const snapshot = await query.orderBy('timestamp', 'desc').get();
+
+                if (snapshot.empty) {
+                    sellerViewHistoryEmpty.classList.remove('hidden');
+                    sellerViewHistorySummary.textContent = 'No se encontraron transacciones para los filtros seleccionados.';
+                    return;
+                }
+
+                let totalSalesCLP = 0;
+                let totalCommissionCLP = 0;
+
+                snapshot.forEach(doc => {
+                    const commission = doc.data();
+                    sellerViewHistoryData.push(commission);
+                    totalSalesCLP += commission.orderCLPAmount || 0;
+                    totalCommissionCLP += commission.commissionAmountCLP || 0;
+                    const commissionDate = commission.timestamp && typeof commission.timestamp.toDate === 'function'
+                        ? commission.timestamp.toDate()
+                        : new Date();
+
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-gray-200 hover:bg-gray-50';
+                    row.innerHTML = `
+                      <td class="p-2 text-gray-600 whitespace-nowrap">${formatDateForTable(commissionDate)}</td>
+                      <td class="p-2 font-mono text-gray-500">${(commission.orderId || '').slice(-5)}</td>
+                      <td class="p-2 font-mono text-right text-blue-600">${(commission.orderCLPAmount || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</td>
+                      <td class="p-2 font-mono text-right text-green-600 font-semibold">+ ${(commission.commissionAmountCLP || 0).toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</td>
+                  `;
+                    sellerViewHistoryList.appendChild(row);
+                });
+
+                const netAmountCLP = totalSalesCLP - totalCommissionCLP;
+                const scopeLabel = hasStart && hasEnd
+                    ? `del ${sellerViewHistoryStart.value} al ${sellerViewHistoryEnd.value}`
+                    : 'de todo el historial';
+
+                sellerViewHistorySummary.innerHTML = `Se encontraron <strong>${snapshot.size}</strong> transacciones ${scopeLabel}. <br> Total Ventas: <strong>${totalSalesCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</strong> | Total Comision: <strong class="text-green-600">${totalCommissionCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</strong> <br> Monto Neto (CLP): <strong class="text-blue-600">${netAmountCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}</strong>`;
+            } catch (error) {
+                console.error("Error fetching seller own history:", error);
+                sellerViewHistorySummary.textContent = 'Error al cargar tu historial de transacciones.';
+                if (error.code === 'failed-precondition') {
+                    showCustomAlert('Error: Falta un indice para consultar tu historial de transacciones. Revisa la consola (F12) y crea el indice sugerido por Firebase.');
+                }
+            } finally {
+                loadingSpinner.classList.add('hidden');
+                loadingSpinner.classList.remove('flex');
+            }
+        };
+
+        const setSellerViewHistoryDateRangeAndSearch = (start, end) => {
+            if (sellerViewHistoryStart) sellerViewHistoryStart.valueAsDate = start;
+            if (sellerViewHistoryEnd) sellerViewHistoryEnd.valueAsDate = end;
+            handleSellerViewHistorySearch();
+        };
+
         /** Attaches a listener for the admin to see all seller commissions for the day. */
         const attachAdminSellerCommissionsListener = () => {
             if (adminSellerCommissionsListener) adminSellerCommissionsListener();
@@ -2392,7 +2579,15 @@
                             document.getElementById('seller-global-balance-section').classList.remove('hidden');
                             attachAccountsListener(); // Attach the listener to get balance data
 
-                            fetchAndRenderClients(); // Sellers get access to the full client list
+                            fetchAndRenderSellerClients(user.uid); // Sellers only load their own client registry
+                            if (sellerViewHistoryStart) sellerViewHistoryStart.value = '';
+                            if (sellerViewHistoryEnd) sellerViewHistoryEnd.value = '';
+                            setActiveChip(sellerViewHistoryRangeButtons, null);
+                            handleSellerViewHistorySearch(); // Full seller history (own transactions)
+                        } else {
+                            document.getElementById('seller-commission-section').classList.add('hidden');
+                            document.getElementById('seller-global-balance-section').classList.add('hidden');
+                            fullClientList = [];
                         }
 
                         switchMainView('user');
@@ -2433,6 +2628,13 @@
                 }
                 document.getElementById('seller-commission-section').classList.add('hidden');
                 document.getElementById('seller-global-balance-section').classList.add('hidden'); // NEW: Hide on logout
+                sellerViewHistoryData = [];
+                if (sellerViewHistoryList) sellerViewHistoryList.innerHTML = '';
+                if (sellerViewHistorySummary) sellerViewHistorySummary.textContent = '';
+                if (sellerViewHistoryEmpty) sellerViewHistoryEmpty.classList.add('hidden');
+                if (sellerViewHistoryStart) sellerViewHistoryStart.value = '';
+                if (sellerViewHistoryEnd) sellerViewHistoryEnd.value = '';
+                setActiveChip(sellerViewHistoryRangeButtons, null);
                 renderSavedBeneficiaries(); // This will clear lists and hide toggles
                 isInitialOrdersLoad = true; // Reset flag on logout
                 if (accountsListener) {
@@ -3451,6 +3653,9 @@
                     amount: clpAmount,
                     type: 'add',
                     note: `Carga de saldo (Equivalente a ${amount.toLocaleString('es-VE')} VES)`,
+                    purchaseRateVESUsed: clpRate,
+                    vesAmountAtCalc: amount,
+                    clpAmountComputed: clpAmount,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     adminTag: userTags[currentUser.email] || 'ADMIN'
                 });
@@ -5319,6 +5524,13 @@
          */
         const getOrCreateClient = async (clientData) => {
             const { clientName, cedula, email, phone, bank, accountNumber, accountType } = clientData;
+            const fallbackClientId = `client_${(cedula || '').replace(/[^0-9]/g, '')}`;
+
+            // Privacy rule: only admins can read/write the shared clients collection.
+            // Sellers and regular clients work with their own order history instead.
+            if (!isAdmin) {
+                return fallbackClientId || `client_${currentUser ? currentUser.uid : 'anon'}`;
+            }
 
             // 1. Search for existing client by cedula
             const existingClientQuery = await db.collection('clients')
@@ -5703,6 +5915,44 @@
                 const chileEnd = getChileanDateForPicker(end);
                 setSellerCommissionDateRangeAndSearch(chileStart, chileEnd);
                 setActiveChip(sellerCommissionRangeButtons, sellerCommissionHistory7DaysBtn);
+            });
+        }
+
+        // Seller self-history controls (user view)
+        if (sellerViewHistorySearchBtn) {
+            sellerViewHistorySearchBtn.addEventListener('click', () => {
+                setActiveChip(sellerViewHistoryRangeButtons, null);
+                handleSellerViewHistorySearch();
+            });
+        }
+
+        if (sellerViewHistoryTodayBtn) {
+            sellerViewHistoryTodayBtn.addEventListener('click', () => {
+                const today = getChileanDateForPicker(new Date());
+                setSellerViewHistoryDateRangeAndSearch(today, today);
+                setActiveChip(sellerViewHistoryRangeButtons, sellerViewHistoryTodayBtn);
+            });
+        }
+
+        if (sellerViewHistoryYesterdayBtn) {
+            sellerViewHistoryYesterdayBtn.addEventListener('click', () => {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const chileYesterday = getChileanDateForPicker(yesterday);
+                setSellerViewHistoryDateRangeAndSearch(chileYesterday, chileYesterday);
+                setActiveChip(sellerViewHistoryRangeButtons, sellerViewHistoryYesterdayBtn);
+            });
+        }
+
+        if (sellerViewHistory7DaysBtn) {
+            sellerViewHistory7DaysBtn.addEventListener('click', () => {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 6);
+                const chileStart = getChileanDateForPicker(start);
+                const chileEnd = getChileanDateForPicker(end);
+                setSellerViewHistoryDateRangeAndSearch(chileStart, chileEnd);
+                setActiveChip(sellerViewHistoryRangeButtons, sellerViewHistory7DaysBtn);
             });
         }
 

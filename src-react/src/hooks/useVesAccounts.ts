@@ -7,6 +7,19 @@ export interface VesAccount {
     holder: string;
     bank: string;
     balance: number;
+    accountType?: 'source' | 'payout';
+    alias?: string;
+    documentId?: string;
+    accountNumber?: string;
+    accountLast4?: string;
+}
+
+export function isSourceAccount(account: VesAccount) {
+    return account.accountType === 'source';
+}
+
+export function isPayoutAccount(account: VesAccount) {
+    return account.accountType !== 'source';
 }
 
 /**
@@ -25,6 +38,11 @@ export function useVesAccounts() {
                 holder: doc.data().holder || '',
                 bank: doc.data().bank || '',
                 balance: doc.data().balance || 0,
+                accountType: doc.data().accountType || 'payout',
+                alias: doc.data().alias || '',
+                documentId: doc.data().documentId || '',
+                accountNumber: doc.data().accountNumber || '',
+                accountLast4: doc.data().accountLast4 || '',
             }));
             setAccounts(data.sort((a, b) => b.balance - a.balance));
             setTotalBalance(data.reduce((sum, acc) => sum + acc.balance, 0));

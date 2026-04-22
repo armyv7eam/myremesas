@@ -36,7 +36,9 @@ export function HistoryScreen({ onBack }: Props = {}) {
 
     const handleSearch = () => {
         if (!startDate || !endDate) return;
-        search(new Date(startDate), new Date(endDate), statusFilter);
+        const [sy, sm, sd] = startDate.split('-').map(Number);
+        const [ey, em, ed] = endDate.split('-').map(Number);
+        search(new Date(sy, sm - 1, sd), new Date(ey, em - 1, ed), statusFilter);
     };
 
     const handleQuickRange = (days: number) => {
@@ -48,7 +50,12 @@ export function HistoryScreen({ onBack }: Props = {}) {
         } else {
             start.setDate(start.getDate() - days);
         }
-        const fmt = (d: Date) => d.toISOString().split('T')[0];
+        const fmt = (d: Date) => {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        };
         setStartDate(fmt(start));
         setEndDate(fmt(end));
         search(start, end, statusFilter);

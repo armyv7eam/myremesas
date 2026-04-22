@@ -1,7 +1,7 @@
 import { useNavigation, type Screen } from '../contexts/NavigationContext';
 import { useAuth } from '../hooks/useAuth';
 import {
-    LayoutDashboard, ClipboardList, Wallet, BarChart3, Settings, Users
+    LayoutDashboard, ClipboardList, Wallet, BarChart3, Settings, Users, DollarSign
 } from 'lucide-react';
 
 const ADMIN_TABS: { id: Screen; icon: typeof LayoutDashboard; label: string }[] = [
@@ -20,11 +20,25 @@ const USER_TABS: { id: Screen; icon: typeof LayoutDashboard; label: string }[] =
     { id: 'settings', icon: Settings, label: 'Config' },
 ];
 
+const SELLER_TABS: { id: Screen; icon: typeof LayoutDashboard; label: string }[] = [
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Inicio' },
+    { id: 'history', icon: ClipboardList, label: 'Historial' },
+    { id: 'clients', icon: Users, label: 'Clientes' },
+    { id: 'balance', icon: Wallet, label: 'Balance' },
+    { id: 'commissions', icon: DollarSign, label: 'Comisiones' },
+    { id: 'settings', icon: Settings, label: 'Config' },
+];
+
 export function BottomNav() {
     const { screen, navigate } = useNavigation();
     const { role } = useAuth();
 
-    const visibleTabs = role === 'admin' ? ADMIN_TABS : USER_TABS;
+    const visibleTabs =
+        role === 'admin'
+            ? ADMIN_TABS
+            : role === 'seller'
+                ? SELLER_TABS
+                : USER_TABS;
 
     return (
         <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 safe-area-bottom md:hidden">

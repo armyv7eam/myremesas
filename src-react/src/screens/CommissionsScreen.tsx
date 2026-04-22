@@ -16,6 +16,18 @@ const QUICK_RANGES = [
     { label: '30 días', days: 30 },
 ];
 
+const formatDateInput = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
+const parseDateInput = (value: string) => {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d, 12, 0, 0, 0);
+};
+
 interface Props {
     onBack?: () => void;
 }
@@ -24,7 +36,7 @@ export function CommissionsScreen({ onBack }: Props = {}) {
     const { user, role } = useAuth();
     const { goHome } = useNavigation();
     const handleBack = onBack || goHome;
-    const { entries, loading, error, summary, search } = useSellerCommissions();
+    const { entries, loading, error, summary, totals, search } = useSellerCommissions();
     const [sellerEmail, setSellerEmail] = useState(role === 'seller' && user?.email ? user.email : '');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -35,20 +47,22 @@ export function CommissionsScreen({ onBack }: Props = {}) {
         .sort(([, a], [, b]) => a.localeCompare(b));
 
     const handleSearch = () => {
-        if (!sellerEmail || !startDate || !endDate) return;
-        search(sellerEmail, new Date(startDate), new Date(endDate));
+        if (!startDate || !endDate) return;
+        if (role !== 'seller' && !sellerEmail) return;
+        search(sellerEmail, parseDateInput(startDate), parseDateInput(endDate));
     };
 
     const handleQuickRange = (days: number) => {
-        if (!sellerEmail) return;
+        if (role !== 'seller' && !sellerEmail) return;
         const end = new Date();
         const start = new Date();
         if (days === 1) { start.setDate(start.getDate() - 1); end.setDate(end.getDate() - 1); }
         else { start.setDate(start.getDate() - days); }
-        const fmt = (d: Date) => d.toISOString().split('T')[0];
-        setStartDate(fmt(start));
-        setEndDate(fmt(end));
-        search(sellerEmail, start, end);
+        const startValue = formatDateInput(start);
+        const endValue = formatDateInput(end);
+        setStartDate(startValue);
+        setEndDate(endValue);
+        search(sellerEmail, parseDateInput(startValue), parseDateInput(endValue));
     };
 
     const handleExport = () => {
@@ -62,7 +76,8 @@ export function CommissionsScreen({ onBack }: Props = {}) {
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Comisiones');
-        XLSX.writeFile(wb, `Comisiones_${sellerEmail}_${startDate}_${endDate}.xlsx`);
+        const exportSeller = sellerEmail || user?.email || 'seller';
+        XLSX.writeFile(wb, `Comisiones_${exportSeller}_${startDate}_${endDate}.xlsx`);
     };
 
     return (
@@ -142,6 +157,31 @@ export function CommissionsScreen({ onBack }: Props = {}) {
                 </div>
 
                 {summary && <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2.5 text-xs text-blue-700 font-medium">{summary}</div>}
+
+                {entries.length > 0 && (
+                    <div className="bg-white rounded-xl border border-gray-100 p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-wider text-blue-500 font-bold">Total Enviado CLP</p>
+                                <p className="text-sm font-bold text-blue-700">
+                                    {totals.totalSalesCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">Monto Neto CLP</p>
+                                <p className="text-sm font-bold text-gray-800">
+                                    {totals.netAmountCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
+                                </p>
+                            </div>
+                            <div className="rounded-lg border border-green-100 bg-green-50 px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-wider text-green-500 font-bold">Líquido a Recibir</p>
+                                <p className="text-sm font-bold text-green-700">
+                                    {totals.liquidCommissionCLP.toLocaleString('es-CL', { style: 'currency', currency: 'CLP' })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {error && <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-2.5 text-xs text-red-600">{error}</div>}
 
                 {/* Entries */}

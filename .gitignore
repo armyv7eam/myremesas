@@ -84,3 +84,9 @@ serviceAccountKey.json
 .agent/
 .idea/
 .vscode/
+
+# Playwright bot artifacts
+bdv-bot/.auth/
+bdv-bot/artifacts/
+bdv-bot/playwright-report/
+bdv-bot/test-results/

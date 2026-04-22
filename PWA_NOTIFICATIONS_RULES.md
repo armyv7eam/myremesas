@@ -21,6 +21,11 @@ const payload = {
   // ESTE BLOQUE ES CRÍTICO PARA LA PWA (ANDROID/CHROME)
   webpush: {
     notification: {
+      // ⚠️ IMPORTANTE: 'title' y 'body' DEBEN replicarse aquí adentro. 
+      // El bloque webpush.notification SOBREESCRIBE por completo al bloque superior `notification` en plataformas Web.
+      // Si no los incluyes aquí, el ServiceWorker de la PWA recibirá un título y mensaje vacíos. 
+      title: "Título de la alerta",
+      body: "Cuerpo del mensaje",
       icon: "/images/icon-192x192.png",
       vibrate: [200, 100, 200, 100, 200, 100, 200],
       requireInteraction: true,

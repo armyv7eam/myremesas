@@ -15,8 +15,8 @@ interface CreateBatchModalProps {
 }
 
 export function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateBatchModalProps) {
-    const { user } = useAuth();
-    const { clients, loading: loadingClients, loadRecent, searchByCedula } = useClients();
+    const { user, role } = useAuth();
+    const { clients, loading: loadingClients, searchByCedula } = useClients();
     const { rates } = useExchangeRates();
     const toast = useToast();
 
@@ -33,21 +33,20 @@ export function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateBatchModa
             setSearchTerm('');
             setSelectedClients(new Set());
             setAmounts({});
-            loadRecent(50); // Load initial list
         }
-    }, [isOpen, loadRecent]);
+    }, [isOpen]);
 
     // Handle Search
     useEffect(() => {
         const timer = setTimeout(() => {
             if (searchTerm.trim().length > 2) {
                 searchByCedula(searchTerm);
-            } else if (searchTerm.trim() === '') {
-                loadRecent(50);
             }
         }, 500);
         return () => clearTimeout(timer);
-    }, [searchTerm, searchByCedula, loadRecent]);
+    }, [searchTerm, searchByCedula]);
+
+    const shouldShowSearchResults = searchTerm.trim().length > 2;
 
     const toggleClient = (clientId: string) => {
         const newSelected = new Set(selectedClients);
@@ -85,8 +84,16 @@ export function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateBatchModa
         setIsSubmitting(true);
         const adminTag = user?.email || 'ADMIN';
         const vesRate = rates?.VES || 0;
+        let sellerCommissionRate = 0;
 
         try {
+            if ((role === 'seller' || role === 'admin') && user) {
+                const idTokenResult = await user.getIdTokenResult();
+                const claimRate = idTokenResult.claims.commissionRate;
+                const parsedRate = typeof claimRate === 'number' ? claimRate : Number(claimRate || 0);
+                sellerCommissionRate = Number.isFinite(parsedRate) ? parsedRate : 0;
+            }
+
             const batch = writeBatch(db);
             const selected = getSelectedClientsData();
 
@@ -112,6 +119,11 @@ export function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateBatchModa
                     userId: user?.uid || 'unknown',
                     createdByTag: adminTag,
                     createdAt: serverTimestamp(),
+                    ...((role === 'seller' || role === 'admin') && user ? {
+                        sellerId: user.uid,
+                        sellerEmail: user.email || '',
+                        sellerCommissionRate,
+                    } : {}),
                 });
             });
 
@@ -147,7 +159,9 @@ export function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateBatchModa
                     </div>
 
                     <div className="flex-1 overflow-y-auto space-y-2 pr-2 border rounded-xl p-2 bg-gray-50/50">
-                        {loadingClients ? (
+                        {!shouldShowSearchResults ? (
+                            <p className="text-center text-gray-500 py-8 text-sm">Escribe al menos 3 digitos para buscar clientes.</p>
+                        ) : loadingClients ? (
                             <div className="flex justify-center py-8">
                                 <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
                             </div>
@@ -235,9 +249,22 @@ export function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateBatchModa
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {getSelectedClientsData().map(client => {
+                                    const clientType = (client as any).type as string;
+                                    const accountNumber = (client as any).accountNumber as string | undefined;
+                                    const phone = (client as any).phone as string | undefined;
+
+                                    const copyTransferData = () => {
+                                        let text = '';
+                                        if (clientType === 'transferencia') {
+                                            text = `Banco: ${client.bank || 'N/A'}\nCuenta: ${accountNumber || 'N/A'}\nCédula: ${client.cedula}\nBeneficiario: ${client.clientName}`;
+                                        } else {
+                                            text = `Banco: ${client.bank || 'N/A'}\nTeléfono: ${phone || 'N/A'}\nCédula: ${client.cedula}\nBeneficiario: ${client.clientName}`;
+                                        }
+                                        navigator.clipboard.writeText(text);
+                                    };
                                     const clpAmount = parseFloat(amounts[client.id] || '0');
                                     const vesAmount = !isNaN(clpAmount) ? (clpAmount * (rates?.VES || 0)) : 0;
-                                    const TypeIcon = (client as any).type === 'transferencia' ? Building2 : ((client as any).type === 'pago-movil' ? Smartphone : CreditCard);
+                                    const TypeIcon = clientType === 'transferencia' ? Building2 : (clientType === 'pago-movil' ? Smartphone : CreditCard);
 
                                     return (
                                         <tr key={client.id} className="hover:bg-gray-50/50">
@@ -250,6 +277,22 @@ export function CreateBatchModal({ isOpen, onClose, onSuccess }: CreateBatchModa
                                                         <TypeIcon className="w-2.5 h-2.5" /> {client.bank || '...'}
                                                     </span>
                                                 </div>
+                                                <div className="mt-1.5 bg-amber-50 border border-amber-200 rounded px-2 py-1 text-[10px] font-mono text-gray-700">
+                                                    {clientType === 'transferencia' && accountNumber ? (
+                                                        <span><span className="text-gray-400 font-sans not-italic">Cta: </span>{accountNumber}</span>
+                                                    ) : phone ? (
+                                                        <span><span className="text-gray-400 font-sans not-italic">Telf: </span>{phone}</span>
+                                                    ) : (
+                                                        <span className="text-gray-400 italic font-sans">Sin datos de cuenta</span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={copyTransferData}
+                                                    className="mt-1 text-[9px] bg-blue-50 text-blue-600 hover:bg-blue-100 px-1.5 py-0.5 rounded font-semibold transition-colors"
+                                                >
+                                                    Copiar datos
+                                                </button>
                                             </td>
                                             <td className="px-3 py-3">
                                                 <input

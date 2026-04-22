@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { doc, writeBatch, collection, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { normalizeBankName, computeInterbankFee } from '../lib/constants';
-import type { VesAccount } from './useVesAccounts';
+import { isPayoutAccount, type VesAccount } from './useVesAccounts';
 
 interface TransferParams {
     fromAccount: VesAccount;
@@ -40,6 +40,9 @@ export function useTransferFunds() {
             if (isNaN(amount) || amount <= 0) {
                 throw new Error('El monto debe ser un número positivo.');
             }
+            if (!isPayoutAccount(toAccount)) {
+                throw new Error('La cuenta de destino debe ser una cuenta pagadora.');
+            }
 
             // Calcular comisión interbancaria
             const fromBank = normalizeBankName(fromAccount.bank);
@@ -75,7 +78,7 @@ export function useTransferFunds() {
             batch.set(doc(collection(db, 'balance_history')), {
                 amount,
                 type: 'subtract',
-                note: `Transferencia a ${toHolder}`,
+                note: `Distribucion mayorista a ${toHolder}`,
                 timestamp: ts,
                 holder: fromHolder,
                 bank: fromBankName,
@@ -99,7 +102,7 @@ export function useTransferFunds() {
             batch.set(doc(collection(db, 'balance_history')), {
                 amount,
                 type: 'add',
-                note: `Transferencia desde ${fromHolder}`,
+                note: `Abono desde cuenta fuente ${fromHolder}`,
                 timestamp: ts,
                 holder: toHolder,
                 bank: toBankName,

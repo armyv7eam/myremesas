@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth, useExchangeRates, useOrders, useOrderActions } from '../hooks';
+import { useBinanceAPI } from '../hooks/useBinanceAPI';
 import { useVesAccounts } from '../hooks/useVesAccounts';
 import { useNavigation } from '../contexts/NavigationContext';
+import { useToast } from '../contexts/ToastContext';
 import { Button } from '../components/ui';
+import { BankLogo } from '../components/ui/BankLogo';
 import { Sidebar } from '../components/Sidebar';
 import { OrderForm } from './OrderForm';
 import { OrderDetailModal } from './OrderDetailModal';
@@ -14,7 +17,8 @@ import type { Order } from '../hooks/useOrders';
 import { USER_TAGS } from '../lib/constants';
 import {
     Menu, Plus, TrendingUp, Clock, CheckCircle,
-    CircleDollarSign, Apple, Copy, X, Share2, AlertTriangle
+    CircleDollarSign, Apple, Copy, X, Share2, AlertTriangle, Eye, EyeOff,
+    MailWarning
 } from 'lucide-react';
 
 const FLAGS: Record<string, string> = {
@@ -114,6 +118,11 @@ function OrderCard({ order, onClick, isSelected, onToggleSelect, onCancel, onCop
     };
 
     const isPending = order.status === 'Pendiente de pago';
+    const hasEmailError = order.status === 'Pagado' &&
+        order.email &&
+        order.email.trim() !== '' &&
+        order.email !== 'notiene@gmail.com' &&
+        order.emailSent === false;
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
     // Format timestamp nicely if exists: "23/2 12:23"
@@ -143,76 +152,85 @@ function OrderCard({ order, onClick, isSelected, onToggleSelect, onCancel, onCop
                                 className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 shrink-0"
                             />
                         )}
-                        <span className="font-bold text-[14px] text-gray-900 leading-tight truncate">{order.clientName}</span>
-                        <span className="text-[11px] text-gray-400">#{order.id.slice(-5)}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wider ${order.type === 'pago-movil' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
+                        <span className="font-bold text-[17px] text-gray-900 leading-tight truncate">{order.clientName}</span>
+                        <span className="text-[13px] text-gray-400">#{order.id.slice(-5)}</span>
+                        <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded tracking-wider ${order.type === 'pago-movil' ? 'bg-purple-50 text-purple-600' : 'bg-blue-50 text-blue-600'
                             }`}>{typeLabels[order.type] || order.type}</span>
                     </div>
                 </div>
                 <div className="flex flex-col items-end shrink-0 pl-1">
-                    <div className="font-bold text-[14px] text-gray-900 leading-none flex items-baseline gap-1">
+                    {hasEmailError && (
+                        <div className="flex items-center gap-1 text-red-500 animate-pulse mb-1" title="Error enviando correo">
+                            <MailWarning className="w-4 h-4" />
+                            <span className="text-[10px] font-bold uppercase">Email Error</span>
+                        </div>
+                    )}
+                    <div className="font-bold text-[17px] text-gray-900 leading-none flex items-baseline gap-1">
                         {order.destinationAmount.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                        <span className="text-[9px] text-gray-500 font-normal">VES</span>
+                        <span className="text-[11px] text-gray-500 font-normal">VES</span>
                     </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5 leading-none">
+                    <div className="text-[13px] text-gray-400 mt-0.5 leading-none">
                         ${order.clpAmount.toLocaleString('es-CL')}
                     </div>
                 </div>
             </div>
 
             {/* MIDDLE ROW: Bank gray box */}
-            <div className="bg-gray-50/80 rounded border border-gray-100 px-2 py-1.5 w-fit max-w-[90%]">
-                <div className="text-[10px] leading-tight text-gray-600 flex flex-wrap gap-x-2 gap-y-0.5">
-                    <div><span className="text-gray-400">BANCO:</span> <span className="font-semibold text-gray-800">{order.bank || '-'}</span></div>
-                    <div><span className="text-gray-400">{order.type === 'pago-movil' ? 'TELF:' : 'CTA:'}</span> <span className="font-semibold text-gray-800">{order.accountNumber || order.phone || '-'}</span></div>
-                </div>
-                <div className="text-[10px] leading-tight text-gray-600 mt-0.5 flex flex-wrap gap-x-2">
-                    <div><span className="text-gray-400">ID:</span> <span className="font-semibold text-gray-800">{order.cedula || 'N/A'}</span></div>
-                    {order.email && <div><span className="text-gray-400">@:</span> <span className="font-semibold text-gray-800 truncate max-w-[120px] inline-block align-bottom">{order.email}</span></div>}
+            <div className="bg-gray-50/80 rounded border border-gray-100 px-2 py-1.5 w-fit max-w-[90%] flex items-center gap-2">
+                <BankLogo bank={order.bank || ''} className="w-7 h-7 text-[10px]" />
+                <div className="min-w-0">
+                    <div className="text-[12px] leading-tight text-gray-600 flex flex-wrap gap-x-2 gap-y-0.5">
+                        <div><span className="text-gray-400">BANCO:</span> <span className="font-semibold text-gray-800">{order.bank || '-'}</span></div>
+                        <div><span className="text-gray-400">{order.type === 'pago-movil' ? 'TELF:' : 'CTA:'}</span> <span className="font-semibold text-gray-800">{order.accountNumber || order.phone || '-'}</span></div>
+                    </div>
+                    <div className="text-[12px] leading-tight text-gray-600 mt-0.5 flex flex-wrap gap-x-2">
+                        <div><span className="text-gray-400">ID:</span> <span className="font-semibold text-gray-800">{order.cedula || 'N/A'}</span></div>
+                        {order.email && <div><span className="text-gray-400">@:</span> <span className="font-semibold text-gray-800 truncate max-w-[120px] inline-block align-bottom">{order.email}</span></div>}
+                    </div>
                 </div>
             </div>
 
             {/* BOTTOM ROW: Footer date + Actions */}
             <div className="flex justify-between items-end mt-1.5">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-gray-400 font-medium">
+                    <span className="text-[12px] text-gray-400 font-medium">
                         {dateStr || (order.status === 'Pendiente de pago' ? 'Pendiente' : order.status)}
                     </span>
                     {(order.createdByTag || order.paidByTag) && (
                         <div className="flex gap-1">
                             {order.createdByTag && (
-                                <span className="text-[9px] font-mono bg-gray-100 text-gray-500 px-1 rounded border border-gray-200">
+                                <span className="text-[11px] font-mono bg-gray-100 text-gray-500 px-1 rounded border border-gray-200">
                                     C:{USER_TAGS[order.createdByTag] || order.createdByTag}
                                 </span>
                             )}
                             {order.paidByTag && (
-                                <span className="text-[9px] font-mono bg-gray-100 text-gray-500 px-1 rounded border border-gray-200">
+                                <span className="text-[11px] font-mono bg-gray-100 text-gray-500 px-1 rounded border border-gray-200">
                                     P:{USER_TAGS[order.paidByTag] || order.paidByTag}
                                 </span>
                             )}
                         </div>
                     )}
-                    {isSelected && <span className="text-[9px] text-blue-500 font-bold bg-blue-50 px-1 rounded">Sel.</span>}
+                    {isSelected && <span className="text-[11px] text-blue-500 font-bold bg-blue-50 px-1 rounded">Sel.</span>}
                 </div>
 
                 <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    {onCopy && isPending && (
-                        <button onClick={(e) => { e.stopPropagation(); onCopy(); }} title="Copiar" className="w-7 h-7 flex items-center justify-center rounded-full text-blue-500 hover:bg-blue-50 transition-colors">
-                            <Copy className="w-3.5 h-3.5" />
-                        </button>
-                    )}
-
                     {isPending && onCancel && !showCancelConfirm && (
                         <button onClick={(e) => { e.stopPropagation(); setShowCancelConfirm(true); }} disabled={isUpdating} title="Cancelar" className="w-7 h-7 flex items-center justify-center rounded-full opacity-80 text-amber-500 bg-amber-50/50 border border-amber-200 hover:bg-amber-50 hover:opacity-100 transition-all disabled:opacity-50">
                             <AlertTriangle className="w-3.5 h-3.5" />
                         </button>
                     )}
                     {showCancelConfirm && (
-                        <div className="flex items-center bg-amber-50 rounded-full px-1.5 py-0.5 gap-1.5 text-[10px] font-bold text-amber-600 border border-amber-200">
+                        <div className="flex items-center bg-amber-50 rounded-full px-1.5 py-0.5 gap-1.5 text-[12px] font-bold text-amber-600 border border-amber-200">
                             ¿Anular?
                             <button onClick={(e) => { e.stopPropagation(); setShowCancelConfirm(false); }} className="w-5 h-5 rounded-full bg-white text-gray-500 hover:bg-gray-100 flex items-center justify-center"><X className="w-3 h-3" /></button>
                             <button onClick={(e) => { e.stopPropagation(); setShowCancelConfirm(false); onCancel?.(); }} className="w-5 h-5 rounded-full bg-amber-500 text-white hover:bg-amber-600 flex items-center justify-center"><CheckCircle className="w-3 h-3" /></button>
                         </div>
+                    )}
+
+                    {onCopy && isPending && (
+                        <button onClick={(e) => { e.stopPropagation(); onCopy(); }} title="Copiar" className="w-7 h-7 flex items-center justify-center rounded-full text-blue-500 hover:bg-blue-50 transition-colors">
+                            <Copy className="w-3.5 h-3.5" />
+                        </button>
                     )}
 
                     {isPending && onPay && (
@@ -240,6 +258,7 @@ export function DashboardScreen() {
     const { pending, paid, loading: ordersLoading } = useOrders();
     const { cancelOrder, copyOrderData, loading: actionLoading } = useOrderActions();
     const { navigate } = useNavigation();
+    const toast = useToast();
     const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [isRateModalOpen, setIsRateModalOpen] = useState(false);
@@ -247,6 +266,23 @@ export function DashboardScreen() {
     const [selectedForBatch, setSelectedForBatch] = useState<Set<string>>(new Set());
     const [showCreateBatch, setShowCreateBatch] = useState(false);
     const [showBatchModal, setShowBatchModal] = useState(false);
+    const [showPaidOrders, setShowPaidOrders] = useState<boolean>(() => {
+        if (typeof window === 'undefined') return false;
+        return localStorage.getItem('dashboard_show_paid_orders') === '1';
+    });
+
+    const { balance: binanceBalance, checkWalletBalance } = useBinanceAPI();
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem('dashboard_show_paid_orders', showPaidOrders ? '1' : '0');
+    }, [showPaidOrders]);
+
+    useEffect(() => {
+        if (role === 'admin') {
+            checkWalletBalance('USDT');
+        }
+    }, [role, checkWalletBalance]);
 
     const handleCancelOrder = async (order: Order) => {
         try {
@@ -258,22 +294,64 @@ export function DashboardScreen() {
 
     const handleShare = async (order: Order) => {
         try {
-            const text = order.status === 'Pagado'
-                ? `✅ Pago confirmado para ${order.clientName}.\nRef: ${order.id.slice(-5)}\nMonto: ${order.destinationAmount.toLocaleString('es-VE')} ${order.destinationCurrency}`
-                : `Hola ${order.clientName}, tu pedido está procesándose.`;
-
-            if (navigator.share) {
-                await navigator.share({
-                    title: 'Comprobante de Pago - Manzano App',
-                    text: text,
-                    url: order.proofUrl || ''
-                });
-            } else {
-                navigator.clipboard.writeText(text);
-                alert('Información copiada al portapapeles');
+            if (!order.proofUrl) {
+                toast.error('Este pedido no tiene comprobante para compartir.');
+                return;
             }
+
+            const shareText = `Comprobante de pago para ${order.clientName}`;
+            const cap = (window as any).Capacitor;
+            const isNative = Boolean(cap?.isNativePlatform?.());
+
+            if (isNative) {
+                const Filesystem = cap?.Plugins?.Filesystem;
+                const Share = cap?.Plugins?.Share;
+
+                if (!Filesystem || !Share) {
+                    throw new Error('Plugins nativos de compartir no disponibles.');
+                }
+
+                const extension = (order.proofUrl.split('.').pop() || 'jpg').split('?')[0];
+                const fileName = `comprobante_${order.id.slice(-5)}_${Date.now()}.${extension}`;
+
+                await Filesystem.downloadFile({
+                    url: order.proofUrl,
+                    path: fileName,
+                    directory: 'CACHE'
+                });
+
+                const uriResult = await Filesystem.getUri({
+                    path: fileName,
+                    directory: 'CACHE'
+                });
+
+                await Share.share({
+                    title: 'Comprobante de Pago',
+                    text: shareText,
+                    files: [uriResult.uri],
+                });
+                return;
+            }
+
+            if (navigator.share && (navigator as any).canShare) {
+                const response = await fetch(order.proofUrl);
+                const blob = await response.blob();
+                const file = new File([blob], `comprobante_${order.id.slice(-5)}.jpg`, { type: blob.type || 'image/jpeg' });
+
+                if ((navigator as any).canShare({ files: [file] })) {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Comprobante de Pago',
+                        text: shareText,
+                    });
+                    return;
+                }
+            }
+
+            toast.error('Tu dispositivo no soporta compartir archivos directamente.');
         } catch (error) {
-            console.error('Error sharing:', error);
+            console.error('Error sharing proof:', error);
+            toast.error('Error al compartir comprobante.');
         }
     };
 
@@ -289,7 +367,9 @@ export function DashboardScreen() {
     const handleSidebarNavigate = (id: string) => {
         switch (id) {
             case 'new-order': setIsOrderFormOpen(true); break;
-            case 'update-rate': setIsRateModalOpen(true); break;
+            case 'update-rate':
+                if (role === 'admin') setIsRateModalOpen(true);
+                break;
             default: navigate(id as any); break;
         }
     };
@@ -363,6 +443,14 @@ export function DashboardScreen() {
                                 icon={CircleDollarSign}
                                 onClick={() => navigate('accounts')}
                             />
+                            <StatCard 
+                                label="Fondeo USDT" 
+                                value={binanceBalance ? Number(binanceBalance.free).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '...'} 
+                                color="green" 
+                                prefix="$" 
+                                icon={CircleDollarSign} 
+                                onClick={() => checkWalletBalance('USDT')}
+                            />
                             <StatCard label="Tasa VES" value={rates.VES > 0 ? rates.VES.toFixed(3) : '—'} color="purple" icon={TrendingUp} onClick={() => setIsRateModalOpen(true)} />
                         </>
                     )}
@@ -410,18 +498,35 @@ export function DashboardScreen() {
 
                     {/* COLUMNA 2: PAGADOS HOY */}
                     <section>
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                                Pagados Hoy ({paid.length})
-                            </h2>
-                            {paidTotalVes > 0 && (
-                                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                                    Bs {paidTotalVes.toLocaleString('es-VE')}
-                                </span>
-                            )}
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                                    Pagados Hoy ({paid.length})
+                                </h2>
+                                {paidTotalVes > 0 && (
+                                    <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                        Bs {paidTotalVes.toLocaleString('es-VE')}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowPaidOrders(prev => !prev)}
+                                className="w-8 h-8 rounded-full bg-white border border-emerald-200 text-emerald-600 flex items-center justify-center hover:bg-emerald-50 transition-colors"
+                                title={showPaidOrders ? 'Ocultar pagados' : 'Mostrar pagados'}
+                                aria-label={showPaidOrders ? 'Ocultar pedidos pagados' : 'Mostrar pedidos pagados'}
+                            >
+                                {showPaidOrders ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
                         </div>
-                        {paid.length === 0 ? (
+                        {!showPaidOrders ? (
+                            <div className="text-center py-8 bg-white rounded-xl border border-gray-100">
+                                <p className="text-gray-400 text-sm">Pagados ocultos. Pulsa el ojo para mostrarlos.</p>
+                            </div>
+                        ) : ordersLoading ? (
+                            <div className="text-center py-8 text-gray-400 text-sm animate-pulse">Cargando...</div>
+                        ) : paid.length === 0 ? (
                             <div className="text-center py-8 bg-white rounded-xl border border-gray-100">
                                 <p className="text-gray-400 text-sm">No hay pagos registrados hoy.</p>
                             </div>
@@ -446,6 +551,7 @@ export function DashboardScreen() {
                 onClose={() => setIsSidebarOpen(false)}
                 onNavigate={handleSidebarNavigate}
                 onLogout={logout}
+                role={role}
                 userEmail={user?.email || undefined}
             />
 

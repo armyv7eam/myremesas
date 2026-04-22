@@ -1,8 +1,33 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
+    // Client payment proofs uploaded from user/seller flows
+    match /client_proofs/{orderId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    // Admin payment proofs uploaded when marking paid
+    match /proofs/{orderId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /bdv_bot_artifacts/{allPaths=**} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
     match /{allPaths=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

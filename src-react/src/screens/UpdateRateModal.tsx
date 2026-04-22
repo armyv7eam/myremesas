@@ -102,7 +102,7 @@ export function UpdateRateModal({ isOpen, onClose }: Props) {
 
                 {/* Buttons */}
                 <div className="flex gap-3 pt-2">
-                    <Button variant="secondary" fullWidth onClick={handleClose} disabled={loading}>
+                    <Button variant="danger" fullWidth onClick={handleClose} disabled={loading}>
                         Cancelar
                     </Button>
                     <Button variant="primary" fullWidth onClick={handleSubmit} isLoading={loading}>

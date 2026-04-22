@@ -1,0 +1,42 @@
+{
+  "name": "bdv-bot",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "login": "tsx src/index.ts login",
+    "sync": "tsx src/index.ts sync",
+    "process-request": "tsx src/index.ts process-request",
+    "worker": "tsx src/index.ts worker",
+    "mercantil:login": "tsx src/mercantilLogin.ts",
+    "mercantil:login:persistent": "tsx src/mercantilLogin.ts persistent",
+    "mercantil:inspect": "tsx src/mercantilInspect.ts",
+    "mercantil:inspect-secure": "tsx src/mercantilInspectSecure.ts",
+    "mercantil:inspect-post-secure": "tsx src/mercantilInspectPostSecure.ts",
+    "mercantil:inspect-session": "tsx src/mercantilInspectSession.ts",
+    "mercantil:inspect-after-login": "tsx src/mercantilInspectAfterLogin.ts",
+    "mercantil:attach": "tsx src/mercantilAttach.ts",
+    "mercantil:extract-summary": "tsx src/mercantilExtractSummary.ts",
+    "mercantil:inspect-movements": "tsx src/mercantilInspectMovements.ts",
+    "mercantil:inspect-account-detail": "tsx src/mercantilInspectAccountDetail.ts",
+    "mercantil:extract-account-detail": "tsx src/mercantilExtractAccountDetail.ts",
+    "mercantil:inspect-movement-tabs": "tsx src/mercantilInspectMovementTabs.ts",
+    "mercantil:inspect-movement-rows": "tsx src/mercantilInspectMovementRows.ts",
+    "mercantil:inspect-transfer-mercantil": "tsx src/mercantilInspectTransferMercantil.ts",
+    "mercantil:inspect-transfer-step": "tsx src/mercantilInspectTransferStep.ts",
+    "mercantil:prepare-transfer": "tsx src/mercantilPrepareTransfer.ts",
+    "mercantil:confirm-transfer": "tsx src/mercantilConfirmTransfer.ts",
+    "mercantil:process-payout": "tsx src/mercantilProcessPayout.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "firebase-admin": "^13.6.0",
+    "playwright": "^1.55.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

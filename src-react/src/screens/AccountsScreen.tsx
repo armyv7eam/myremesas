@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useVesAccounts, useDailyCommissions } from '../hooks';
+import { isSourceAccount, useVesAccounts, useDailyCommissions } from '../hooks';
 import { useExchangeRates } from '../hooks/useExchangeRates';
 import {
     ArrowLeft, Landmark, User, TrendingUp,
@@ -26,8 +26,10 @@ export function AccountsScreen({ onBack }: Props = {}) {
     const [balanceOp, setBalanceOp] = useState<{ type: 'add' | 'subtract'; amount: number } | null>(null);
     const [vesInput, setVesInput] = useState('');
 
-    const estimatedClp = rates.VES > 0 ? totalBalance / rates.VES : 0;
-    const displayedClpBalance = rates.purchaseRateVES > 0 ? totalBalance / rates.purchaseRateVES : 0;
+    const estimatedClp = rates.purchaseRateVES > 0 ? totalBalance / rates.purchaseRateVES : 0;
+    const displayedClpBalance = estimatedClp;
+    const sourceAccounts = accounts.filter(isSourceAccount);
+    const payoutAccounts = accounts.filter(acc => !isSourceAccount(acc));
 
     const handleBalanceOp = (type: 'add' | 'subtract') => {
         const amount = parseFloat(vesInput);
@@ -67,7 +69,7 @@ export function AccountsScreen({ onBack }: Props = {}) {
                         </div>
                         <div>
                             <p className="text-[10px] text-red-300">Cuentas</p>
-                            <p className="text-sm font-bold">{accounts.length}</p>
+                            <p className="text-sm font-bold">{payoutAccounts.length}</p>
                         </div>
                         <div>
                             <p className="text-[10px] text-red-300">Titulares</p>
@@ -118,8 +120,42 @@ export function AccountsScreen({ onBack }: Props = {}) {
                     <div className="text-center py-12 text-gray-400 text-sm animate-pulse">Cargando cuentas...</div>
                 ) : (
                     /* Accounts grouped by holder */
-                    Object.entries(holders)
-                        .map(([holder, allAccs]) => [holder, allAccs.filter(a => a.balance > 0)] as const)
+                    <>
+                        {sourceAccounts.length > 0 && (
+                            <section className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <User className="w-4 h-4 text-blue-400" />
+                                        <h3 className="text-sm font-bold text-blue-700">Cuenta Fuente Mayorista</h3>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {sourceAccounts.map(acc => (
+                                        <div key={acc.id} className="bg-blue-50 rounded-xl border border-blue-100 p-3 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <BankLogo bank={acc.bank} className="w-10 h-10" />
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-xs font-semibold text-gray-800">{acc.bank}</p>
+                                                        <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">Fuente</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-500">{acc.holder} · Solo distribucion interna</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-blue-700">
+                                                    {acc.balance.toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                                </p>
+                                                <p className="text-[9px] text-blue-400">VES</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        {Object.entries(holders)
+                        .map(([holder, allAccs]) => [holder, allAccs.filter(a => a.balance > 0 && !isSourceAccount(a))] as const)
                         .filter(([, accs]) => accs.length > 0)
                         .sort(([, a], [, b]) => {
                             const totalA = a.reduce((s, acc) => s + acc.balance, 0);
@@ -147,8 +183,11 @@ export function AccountsScreen({ onBack }: Props = {}) {
                                                     <div className="flex items-center gap-3">
                                                         <BankLogo bank={acc.bank} className="w-10 h-10" />
                                                         <div>
-                                                            <p className="text-xs font-semibold text-gray-800">{acc.bank}</p>
-                                                            <p className="text-[10px] text-gray-400">{acc.holder}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-xs font-semibold text-gray-800">{acc.bank}</p>
+                                                                <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Pagadora</span>
+                                                            </div>
+                                                            <p className="text-[10px] text-gray-400">{acc.holder}{acc.accountLast4 ? ` · ****${acc.accountLast4}` : ''}</p>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
@@ -162,31 +201,32 @@ export function AccountsScreen({ onBack }: Props = {}) {
                                     </div>
                                 </section>
                             );
-                        })
+                        })}
+                    </>
                 )}
 
                 {/* Quick Stats */}
-                {!loading && accounts.length > 0 && (
+                {!loading && payoutAccounts.length > 0 && (
                     <div className="grid grid-cols-2 gap-3">
                         <div className="bg-white rounded-xl border border-gray-100 p-3">
                             <div className="flex items-center justify-between mb-1">
                                 <p className="text-[11px] text-gray-400">Cuenta Mayor</p>
                                 <TrendingUp className="w-3 h-3 text-green-500" />
                             </div>
-                            <p className="text-xs font-bold text-gray-800">{accounts[0]?.bank}</p>
-                            <p className="text-sm font-bold text-green-600">{accounts[0]?.balance.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-xs font-bold text-gray-800">{payoutAccounts[0]?.bank}</p>
+                            <p className="text-sm font-bold text-green-600">{payoutAccounts[0]?.balance.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</p>
                         </div>
                         <div className="bg-white rounded-xl border border-gray-100 p-3">
                             <div className="flex items-center justify-between mb-1">
                                 <p className="text-[11px] text-gray-400">Promedio</p>
                                 <CircleDollarSign className="w-3 h-3 text-blue-500" />
                             </div>
-                            <p className="text-xs font-bold text-gray-800">por cuenta</p>
-                            <p className="text-sm font-bold text-blue-600">
-                                {(totalBalance / accounts.length).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
-                            </p>
+                                <p className="text-xs font-bold text-gray-800">por cuenta</p>
+                                <p className="text-sm font-bold text-blue-600">
+                                    {(payoutAccounts.reduce((sum, acc) => sum + acc.balance, 0) / payoutAccounts.length).toLocaleString('es-VE', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
                         </div>
-                    </div>
                 )}
 
                 {/* Daily Commissions Summary */}

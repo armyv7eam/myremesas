@@ -12,6 +12,18 @@ const QUICK_RANGES = [
     { label: '30 días', days: 30 },
 ];
 
+const formatDateInput = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
+const parseDateInput = (value: string) => {
+    const [y, m, d] = value.split('-').map(Number);
+    return new Date(y, m - 1, d, 12, 0, 0, 0);
+};
+
 const TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
     'add': { label: 'Ingreso', icon: '↑', color: 'bg-green-100 text-green-600' },
     'subtract': { label: 'Egreso', icon: '↓', color: 'bg-red-100 text-red-600' },
@@ -33,7 +45,7 @@ export function VesBalanceScreen({ onBack }: Props = {}) {
 
     const handleSearch = () => {
         if (!startDate || !endDate) return;
-        search(new Date(startDate), new Date(endDate));
+        search(parseDateInput(startDate), parseDateInput(endDate));
     };
 
     const handleQuickRange = (days: number) => {
@@ -41,10 +53,11 @@ export function VesBalanceScreen({ onBack }: Props = {}) {
         const start = new Date();
         if (days === 1) { start.setDate(start.getDate() - 1); end.setDate(end.getDate() - 1); }
         else { start.setDate(start.getDate() - days); }
-        const fmt = (d: Date) => d.toISOString().split('T')[0];
-        setStartDate(fmt(start));
-        setEndDate(fmt(end));
-        search(start, end);
+        const startValue = formatDateInput(start);
+        const endValue = formatDateInput(end);
+        setStartDate(startValue);
+        setEndDate(endValue);
+        search(parseDateInput(startValue), parseDateInput(endValue));
     };
 
     const handleExport = () => {

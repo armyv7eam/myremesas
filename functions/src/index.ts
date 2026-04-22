@@ -1019,3 +1019,57 @@ export const notifyBalanceLoad = onDocumentCreated("balance_history/{historyId}"
     return null;
   }
 });
+
+/**
+ * =========================================================
+ * PROXY PARA BINANCE VPS (Bypass HTTPS Mixed Content)
+ * Redirige llamadas de React (HTTPS) al HTTP del VPS
+ * =========================================================
+ */
+export const binanceVpsProxy = onRequest(
+    { cors: false },
+    async (req, res) => {
+        // Configuracion explicita de CORS para permitir headers personalizados como x-vps-token
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-vps-token');
+        
+        if (req.method === 'OPTIONS') {
+            res.status(204).send('');
+            return;
+        }
+
+        try {
+            const axios = require('axios');
+            const vpsIp = "http://165.227.158.59:3005";
+            
+            // Reparacion de path: Firebase a veces deja el nombre de la funcion en req.url
+            let cleanPath = req.url.split('?')[0].replace('/binanceVpsProxy', '');
+            
+            // Si el front manda /balance, mapeamos a /api/balance para el VPS
+            if (cleanPath === '/balance') cleanPath = '/api/balance';
+            if (cleanPath === '/p2p-rate') cleanPath = '/api/p2p-rate';
+
+            // Reconstruir query string si existe
+            const queryString = req.url.includes('?') ? '?' + req.url.split('?')[1] : '';
+            const targetUrl = `${vpsIp}${cleanPath}${queryString}`;
+            
+            logger.info(`Proxying ${req.method} to: ${targetUrl}`);
+
+            const proxyResponse = await axios({
+                method: req.method,
+                url: targetUrl,
+                data: req.body,
+                headers: {
+                    'x-vps-token': req.header('x-vps-token') || 'un_token_largo_y_secreto_para_manzano'
+                },
+                validateStatus: () => true // Permitir 401, 404, etc. para que el front los maneje
+            });
+
+            res.status(proxyResponse.status).send(proxyResponse.data);
+        } catch (error) {
+            logger.error("Error critico en Proxy VPS:", error);
+            res.status(500).json({ error: "Fallo comunicacion con el VPS de Binance.", details: String(error) });
+        }
+    }
+);

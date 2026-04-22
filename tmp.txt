@@ -1,0 +1,166 @@
+﻿commit ce0f4ec9cd992df9f17102c7f760103d0a796240
+Author: Auto Commit Bot <enderjavier@example.com>
+Date:   Tue Feb 24 14:57:21 2026 -0300
+
+    feat: complete UI enhancements, icon integrations, short user tags, and real-time commissions
+
+ check-order.js                                  |   28 +
+ fix-order.js                                    |   24 +
+ public/assets/index-BhTNCKax.js                 |  173 +
+ public/assets/index-BnzAvv1I.js                 |  173 +
+ public/assets/index-CQOHWs_q.js                 |  173 +
+ public/assets/index-CyObChpx.css                |    1 +
+ public/assets/index-D3IYrIwk.css                |    1 +
+ public/assets/index-D5C8e-mD.js                 |  173 +
+ public/assets/index-DBPmDS52.js                 |  173 +
+ public/assets/index-DKDeJuqB.js                 |  173 +
+ public/assets/index-DbIZwId6.js                 |  173 +
+ public/assets/index-DbIlIdHp.css                |    1 +
+ public/assets/index-DgPB_tmJ.js                 |  173 +
+ public/assets/index-DrihhQLS.js                 |  173 +
+ public/assets/index-E1CcUkUK.js                 |  173 +
+ public/assets/index-kueRMy44.css                |    1 +
+ public/css/styles.css                           |    2 +-
+ public/index.html                               | 2263 +-----------
+ public/index_legacy.html                        | 2457 +++++++++++++
+ public/js/app.js                                | 1032 +++++-
+ public/js/firebase-init.js                      |    6 +
+ public/js/push-notifications.js                 |    6 +
+ public/js/ui/orders-ui.js                       |   58 +-
+ public/manifest.json                            |    2 +-
+ public/vite.svg                                 |    1 +
+ session_summary.md                              |  Bin 0 -> 2443 bytes
+ src-react/.gitignore                            |   24 +
+ src-react/README.md                             |   73 +
+ src-react/eslint.config.js                      |   23 +
+ src-react/fix-ves-history.ts                    |   70 +
+ src-react/index.html                            |   20 +
+ src-react/package-lock.json                     | 4459 +++++++++++++++++++++++
+ src-react/package.json                          |   34 +
+ src-react/postcss.config.js                     |    6 +
+ src-react/public/vite.svg                       |    1 +
+ src-react/src/App.tsx                           |   79 +
+ src-react/src/components/BottomNav.tsx          |   59 +
+ src-react/src/components/Sidebar.tsx            |  139 +
+ src-react/src/components/ui/BankLogo.tsx        |   54 +
+ src-react/src/components/ui/Button.tsx          |   59 +
+ src-react/src/components/ui/Modal.tsx           |  102 +
+ src-react/src/components/ui/index.ts            |    3 +
+ src-react/src/contexts/NavigationContext.tsx    |   39 +
+ src-react/src/contexts/ToastContext.tsx         |   87 +
+ src-react/src/hooks/index.ts                    |   16 +
+ src-react/src/hooks/useAuth.ts                  |  109 +
+ src-react/src/hooks/useBalanceHistory.ts        |   84 +
+ src-react/src/hooks/useBalanceOperations.ts     |  121 +
+ src-react/src/hooks/useClients.ts               |  122 +
+ src-react/src/hooks/useCreateOrder.ts           |  115 +
+ src-react/src/hooks/useDailyCommissions.ts      |  126 +
+ src-react/src/hooks/useExchangeRates.ts         |  106 +
+ src-react/src/hooks/useHistoricalOrders.ts      |   97 +
+ src-react/src/hooks/useOrderActions.ts          |  198 +
+ src-react/src/hooks/useOrders.ts                |  133 +
+ src-react/src/hooks/useSellerCommissions.ts     |   72 +
+ src-react/src/hooks/useStoreToggle.ts           |   26 +
+ src-react/src/hooks/useTransferFunds.ts         |  121 +
+ src-react/src/hooks/useUpdateRate.ts            |   61 +
+ src-react/src/hooks/useVesAccounts.ts           |   47 +
+ src-react/src/hooks/useVesBalance.ts            |   84 +
+ src-react/src/index.css                         |  122 +
+ src-react/src/lib/constants.ts                  |   69 +
+ src-react/src/lib/firebase.ts                   |   20 +
+ src-react/src/main.tsx                          |   10 +
+ src-react/src/screens/AccountsScreen.tsx        |  282 ++
+ src-react/src/screens/BalanceOperationModal.tsx |  237 ++
+ src-react/src/screens/BalanceScreen.tsx         |  233 ++
+ src-react/src/screens/BatchPaymentModal.tsx     |  284 ++
+ src-react/src/screens/ClientsScreen.tsx         |  294 ++
+ src-react/src/screens/CommissionsScreen.tsx     |  182 +
+ src-react/src/screens/CreateBatchModal.tsx      |  296 ++
+ src-react/src/screens/DashboardScreen.tsx       |  495 +++
+ src-react/src/screens/HistoryScreen.tsx         |  288 ++
+ src-react/src/screens/LoginScreen.tsx           |   96 +
+ src-react/src/screens/OrderDetailModal.tsx      |  244 ++
+ src-react/src/screens/OrderForm.tsx             |  370 ++
+ src-react/src/screens/ReportsScreen.tsx         |  174 +
+ src-react/src/screens/SettingsScreen.tsx        |  124 +
+ src-react/src/screens/TransferFundsModal.tsx    |  148 +
+ src-react/src/screens/UpdateRateModal.tsx       |  115 +
+ src-react/src/screens/VesBalanceScreen.tsx      |  200 +
+ src-react/tailwind.config.js                    |   46 +
+ src-react/tsconfig.app.json                     |   28 +
+ src-react/tsconfig.json                         |    7 +
+ src-react/tsconfig.node.json                    |   26 +
+ src-react/vite.config.ts                        |    7 +
+ 87 files changed, 16524 insertions(+), 2455 deletions(-)
+
+commit b224f2acaa123345370888b63a557c9e28ca5178
+Author: Ender Javier Pi├▒a Rojas <enderjavier@example.com>
+Date:   Wed Feb 4 08:06:15 2026 -0300
+
+    feat: modularize frontend js, update firebase/capacitor config, and improve bank name display
+
+ .gitignore                            |    17 +
+ ANDROID_BUILD_GUIDE.md                |   152 +
+ ANDROID_TOKEN_GUIDE.md                |    63 +
+ BUILD_GUIDE.md                        |   246 +
+ FIREBASE_SETUP.md                     |   104 +
+ NOTIFICATIONS_DEBUG.md                |   189 +
+ WEB_PUSH_SETUP.md                     |    65 +
+ assets/emitir_factura_electronica.pdf |   Bin 0 -> 714979 bytes
+ assets/icon.png                       |   Bin 0 -> 85881 bytes
+ assets/logo.png                       |   Bin 0 -> 34119 bytes
+ capacitor.config.ts                   |     2 +
+ debug-token.html                      |    74 +
+ firebase.json                         |     3 +
+ firestore.rules                       |    37 +-
+ functions/index.js                    |    49 -
+ functions/lib/index.js                |   423 ++
+ functions/lib/index.js.map            |     1 +
+ functions/lib/src/index.js            |   101 +
+ functions/lib/src/index.js.map        |     1 +
+ functions/package-lock.json           |     7 +-
+ functions/scr/index.ts                |    41 -
+ functions/src/index.ts                |    21 +
+ functions/tsconfig.json               |     8 +-
+ make-admin.js                         |    47 +
+ package-lock.json                     |  3956 +++++++++++-
+ package.json                          |    19 +-
+ photo.jpg                             |   Bin 0 -> 25396 bytes
+ public/capacitor.js                   |     2 +
+ public/css/styles.css                 |     2 +-
+ public/firebase-messaging-sw.js       |    46 +
+ public/images/icon-192x192.png        |   Bin 0 -> 34119 bytes
+ public/images/icon-512x512.png        |   Bin 0 -> 34119 bytes
+ public/index.html                     |  3108 +++++----
+ public/js/app-modern.js               |   149 +
+ public/js/app.js                      | 11001 +++++++++++++++++---------------
+ public/js/auth-wrapper.js             |   130 +
+ public/js/config/constants.js         |    62 +
+ public/js/firebase-config.js          |    19 +
+ public/js/firebase-init.js            |    24 +
+ public/js/push-notifications.js       |   171 +
+ public/js/services/admin.js           |    78 +
+ public/js/services/auth.js            |   150 +
+ public/js/services/firebase.js        |    17 +
+ public/js/services/orders.js          |    46 +
+ public/js/ui/notifications.js         |   104 +
+ public/js/ui/orders-ui.js             |   249 +
+ public/js/utils/formatters.js         |    80 +
+ public/manifest.json                  |    32 +
+ public/test-notifications.html        |   257 +
+ set-admin.js                          |    52 +
+ src/input.css                         |    43 +
+ 51 files changed, 14511 insertions(+), 6937 deletions(-)
+
+commit 93fa5a96d4b2ac6c3dbf560687a0d3107ad85f89
+Author: Ender Javier Pi├▒a Rojas <enderjavier@example.com>
+Date:   Mon Jan 12 19:44:16 2026 -0300
+
+    feat: implement native file sharing on Android and improve push notification configuration
+
+ capacitor.config.ts    |   20 +
+ functions/src/index.ts |  344 +++
+ public/index.html      | 1800 +++++++++++---
+ public/js/app.js       | 6192 ++++++++++++++++++++++++++++++++++++++++++++++++
+ storage.rules          |    8 +
+ 5 files changed, 8074 insertions(+), 290 deletions(-)

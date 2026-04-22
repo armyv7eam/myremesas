@@ -29,6 +29,12 @@ export interface Order {
     paidAt?: Timestamp;
     isDebtor?: boolean;
     isDuplicate?: boolean;
+    sellerId?: string;
+    sellerEmail?: string;
+    sellerCommissionRate?: number;
+    emailSent?: boolean;
+    emailSentAt?: Timestamp;
+    emailError?: string;
 }
 
 interface OrdersState {
@@ -102,6 +108,12 @@ export function useOrders() {
                         createdAt: data.createdAt,
                         paidAt: data.paidAt,
                         isDebtor: data.isDebtor,
+                        sellerId: data.sellerId,
+                        sellerEmail: data.sellerEmail,
+                        sellerCommissionRate: data.sellerCommissionRate,
+                        emailSent: data.emailSent,
+                        emailSentAt: data.emailSentAt,
+                        emailError: data.emailError,
                     };
 
                     if (order.status === 'Pendiente de pago') {

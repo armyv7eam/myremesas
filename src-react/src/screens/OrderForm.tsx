@@ -3,6 +3,7 @@ import { useExchangeRates } from '../hooks/useExchangeRates';
 import { useCreateOrder, VENEZUELAN_BANKS } from '../hooks/useCreateOrder';
 import { findClientSilently } from '../hooks/useClients';
 import type { OrderType, OrderFormData } from '../hooks/useCreateOrder';
+import { useAuth } from '../hooks/useAuth';
 import { Button, Modal } from '../components/ui';
 import { useToast } from '../contexts/ToastContext';
 import { Building2, Smartphone, CreditCard } from 'lucide-react';
@@ -22,6 +23,7 @@ interface Props {
 
 export function OrderForm({ isOpen, onClose, onSuccess }: Props) {
     const { rates } = useExchangeRates();
+    const { role, user } = useAuth();
     const { createOrder, loading, error, reset } = useCreateOrder();
     const toast = useToast();
 
@@ -206,7 +208,10 @@ export function OrderForm({ isOpen, onClose, onSuccess }: Props) {
                             onChange={e => setCedula(e.target.value)}
                             onBlur={async () => {
                                 if (cedula.length >= 6) {
-                                    const client = await findClientSilently(cedula);
+                                    const client = await findClientSilently(cedula, {
+                                        role,
+                                        userId: user?.uid || null,
+                                    });
                                     if (client) {
                                         if (!clientName) setClientName(client.clientName);
                                         if (!email && client.email) setEmail(client.email);
@@ -356,8 +361,8 @@ export function OrderForm({ isOpen, onClose, onSuccess }: Props) {
                 )}
 
                 {/* Botones */}
-                <div className="pt-3 flex flex-col md:flex-row gap-3">
-                    <Button variant="secondary" fullWidth onClick={handleClose} disabled={loading}>
+                <div className="pt-3 flex flex-col-reverse md:flex-row gap-3">
+                    <Button variant="danger" fullWidth onClick={handleClose} disabled={loading}>
                         Cancelar
                     </Button>
                     <Button variant="primary" fullWidth onClick={handleSubmit} isLoading={loading}>

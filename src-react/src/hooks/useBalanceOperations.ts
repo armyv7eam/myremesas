@@ -14,7 +14,7 @@ interface BalanceOperationParams {
 
 /**
  * Hook para operaciones de balance: cargar o restar fondos de una cuenta VES.
- * Actualiza: accounts, balance_history, config/rate (totalClpBalance), clp_balance_history.
+ * Actualiza: accounts, balance_history, config/rate (purchaseRateVES), clp_balance_history.
  */
 export function useBalanceOperations(accounts: VesAccount[]) {
     const [loading, setLoading] = useState(false);
@@ -45,25 +45,17 @@ export function useBalanceOperations(accounts: VesAccount[]) {
             const accountId = `${holder.toUpperCase().replace(/ /g, '_')}_${bank.toUpperCase().replace(/ /g, '_')}`;
             const clpAmount = Math.ceil((amount / clpRate) * 100) / 100;
             const vesIncrement = type === 'add' ? amount : -amount;
-            const clpIncrement = type === 'add' ? clpAmount : -clpAmount;
 
             await runTransaction(db, async (transaction: Transaction) => {
                 // 1. Read necessary documents
                 const accountRef = doc(db, 'accounts', accountId);
                 const rateRef = doc(db, 'config', 'rate');
 
-                const [accountDoc, rateDoc] = await Promise.all([
-                    transaction.get(accountRef),
-                    transaction.get(rateRef)
-                ]);
+                const accountDoc = await transaction.get(accountRef);
 
                 // Calculate VES Balance After
                 const currentBalance = accountDoc.exists() ? accountDoc.data().balance : 0;
                 const balanceAfter = currentBalance + vesIncrement;
-
-                // Calculate CLP Balance After
-                const currentTotalClpBalance = rateDoc.exists() ? rateDoc.data().totalClpBalance || 0 : 0;
-                const newTotalClpBalance = currentTotalClpBalance + clpIncrement;
 
                 // 2. Perform Writes
                 const ts = serverTimestamp();
@@ -87,11 +79,15 @@ export function useBalanceOperations(accounts: VesAccount[]) {
                     balanceAfter,
                 });
 
-                // Actualizar config/rate (totalClpBalance + purchaseRateVES)
-                transaction.update(rateRef, {
-                    totalClpBalance: newTotalClpBalance,
-                    purchaseRateVES: clpRate,
-                });
+                // Regla de negocio: la tasa mayorista se fija al cargar VES.
+                // En "subtract" no se debe pisar purchaseRateVES.
+                const rateUpdate: Record<string, any> = {};
+                if (type === 'add') {
+                    rateUpdate.purchaseRateVES = clpRate;
+                }
+                if (Object.keys(rateUpdate).length > 0) {
+                    transaction.update(rateRef, rateUpdate);
+                }
 
                 // Registro en clp_balance_history (solo para 'add')
                 if (type === 'add') {
@@ -100,9 +96,13 @@ export function useBalanceOperations(accounts: VesAccount[]) {
                         amount: clpAmount,
                         type: 'add',
                         note: `Carga de saldo (Equivalente a ${amount.toLocaleString('es-VE')} VES)`,
+                        description: `Carga de saldo (Equivalente a ${amount.toLocaleString('es-VE')} VES)`,
+                        purchaseRateVESUsed: clpRate,
+                        vesAmountAtCalc: amount,
+                        clpAmountComputed: clpAmount,
+                        timestamp: ts,
                         createdAt: ts,
                         adminTag: 'ADMIN',
-                        balanceAfter: newTotalClpBalance,
                         bank: bank
                     });
                 }

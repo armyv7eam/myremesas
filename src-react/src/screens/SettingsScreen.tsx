@@ -51,6 +51,34 @@ export function SettingsScreen({ onBack }: Props = {}) {
                             <p className="text-sm font-semibold">{TAG_ROLES[currentTag] || 'Usuario'}</p>
                         </div>
                     </div>
+
+                    <div className="mt-5 border-t border-gray-600 pt-4">
+                        <button
+                            onClick={() => window.dispatchEvent(new CustomEvent('request-notification-permission', { detail: { forceRefresh: true } }))}
+                            className="bg-gray-800 hover:bg-gray-600 text-white text-xs font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors w-full border border-gray-600 mb-3"
+                        >
+                            🔔 Activar Notificaciones Push
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const { getFunctions, httpsCallable } = await import('firebase/functions');
+                                    const app = (await import('../lib/firebase')).default;
+                                    const functions = getFunctions(app);
+                                    const testPush = httpsCallable(functions, 'testPushNotification');
+                                    const result = await testPush();
+                                    const data = result.data as any;
+                                    alert(`Test Result:\nSuccess: ${data.success}\nTokens Found: ${data.tokensFound}\nDelivered: ${data.successCount}\nFailed: ${data.failureCount}\n\nDetails:\n${JSON.stringify(data.details, null, 2)}`);
+                                } catch (e: any) {
+                                    alert(`Test Push failed: ${e.message}`);
+                                }
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors w-full border border-blue-500"
+                        >
+                            🧪 Probar Notificaciones Push
+                        </button>
+                        <p className="text-[10px] text-gray-400 mt-2 text-center">Si estás en web, haz click en Activar para autorizar y obtener un token. Luego en Probar para verificar que suena.</p>
+                    </div>
                 </div>
 
                 {/* System Info - Admin Only */}
@@ -80,31 +108,34 @@ export function SettingsScreen({ onBack }: Props = {}) {
                             </div>
                         </div>
                     </section>
-                )}
+                )
+                }
 
                 {/* User Tags List - Admin Only */}
-                {role === 'admin' && (
-                    <section className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
-                        <h3 className="text-xs font-bold text-gray-700">Usuarios del Sistema</h3>
-                        <div className="space-y-2">
-                            {Object.entries(USER_TAGS)
-                                .sort(([, a], [, b]) => a.localeCompare(b))
-                                .map(([email, tag]) => (
-                                    <div key={email} className={`flex items-center justify-between py-2 px-3 rounded-lg ${email === user?.email ? 'bg-manzano-50 border border-manzano-200' : 'bg-gray-50'
-                                        }`}>
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${tag.startsWith('A') ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                                                }`}>
-                                                {tag}
-                                            </span>
-                                            <span className="text-xs text-gray-700 truncate">{email}</span>
+                {
+                    role === 'admin' && (
+                        <section className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+                            <h3 className="text-xs font-bold text-gray-700">Usuarios del Sistema</h3>
+                            <div className="space-y-2">
+                                {Object.entries(USER_TAGS)
+                                    .sort(([, a], [, b]) => a.localeCompare(b))
+                                    .map(([email, tag]) => (
+                                        <div key={email} className={`flex items-center justify-between py-2 px-3 rounded-lg ${email === user?.email ? 'bg-manzano-50 border border-manzano-200' : 'bg-gray-50'
+                                            }`}>
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${tag.startsWith('A') ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                                                    }`}>
+                                                    {tag}
+                                                </span>
+                                                <span className="text-xs text-gray-700 truncate">{email}</span>
+                                            </div>
+                                            <span className="text-[10px] text-gray-400 shrink-0">{TAG_ROLES[tag] || 'Usuario'}</span>
                                         </div>
-                                        <span className="text-[10px] text-gray-400 shrink-0">{TAG_ROLES[tag] || 'Usuario'}</span>
-                                    </div>
-                                ))}
-                        </div>
-                    </section>
-                )}
+                                    ))}
+                            </div>
+                        </section>
+                    )
+                }
 
                 {/* Logout Button */}
                 <button
@@ -118,7 +149,7 @@ export function SettingsScreen({ onBack }: Props = {}) {
                 <div className="text-center py-4">
                     <p className="text-[11px] text-gray-300">Manzano App v2.0 — React</p>
                 </div>
-            </main>
-        </div>
+            </main >
+        </div >
     );
 }

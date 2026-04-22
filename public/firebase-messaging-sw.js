@@ -18,29 +18,77 @@ firebase.initializeApp({
 // Retrieve an instance of Firebase Messaging
 const messaging = firebase.messaging();
 
+self.addEventListener('install', () => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+});
+
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    const notificationTitle = payload.notification?.title || 'New Message';
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'New Message';
+    const notificationBody = payload.notification?.body || payload.data?.body || '';
+    const notificationTag =
+        payload.messageId ||
+        payload?.data?.stamp ||
+        payload?.data?.orderID ||
+        payload?.data?.historyID ||
+        `fcm-${Date.now()}`;
+
     const notificationOptions = {
-        body: payload.notification?.body || '',
+        body: notificationBody,
         icon: '/images/icon-192x192.png',
         badge: '/images/icon-192x192.png',
-        data: payload.data
+        tag: notificationTag,
+        renotify: false,
+        data: payload.data || {}
     };
 
     return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+// The fallback push event has been removed to avoid conflicts with onBackgroundMessage
+
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
-    console.log('[firebase-messaging-sw.js] Notification click received.');
-
+    console.log('[firebase-messaging-sw.js] Notification click received.', event.notification.data);
     event.notification.close();
 
-    // Open the app
+    const data = event.notification.data || {};
+    let targetPath = '/';
+    
+    if (data.type === 'new_order') {
+        targetPath = '/?screen=dashboard';
+    } else if (data.type === 'order_update') {
+        targetPath = '/?screen=history';
+    } else if (data.type === 'wholesale_purchase') {
+        targetPath = '/?screen=wholesale-purchases';
+    } else if (data.type === 'balance_load') {
+        targetPath = '/?screen=balance';
+    } else if (data.type === 'exchange_rate_update') {
+        targetPath = '/?screen=calculator';
+    }
+
     event.waitUntil(
-        clients.openWindow('/')
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            for (let i = 0; i < windowClients.length; i++) {
+                const client = windowClients[i];
+                if (client.url && client.url.includes(self.location.origin)) {
+                    client.focus();
+                    const screenMatch = targetPath.match(/screen=([^&]+)/);
+                    if (screenMatch) {
+                        client.postMessage({ type: 'manzano-navigate', screen: screenMatch[1] });
+                    }
+                    return;
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(targetPath);
+            }
+        })
     );
 });

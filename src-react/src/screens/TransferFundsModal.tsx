@@ -4,7 +4,7 @@ import { Button } from '../components/ui';
 import { useTransferFunds } from '../hooks/useTransferFunds';
 import { useToast } from '../contexts/ToastContext';
 import { normalizeBankName, computeInterbankFee } from '../lib/constants';
-import type { VesAccount } from '../hooks/useVesAccounts';
+import { isPayoutAccount, isSourceAccount, type VesAccount } from '../hooks/useVesAccounts';
 
 interface Props {
     accounts: VesAccount[];
@@ -21,6 +21,8 @@ export function TransferFundsModal({ accounts, onClose }: Props) {
     const fromAccount = accounts.find(a => a.id === fromId);
     const toAccount = accounts.find(a => a.id === toId);
     const parsedAmount = parseFloat(amount) || 0;
+    const sourceAccounts = accounts.filter(acc => acc.balance > 0);
+    const payoutAccounts = accounts.filter(isPayoutAccount);
 
     // Calcular comisión en tiempo real
     const feeInfo = useMemo(() => {
@@ -76,10 +78,10 @@ export function TransferFundsModal({ accounts, onClose }: Props) {
                             className="mt-1 w-full p-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                             required
                         >
-                            <option value="">Seleccione origen...</option>
-                            {accounts.filter(acc => acc.balance > 0).map(acc => (
+                            <option value="">Seleccione cuenta origen...</option>
+                            {sourceAccounts.map(acc => (
                                 <option key={acc.id} value={acc.id}>
-                                    {acc.holder} - {acc.bank} ({fmtBal(acc.balance)} VES)
+                                    {isSourceAccount(acc) ? '[FUENTE] ' : '[PAGADORA] '}{acc.holder} - {acc.bank}{acc.accountLast4 ? ` ****${acc.accountLast4}` : ''} ({fmtBal(acc.balance)} VES)
                                 </option>
                             ))}
                         </select>
@@ -94,14 +96,20 @@ export function TransferFundsModal({ accounts, onClose }: Props) {
                             className="mt-1 w-full p-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                             required
                         >
-                            <option value="">Seleccione destino...</option>
-                            {accounts.map(acc => (
+                            <option value="">Seleccione cuenta pagadora...</option>
+                            {payoutAccounts.map(acc => (
                                 <option key={acc.id} value={acc.id} disabled={acc.id === fromId}>
-                                    {acc.holder} - {acc.bank} ({fmtBal(acc.balance)} VES)
+                                    [PAGADORA] {acc.holder} - {acc.bank}{acc.accountLast4 ? ` ****${acc.accountLast4}` : ''} ({fmtBal(acc.balance)} VES)
                                 </option>
                             ))}
                         </select>
                     </div>
+
+                    {sourceAccounts.length === 0 && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700">
+                            No hay cuentas con saldo disponible para transferir fondos.
+                        </div>
+                    )}
 
                     {/* Monto */}
                     <div>

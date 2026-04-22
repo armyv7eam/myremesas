@@ -7,7 +7,10 @@ import {
     signOut as firebaseSignOut
 } from 'firebase/auth';
 import type { User } from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth } from '../lib/firebase';
+import { db } from '../lib/firebase';
 
 interface AuthState {
     user: User | null;
@@ -27,17 +30,36 @@ export function useAuth() {
     useEffect(() => {
         const unsubscribe = firebaseOnAuthStateChanged(auth, async (user) => {
             if (user) {
+                let isAdmin = false;
+                let isSeller = false;
+                let computedRole: 'admin' | 'seller' | 'client' = 'client';
+
                 try {
                     const idTokenResult = await user.getIdTokenResult();
-                    let computedRole: 'admin' | 'seller' | 'client' = 'client';
-                    if (idTokenResult.claims.admin) {
+                    isAdmin = !!idTokenResult.claims.admin;
+                    isSeller = !!idTokenResult.claims.seller;
+                    if (isAdmin) {
                         computedRole = 'admin';
-                    } else if (idTokenResult.claims.seller) {
+                    } else if (isSeller) {
                         computedRole = 'seller';
                     }
-                    setState({ user, role: computedRole, loading: false, error: null });
                 } catch (e) {
-                    setState({ user, role: 'client', loading: false, error: null });
+                    console.error('Error reading auth claims:', e);
+                }
+
+                setState({ user, role: computedRole, loading: false, error: null });
+
+                try {
+                    const userRef = doc(db, 'users', user.uid);
+                    await setDoc(userRef, {
+                        email: user.email || '',
+                        isAdmin,
+                        isSeller,
+                        platform: Capacitor.isNativePlatform() ? 'native' : 'web',
+                        lastLogin: serverTimestamp(),
+                    }, { merge: true });
+                } catch (syncError) {
+                    console.error('Error syncing user status to Firestore:', syncError);
                 }
             } else {
                 setState({ user: null, role: null, loading: false, error: null });

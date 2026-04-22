@@ -132,67 +132,7 @@ async function getUserTokens(userId) {
  * Notifies admin users about new orders
  */
 // ... (previous imports)
-const nodemailer = __importStar(require("nodemailer"));
 // ... (existing code)
-// Helper to create transport
-const createTransporter = () => {
-    const emailUser = process.env.BREVO_USER; // Changed to BREVO_USER
-    const emailPass = process.env.BREVO_PASS; // Changed to BREVO_PASS (SMTP Key)
-    if (!emailUser || !emailPass) {
-        logger.warn("Brevo credentials not found. Email sending will be skipped.");
-        return null;
-    }
-    return nodemailer.createTransport({
-        host: "smtp-relay.brevo.com",
-        port: 587,
-        secure: false,
-        auth: {
-            user: emailUser,
-            pass: emailPass,
-        },
-    });
-};
-// Renamed per user request matching Firebase deployment
-const sendPaymentConfirmationEmail = async (orderId, orderData) => {
-    const transporter = createTransporter();
-    if (!transporter)
-        return;
-    const clientEmail = orderData.email;
-    if (!clientEmail) {
-        logger.info(`No email found for order ${orderId}, skipping confirmation.`);
-        return;
-    }
-    const amount = orderData.destinationAmount || orderData.vesAmount || 0;
-    const formattedAmount = amount.toLocaleString('es-VE', { minimumFractionDigits: 2 });
-    const mailOptions = {
-        from: `"Manzano App" <${process.env.BREVO_USER}>`,
-        to: clientEmail,
-        subject: `Pago Confirmado - Pedido #${orderId.slice(-5)}`,
-        html: `
-      <div style="font-family: Arial, sans-serif; color: #333;">
-        <h1 style="color: #4CAF50;">¡Pago Confirmado!</h1>
-        <p>Hola ${orderData.clientName || "Cliente"},</p>
-        <p>Tu pago para el pedido <strong>#${orderId.slice(-5)}</strong> ha sido confirmado exitosamente.</p>
-        <hr style="border: 1px solid #eee;">
-        <p><strong>Detalles de la Transacción:</strong></p>
-        <ul>
-          <li><strong>Monto Confirmado:</strong> ${formattedAmount} VES</li>
-          <li><strong>Banco:</strong> ${orderData.bank || 'N/A'}</li>
-          <li><strong>Estado:</strong> Pagado</li>
-        </ul>
-        <p style="margin-top: 20px;">Gracias por tu preferencia.</p>
-        <p style="font-size: 12px; color: #888;">Este es un mensaje automático, por favor no respondas a este correo.</p>
-      </div>
-    `,
-    };
-    try {
-        await transporter.sendMail(mailOptions);
-        logger.info(`Payment confirmation email sent to ${clientEmail}`);
-    }
-    catch (error) {
-        logger.error("Error sending payment confirmation email:", error);
-    }
-};
 /**
  * Send push notification when a new order is created
  * Notifies admin users about new orders
@@ -277,8 +217,6 @@ exports.notifyOrderUpdate = (0, firestore_1.onDocumentUpdated)("orders/{orderId}
         const clientName = afterData.clientName || afterData.name || "Cliente";
         if (afterData.status === "Pagado") {
             notificationBody = `El pedido de ${clientName} ha sido procesado y pagado. ${afterData.vesAmount || 0} VES`;
-            // Enviamos el correo de confirmación cuando se confirma el pago
-            await sendPaymentConfirmationEmail(orderId, afterData).catch(err => logger.error("Email send on payment failed", err));
         }
         else if (afterData.status === "Cancelado") {
             notificationBody = `El pedido de ${clientName} ha sido cancelado.`;

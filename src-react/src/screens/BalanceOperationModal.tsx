@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Plus, Minus, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from '../components/ui';
 import { useBalanceOperations } from '../hooks/useBalanceOperations';
 import { useToast } from '../contexts/ToastContext';
 import type { VesAccount } from '../hooks/useVesAccounts';
+import { useWholesalePurchases } from '../hooks/useWholesalePurchases';
+import { useExchangeRates } from '../hooks/useExchangeRates';
 
 interface Props {
     type: 'add' | 'subtract';
@@ -19,6 +21,8 @@ export function BalanceOperationModal({ type, vesAmount, accounts, onClose }: Pr
     const [note, setNote] = useState('');
     const [clpRate, setClpRate] = useState('');
     const { operate, loading } = useBalanceOperations(accounts);
+    const { latestPurchase, loadLatest } = useWholesalePurchases();
+    const { rates } = useExchangeRates();
     const toast = useToast();
 
     const isAdd = type === 'add';
@@ -54,6 +58,21 @@ export function BalanceOperationModal({ type, vesAmount, accounts, onClose }: Pr
 
     // Llamar preselect al montar
     useState(() => { preselect(); });
+
+    useEffect(() => {
+        if (!isAdd) return;
+        loadLatest();
+    }, [isAdd, loadLatest]);
+
+    useEffect(() => {
+        if (!isAdd) return;
+        if (clpRate) return;
+
+        const defaultRate = latestPurchase?.wholesaleRateClpPerVes || rates.purchaseRateVES || 0;
+        if (defaultRate > 0) {
+            setClpRate(defaultRate.toString());
+        }
+    }, [clpRate, isAdd, latestPurchase?.wholesaleRateClpPerVes, rates.purchaseRateVES]);
 
     // Equivalente CLP
     const parsedRate = parseFloat(clpRate) || 0;
@@ -185,6 +204,11 @@ export function BalanceOperationModal({ type, vesAmount, accounts, onClose }: Pr
                                 <p className="text-xs text-gray-500 mt-1">
                                     Equivalente: <span className="font-semibold">{clpEquivalent > 0 ? fmtClp(clpEquivalent) : '0,00 CLP'}</span>
                                 </p>
+                                {isAdd && latestPurchase?.wholesaleRateClpPerVes && (
+                                    <p className="text-[11px] text-indigo-600 mt-1">
+                                        Tasa mayorista sugerida: {latestPurchase.wholesaleRateClpPerVes.toFixed(6)} (editable)
+                                    </p>
+                                )}
                             </div>
 
                             {/* Resumen */}
