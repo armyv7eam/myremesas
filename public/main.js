@@ -46,7 +46,7 @@ let marginConfig = { ...DEFAULT_MARGIN_CONFIG };
 let marginConfigUnsubscribe = null;
 
 // --- DECLARACIN DE VARIABLES DEL DOM ---
-let userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, suggestedRateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails, binanceBalanceCard, usdtBalanceDisplay, refreshUsdtBalanceButton, usdtBalanceStatus;
+let calculatorBankContainer, calculatorBankReceive, calculatorLoading, userIdDisplay, userIdContainer, authStatus, amountSendInput, currencySendSelect, currencyReceiveSelect, swapButton, amountReceiveDisplay, rateDisplay, suggestedRateDisplay, paymentButton, errorMessage, historyContainer, loadingHistory, adminPanel, toggleAdminButton, rateFetchStatus, savedAccountsList, accountCount, wldUsdtDisplay, usdtClpP2pWldDisplay, clpUsdtP2pDisplay, vesUsdtP2pDisplay, usdtClpMarginDisplay, adminBankNameInput, adminAccountHolderInput, adminAccountNumberInput, adminRutInput, adminAccountTypeInput, adminEmailInput, saveAccountsButton, accountStatus, paymentModal, closeModalButton, modalAmountSend, modalAmountReceive, noAccountsMessage, modalCryptoWarning, modalTransferCurrency, adminToggleContainer, marginWldClpInput, marginClpVesInput, marginUsdtClpInput, saveMarginsButton, marginStatus, marginWldClpLabel, marginClpVesLabel, marginUsdtClpLabel, receiptUploadInput, uploadReceiptButton, receiptUploadStatus, adminTransactionsSection, adminPendingTransactionsList, adminCompletedTransactionsList, usdtDestinationForm, usdtWalletInput, usdtNetworkSelect, usdtNotesInput, vesDestinationForm, vesBeneficiaryInput, vesIdInput, vesBankInput, vesAccountTypeInput, vesAccountNumberInput, vesNotesInput, imageViewerModal, closeImageViewerButton, imageViewerImg, imageViewerTitle, orderCreationSection, toggleOrderCreationButton, adminAccountSelect, selectedAdminAccountDetails, binanceBalanceCard, usdtBalanceDisplay, refreshUsdtBalanceButton, usdtBalanceStatus;
 
 let currentTransactionId = null;
 let currentTransactionPath = null;
@@ -105,6 +105,9 @@ function initializeDOM() {
     amountSendInput = document.getElementById('amount-send');
     currencySendSelect = document.getElementById('currency-send');
     currencyReceiveSelect = document.getElementById('currency-receive');
+    calculatorBankContainer = document.getElementById('calculator-bank-container');
+    calculatorBankReceive = document.getElementById('calculator-bank-receive');
+    calculatorLoading = document.getElementById('calculator-loading');
     swapButton = document.getElementById('swap-button');
     amountReceiveDisplay = document.getElementById('amount-receive-display');
     rateDisplay = document.getElementById('rate-display');
@@ -833,6 +836,10 @@ function calculateExchange(enablePaymentButton = true) {
         errorMessage.classList.add('hidden');
         return;
     }
+    if (calculatorBankContainer) {
+        calculatorBankContainer.classList.toggle('hidden', currencyReceive !== 'VES');
+    }
+
     const rateKey = `${currencySend}_to_${currencyReceive}`;
     const rate = rates[rateKey];
     if (rate == null) {
