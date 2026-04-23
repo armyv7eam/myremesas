@@ -106,6 +106,24 @@ async function getBinanceP2POffersWithRetry(options, attempts = 3, delayMs = 400
 async function getBinanceVesSellRate() {
   const targetAmount = toNumber(VES_SELL_TARGET_AMOUNT);
 
+  // 1. Intentar primero con Banco de Venezuela, tomando el 5to vendedor (índice 4)
+  const bdvRows = await getBinanceP2POffersWithRetry({
+    fiat: "VES",
+    tradeType: "SELL",
+    rows: 50,
+    payTypes: ["BancoDeVenezuela"],
+    transAmount: VES_SELL_TARGET_AMOUNT,
+  });
+  
+  const filteredBdvRows = bdvRows.filter((row) => canCoverTargetAmount(row, targetAmount));
+  if (filteredBdvRows.length >= 5) {
+    return {
+      rate: toNumber(filteredBdvRows[4].adv?.price),
+      source: `Binance P2P SELL (BDV 5th, ${VES_SELL_TARGET_AMOUNT} VES)`,
+    };
+  }
+
+  // 2. Si no hay 5to vendedor de BDV, pasamos a Transferencia Bancaria (BANK)
   const exactBankRows = await getBinanceP2POffersWithRetry({
     fiat: "VES",
     tradeType: "SELL",
