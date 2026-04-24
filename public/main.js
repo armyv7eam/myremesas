@@ -1656,7 +1656,7 @@ async function refreshBinanceBalance() {
     setUsdtBalanceStatus('Consultando saldo...', false);
     if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.disabled = true;
     try {
-        const response = await fetch('https://binancebalance-775892034675.us-central1.run.app?asset=USDT');
+        const response = await fetch('/api/binance-balance?asset=USDT');
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload.success) {
             throw new Error(payload.message || `HTTP ${response.status}`);
