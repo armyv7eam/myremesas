@@ -405,6 +405,8 @@ module.exports = async (req, res) => {
       : (adjustedVesRateCriptoYa || null);
     const vesFromDirectBinance = p2pBinance.vesSell6Bank > 0;
 
+    console.log(`Rates Summary: CLP P2P=${usdtToClpFromBinance6}, VES P2P=${usdtToVesFromBinance6BankSell} (Direct: ${vesFromDirectBinance})`);
+
     const usdtToClp = usdtToClpFromBinance6
       || clpRateCriptoYa
       || backupRatesCoinGecko?.usdt_clp
@@ -442,6 +444,11 @@ module.exports = async (req, res) => {
             ? (p2pBinance.vesSellSource || `Binance P2P SELL (${VES_SELL_TARGET_AMOUNT} VES)`)
             : 'Binance P2P via CriptoYa')
           : (backupRatesCoinGecko?.usdt_ves ? 'CoinGecko' : 'Fallback'),
+        debug: {
+            proxy_active: !!process.env.BINANCE_PROXY_URL,
+            binance_p2p_clp: !!usdtToClpFromBinance6,
+            binance_p2p_ves: !!p2pBinance.vesSell6Bank
+        }
       }
     };
 

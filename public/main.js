@@ -1,3 +1,8 @@
+/**
+ * Main JS Application Logic - Manzano App
+ * Version: 10.98.0424
+ * Updated to bypass 451 geo-blocking via proxy
+ */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -596,7 +601,7 @@ function setupMarginConfigListener() {
 
 async function saveMarginConfig(event) {
     if (event) event.preventDefault();
-    if (!isAuthReady || !db || !ADMIN_UIDS.includes(userId)) {
+    if (!isAuthReady || !db || !isCurrentUserAdmin) {
         showMarginStatus('No autorizado para actualizar márgenes.', true);
         return;
     }
@@ -1656,7 +1661,8 @@ async function refreshBinanceBalance() {
     setUsdtBalanceStatus('Consultando saldo...', false);
     if (refreshUsdtBalanceButton) refreshUsdtBalanceButton.disabled = true;
     try {
-        const response = await fetch('/api/binance-balance?asset=USDT');
+        // Cache buster for the local API proxy
+        const response = await fetch(`/api/binance-balance?asset=USDT&_v=${Date.now()}`);
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || !payload.success) {
             throw new Error(payload.message || `HTTP ${response.status}`);

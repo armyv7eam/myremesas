@@ -82,10 +82,10 @@ module.exports = async (req, res) => {
 
     if (useProxy) {
       // El VPS de DigitalOcean ya nos devuelve el balance formateado
-      if (responseData && responseData.asset) {
+      if (responseData && (responseData.asset || responseData.free)) {
           finalResponse = {
             success: true,
-            asset: responseData.asset,
+            asset: responseData.asset || asset,
             balance: {
               free: parseFloat(responseData.free || "0"),
               locked: parseFloat(responseData.locked || "0"),
@@ -94,6 +94,7 @@ module.exports = async (req, res) => {
             },
           };
       } else {
+          console.error("Respuesta inesperada del proxy:", responseData);
           return res.status(502).json({ success: false, message: "Respuesta inesperada del proxy.", data: responseData });
       }
     } else {
@@ -104,7 +105,8 @@ module.exports = async (req, res) => {
     return res.status(200).json(finalResponse);
   } catch (error) {
     const status = error.response?.status;
-    const message = error.response?.data?.msg || error.message;
+    const message = error.response?.data?.error || error.response?.data?.msg || error.message;
+    console.error(`Error en API binance-balance: ${message} (Status: ${status})`);
     return res.status(status || 500).json({
       success: false,
       message: `Error al consultar saldo en Binance: ${message}`,
