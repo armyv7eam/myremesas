@@ -71,12 +71,21 @@ async function getBinanceP2POffers({ fiat, tradeType, rows = 20, payTypes = [], 
       transAmount,
     };
 
-    const response = await axios.post(BINANCE_P2P_SEARCH_URL, payload, {
-      timeout: 10000,
-      headers: {
+    const useProxy = !!process.env.BINANCE_PROXY_URL;
+    const vpsToken = process.env.VPS_AUTH_TOKEN || 'manzano_dev_token';
+    const url = useProxy 
+      ? `${process.env.BINANCE_PROXY_URL}/api/proxy/p2p` 
+      : BINANCE_P2P_SEARCH_URL;
+
+    const headers = {
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0",
-      },
+    };
+    if (useProxy) headers["x-vps-token"] = vpsToken;
+
+    const response = await axios.post(url, payload, {
+      timeout: 10000,
+      headers
     });
 
     return Array.isArray(response.data?.data) ? response.data.data : [];
@@ -239,9 +248,18 @@ async function getCriptoYaP2PRate(fiat, volume = 1) {
  */
 async function getBinanceSpotRate(symbol) {
   try {
-    const response = await axios.get(BINANCE_SPOT_PRICE_URL, {
+    const useProxy = !!process.env.BINANCE_PROXY_URL;
+    const vpsToken = process.env.VPS_AUTH_TOKEN || 'manzano_dev_token';
+    const url = useProxy 
+      ? `${process.env.BINANCE_PROXY_URL}/api/proxy/spot` 
+      : BINANCE_SPOT_PRICE_URL;
+
+    const headers = useProxy ? { "x-vps-token": vpsToken } : {};
+
+    const response = await axios.get(url, {
       params: { symbol },
       timeout: 7000,
+      headers
     });
 
     if (response.data?.price) {

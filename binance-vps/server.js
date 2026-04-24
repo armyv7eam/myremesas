@@ -94,74 +94,52 @@ app.get('/api/balance', authenticate, async (req, res) => {
 
 /**
  * =========================================================
- * ENDPOINT 2: Consultar Tasa P2P según monto y par
+ * ENDPOINT 2: Proxy universal para Binance P2P
  * Scraping de /bapi/c2c/v2/friendly/c2c/adv/search
  * =========================================================
  */
-app.post('/api/p2p-rate', authenticate, async (req, res) => {
-    // Parámetros recibidos desde la App Manzano
-    const { fiat = 'VES', asset = 'USDT', tradeType = 'BUY', amount } = req.body;
-
+app.post('/api/proxy/p2p', authenticate, async (req, res) => {
     try {
-        const payload = {
-            proMerchantAds: false,
-            page: 1,
-            rows: 5,
-            payTypes: [],
-            countries: [],
-            publisherType: null,
-            asset: asset,
-            fiat: fiat,
-            tradeType: tradeType // BUY = Compramos al cliente, SELL = Vendemos al cliente
-        };
-
-        // Si se nos manda un monto específico (filtro clave para precisión)
-        if (amount && amount > 0) {
-            payload.transAmount = amount;
-        }
-
         const response = await axios.post(
             'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
-            payload,
+            req.body,
             {
                 headers: {
                     'Content-Type': 'application/json',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
-                }
+                },
+                timeout: 10000
             }
         );
 
-        const dataList = response.data?.data;
-        if (!dataList || dataList.length === 0) {
-            return res.status(404).json({ error: 'No se encontraron anuncios P2P para estos parámetros.' });
-        }
-
-        // Extraemos las primeras opciones disponibles
-        const topAds = dataList.slice(0, 3).map(item => ({
-            price: parseFloat(item.adv.price),
-            advertiser: item.advertiser.nickName,
-            orders: item.advertiser.monthOrderCount,
-            min: item.adv.minSingleTransAmount,
-            max: item.adv.maxSingleTransQuantity,
-        }));
-
-        // Calculamos un promedio seguro o enviamos la mejor tasa directamente (el Top 1)
-        const bestRate = topAds[0].price;
-
-        res.json({
-            fiat,
-            asset,
-            tradeType,
-            requestedAmount: amount || null,
-            bestRate,
-            topAds,
-            source: 'Binance P2P',
-            updatedAt: new Date().toISOString()
-        });
-
+        res.status(response.status).json(response.data);
     } catch (error) {
          console.error('Error fetching P2P rate:', error.message);
-         res.status(500).json({ error: 'Fallo comunicarse con Binance P2P.' });
+         const status = error.response?.status || 500;
+         res.status(status).json(error.response?.data || { error: 'Fallo comunicarse con Binance P2P.' });
+    }
+});
+
+/**
+ * =========================================================
+ * ENDPOINT 3: Proxy universal para Binance Spot
+ * =========================================================
+ */
+app.get('/api/proxy/spot', authenticate, async (req, res) => {
+    try {
+        const response = await axios.get(
+            'https://api.binance.com/api/v3/ticker/price',
+            {
+                params: req.query, // Pasa parámetros como ?symbol=WLDUSDT
+                timeout: 7000
+            }
+        );
+
+        res.status(response.status).json(response.data);
+    } catch (error) {
+         console.error('Error fetching Spot rate:', error.message);
+         const status = error.response?.status || 500;
+         res.status(status).json(error.response?.data || { error: 'Fallo comunicarse con Binance Spot.' });
     }
 });
 

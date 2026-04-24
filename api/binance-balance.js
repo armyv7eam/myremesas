@@ -28,11 +28,15 @@ module.exports = async (req, res) => {
     let responseData;
 
     if (useProxy) {
-      // --- Lógica para llamar al Proxy de Cloudflare ---
-      const proxyUrl = `${process.env.BINANCE_PROXY_URL}/binance?asset=${asset}`;
-      console.log(`Usando proxy de Cloudflare: ${proxyUrl}`);
-      const { data } = await axios.get(proxyUrl, { timeout: 8000 });
-      responseData = data; // La respuesta del proxy ya tiene el formato que necesitamos
+      // --- Lógica para llamar al Proxy de DigitalOcean ---
+      const proxyUrl = `${process.env.BINANCE_PROXY_URL}/api/balance?asset=${asset}`;
+      console.log(`Usando proxy de DigitalOcean: ${proxyUrl}`);
+      const vpsToken = process.env.VPS_AUTH_TOKEN || 'manzano_dev_token';
+      const { data } = await axios.get(proxyUrl, { 
+          timeout: 8000,
+          headers: { 'x-vps-token': vpsToken }
+      });
+      responseData = data;
     } else {
       // --- Lógica original para llamar directamente a Binance (para desarrollo local) ---
       console.log("Usando API directa de Binance (entorno local o sin proxy configurado).");
@@ -77,36 +81,21 @@ module.exports = async (req, res) => {
     let finalResponse;
 
     if (useProxy) {
-      // Proxy returns raw Binance array, need to process it
-      if (!Array.isArray(responseData)) {
-        return res.status(502).json({ success: false, message: "Respuesta inesperada del proxy.", data: responseData });
+      // El VPS de DigitalOcean ya nos devuelve el balance formateado
+      if (responseData && responseData.asset) {
+          finalResponse = {
+            success: true,
+            asset: responseData.asset,
+            balance: {
+              free: parseFloat(responseData.free || "0"),
+              locked: parseFloat(responseData.locked || "0"),
+              withdrawing: parseFloat(responseData.withdrawing || "0"),
+              total: parseFloat(responseData.free || "0") + parseFloat(responseData.locked || "0") + parseFloat(responseData.withdrawing || "0"),
+            },
+          };
+      } else {
+          return res.status(502).json({ success: false, message: "Respuesta inesperada del proxy.", data: responseData });
       }
-
-      const assetInfo = responseData.find((item) => item.coin === asset);
-      if (!assetInfo) {
-        return res.status(200).json({
-          success: true,
-          asset,
-          balance: null,
-          message: `El activo ${asset} no se encontró en la cuenta.`,
-        });
-      }
-
-      const free = parseFloat(assetInfo.free || "0");
-      const locked = parseFloat(assetInfo.locked || "0");
-      const withdrawing = parseFloat(assetInfo.withdrawing || "0");
-      const total = free + locked + withdrawing;
-
-      finalResponse = {
-        success: true,
-        asset,
-        balance: {
-          free,
-          locked,
-          withdrawing,
-          total,
-        },
-      };
     } else {
       // Direct API already formatted the response
       finalResponse = responseData;
