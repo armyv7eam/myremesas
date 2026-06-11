@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-﻿
 <html lang="es">
 
 <head>
@@ -804,17 +803,81 @@
 
             #user-id-display {
 
-                gap: 0.4rem;
+                display: flex;
 
-                font-size: 0.72rem;
+                align-items: center;
+
+                justify-content: space-between;
+
+                gap: 0.75rem;
+
+                width: min(100%, 26rem);
+
+                margin-left: auto;
+
+                padding: 0.78rem 0.9rem;
+
+                border: 1px solid rgba(148, 163, 184, 0.18);
+
+                border-radius: 1rem;
+
+                background: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.92));
+
+                box-shadow: 0 18px 45px rgba(2, 8, 23, 0.32);
+
+                font-size: 0.78rem;
 
             }
 
             #user-id-display > div {
 
+                min-width: 0;
+
                 line-height: 1.2;
 
                 text-align: left;
+
+            }
+
+            .session-pill-label {
+
+                margin: 0;
+
+                font-size: 0.62rem;
+
+                letter-spacing: 0.22em;
+
+                text-transform: uppercase;
+
+                color: rgba(148, 163, 184, 0.92);
+
+            }
+
+            #user-id {
+
+                display: block;
+
+                max-width: 14rem;
+
+                overflow: hidden;
+
+                text-overflow: ellipsis;
+
+                white-space: nowrap;
+
+                color: #f8fafc;
+
+                font-weight: 700;
+
+                margin-top: 0.18rem;
+
+            }
+
+            .session-pill-action {
+
+                white-space: nowrap;
+
+                flex-shrink: 0;
 
             }
 
@@ -1601,10 +1664,19 @@
 
                 </div>
 
-                <button id="menu-toggle-button" class="btn btn-outline btn-md text-slate-700 self-start sm:self-auto" aria-expanded="false" aria-controls="app-nav-menu">
-                    <span>Menu</span>
-                    <span class="text-lg leading-none">☰</span>
-                </button>
+                <div class="flex w-full sm:w-auto items-start sm:items-center justify-end gap-2">
+                    <div id="user-id-display" class="hidden">
+                        <div>
+                            <p class="session-pill-label">Sesión activa</p>
+                            <span id="user-id"></span>
+                        </div>
+                        <button id="logout-button" class="btn btn-outline btn-sm session-pill-action">Salir</button>
+                    </div>
+                    <button id="menu-toggle-button" class="btn btn-outline btn-md text-slate-700 self-start sm:self-auto" aria-expanded="false" aria-controls="app-nav-menu">
+                        <span>Menú</span>
+                        <span class="text-lg leading-none">☰</span>
+                    </button>
+                </div>
 
             </div>
 
@@ -1618,15 +1690,6 @@
             </div>
 
             <p class="text-slate-300 max-w-2xl mx-auto text-sm md:text-base">Calculadora, seguimiento de órdenes y operación administrativa con un lenguaje más cercano a una mesa de exchange.</p>
-
-            <div class="mt-5 p-3 bg-cyan-50 text-cyan-900 rounded-2xl text-sm font-medium hidden border border-cyan-100">
-                <div id="user-id-display" class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <span class="font-bold">ID de Usuario:</span> <span id="user-id"></span>
-                    </div>
-                    <button id="logout-button" class="btn btn-outline btn-sm w-full sm:w-auto">Cerrar Sesión</button>
-                </div>
-            </div>
 
             <p id="auth-status" class="text-sm text-red-500 mt-2">Inicializando...</p>
 
