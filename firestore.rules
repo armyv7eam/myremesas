@@ -1,0 +1,67 @@
+rules_version = "2";
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Funciones de Ayuda ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      // Lista de UIDs de administradores
+      return isSignedIn() && request.auth.uid in [
+        "R3QU4xRLmSQFiArCWWRwGBMEOhc2", 
+        "71YiNOk9MOc6mNjxnnKBLST1Clh2"
+      ];
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Reglas de Acceso ---
+
+    // 1. Cuentas bancarias del administrador (lectura pública)
+    // Cualquiera puede leer las cuentas para hacer una transferencia.
+    // Solo los administradores pueden crearlas, actualizarlas o borrarlas.
+    match /artifacts/{appId}/public/data/admin_accounts/{accountId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 2. Transacciones de los usuarios
+    // Un usuario solo puede ver/crear/actualizar sus propias transacciones.
+    // Un administrador puede ver/actualizar cualquier transacción.
+    match /artifacts/{appId}/users/{userId}/transactions/{transactionId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // 2b. CollectionGroup para transacciones (usado por admin panel)
+    // Permite a los administradores consultar todas las transacciones usando collectionGroup
+    match /{path=**}/transactions/{transactionId} {
+      allow read: if isAdmin();
+    }
+
+    // 3. Configuración de precios (márgenes)
+    // Cualquiera puede leer los márgenes para la calculadora.
+    // Solo los administradores pueden cambiarlos.
+    match /config/pricing {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 5. Cuentas beneficiarias (favoritos) de los usuarios
+    // Un usuario puede gestionar (leer, crear, actualizar, borrar) sus propias
+    // cuentas beneficiarias. Los administradores no necesitan acceso aquí.
+    match /artifacts/{appId}/users/{userId}/beneficiaries/{beneficiaryId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // 4. Regla de denegación explícita para el resto de las rutas
+    // Deniega el acceso a cualquier otra ruta que no haya sido definida explícitamente.
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
