@@ -2091,11 +2091,25 @@ async function buildQuoteCanvas() {
     ctx.font = '500 13px Outfit, sans-serif';
     ctx.fillText(new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }), width - 36, 48);
 
+    // Cantidad enviada
+    ctx.textAlign = 'left';
+    const sendAmountValue = parseFloat(amountSendInput?.value);
+    const sendText = Number.isFinite(sendAmountValue) && sendAmountValue > 0
+        ? formatCurrency(sendAmountValue, currencySendSelect?.value || 'CLP')
+        : '—';
+    ctx.font = '500 15px Outfit, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    const sendLabelWidth = ctx.measureText('Envías').width;
+    ctx.fillText('Envías', 36, 112);
+    ctx.font = '700 18px Outfit, sans-serif';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillText(sendText, 36 + sendLabelWidth + 10, 112);
+
     // Etiqueta
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
     ctx.font = '600 15px Outfit, sans-serif';
-    ctx.fillText('Resultado estimado', 36, 118);
+    ctx.fillText('Resultado estimado', 36, 160);
 
     // Monto con ajuste automático de tamaño
     const amountText = (amountReceiveDisplay?.textContent || '').trim() || '—';
@@ -2106,13 +2120,13 @@ async function buildQuoteCanvas() {
         ctx.font = `800 ${amountSize}px Outfit, sans-serif`;
     }
     ctx.fillStyle = '#f8fafc';
-    ctx.fillText(amountText, 36, 184);
+    ctx.fillText(amountText, 36, 228);
 
     // Tasa aplicada (única línea de tasa en la imagen compartida)
     ctx.fillStyle = '#94a3b8';
     ctx.font = '500 15px Outfit, sans-serif';
     const rateText = (rateDisplay?.textContent || '').trim();
-    ctx.fillText(rateText, 36, 246);
+    ctx.fillText(rateText, 36, 276);
 
     // Pie
     ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
