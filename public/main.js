@@ -2021,6 +2021,130 @@ function renderSkeletonList(container, count = 3) {
     `).join('');
 }
 
+// --- Compartir cotización: imagen con solo el recuadro de resultado ---
+
+async function buildQuoteCanvas() {
+    const scale = 2;
+    const width = 640;
+    const height = 340;
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    // Fondo oscuro con brillo ámbar, espejo del recuadro de la app
+    ctx.beginPath();
+    ctx.roundRect(0, 0, width, height, 36);
+    ctx.clip();
+    const bg = ctx.createLinearGradient(0, 0, width, height);
+    bg.addColorStop(0, '#101828');
+    bg.addColorStop(0.7, '#1c2941');
+    bg.addColorStop(1, '#26324b');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+    const glow = ctx.createRadialGradient(width * 0.94, -40, 20, width * 0.94, -40, 340);
+    glow.addColorStop(0, 'rgba(251, 191, 36, 0.30)');
+    glow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(0.75, 0.75, width - 1.5, height - 1.5);
+
+    // Marca
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.roundRect(36, 34, 26, 26, 9);
+    ctx.fill();
+    ctx.fillStyle = '#1c1917';
+    ctx.font = '800 17px Outfit, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⇅', 49, 48);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#fbbf24';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+    ctx.font = '700 14px Outfit, sans-serif';
+    ctx.fillText('MY REMESAS', 74, 48);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+    // Fecha a la derecha
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '500 13px Outfit, sans-serif';
+    ctx.fillText(new Date().toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }), width - 36, 48);
+
+    // Etiqueta
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
+    ctx.font = '600 15px Outfit, sans-serif';
+    ctx.fillText('Resultado estimado', 36, 110);
+
+    // Monto con ajuste automático de tamaño
+    const amountText = (amountReceiveDisplay?.textContent || '').trim() || '—';
+    let amountSize = 56;
+    ctx.font = `800 ${amountSize}px Outfit, sans-serif`;
+    while (ctx.measureText(amountText).width > width - 72 && amountSize > 24) {
+        amountSize -= 2;
+        ctx.font = `800 ${amountSize}px Outfit, sans-serif`;
+    }
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText(amountText, 36, 172);
+
+    // Tasas
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '500 14px Outfit, sans-serif';
+    const rateText = (rateDisplay?.textContent || '').trim();
+    const suggestedText = (suggestedRateDisplay?.textContent || '').trim();
+    ctx.fillText(rateText, 36, 226);
+    if (suggestedText) ctx.fillText(suggestedText, 36, 252);
+
+    // Pie
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
+    ctx.font = '500 12px Outfit, sans-serif';
+    ctx.fillText('myremesas · tasas referenciales del momento', 36, height - 34);
+
+    return canvas;
+}
+
+async function shareQuote() {
+    const shareButton = document.getElementById('share-quote-button');
+    try {
+        if (shareButton) shareButton.disabled = true;
+        try {
+            await document.fonts.load('800 56px Outfit');
+            await document.fonts.load('600 15px Outfit');
+        } catch (error) {
+            console.warn('Fuentes no disponibles para la imagen, se usa fallback:', error);
+        }
+        const canvas = await buildQuoteCanvas();
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('No se pudo generar la imagen de la cotización.');
+        const file = new File([blob], 'cotizacion-myremesas.png', { type: 'image/png' });
+        const currencySend = currencySendSelect?.value || '';
+        const currencyReceive = currencyReceiveSelect?.value || '';
+        const shareText = `Cotización My Remesas: ${currencySend} → ${currencyReceive}. ${rateDisplay?.textContent || ''}`.trim();
+        if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ files: [file], title: 'Cotización My Remesas', text: shareText });
+            return;
+        }
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = 'cotizacion-myremesas.png';
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 4000);
+        showToast('Imagen de la cotización descargada. Ya puedes compartirla.', 'success');
+    } catch (error) {
+        if (error?.name === 'AbortError') return;
+        console.error('Error al compartir la cotización:', error);
+        showToast('No se pudo compartir la cotización.', 'error');
+    } finally {
+        if (shareButton) shareButton.disabled = false;
+    }
+}
+
 function createCopyRow(label, value) {
     return `
         <div class="relative py-0.5">
@@ -2080,6 +2204,8 @@ function registerStaticEventListeners() {
     if (adminPendingTransactionsList) adminPendingTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
     if (adminCompletedTransactionsList) adminCompletedTransactionsList.addEventListener('click', handleAdminTransactionsListClick);
     if (paymentButton) paymentButton.addEventListener('click', showPaymentModal);
+    const shareQuoteButton = document.getElementById('share-quote-button');
+    if (shareQuoteButton) shareQuoteButton.addEventListener('click', shareQuote);
     if (closeModalButton) closeModalButton.addEventListener('click', () => paymentModal.classList.add('hidden'));
     if (menuLogoutButton) menuLogoutButton.addEventListener('click', async () => {
         await signOut(auth);
