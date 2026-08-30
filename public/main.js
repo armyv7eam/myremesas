@@ -424,17 +424,17 @@ function buildAccountDetailsMarkup(account) {
     const copyText = details.map(d => `${d.label}: ${d.value}`).join('\n');
     const sanitizedCopyText = copyText.replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
     const detailsHtml = details.map(d =>
-        `<p class="leading-tight"><span class="font-medium">${d.label}:</span> ${d.value}</p>`
+        `<p class="leading-tight"><span class="font-semibold text-slate-500">${d.label}:</span> <span class="font-semibold text-slate-900">${d.value}</span></p>`
     ).join('');
     return `
         <div class="relative">
-            <div class="text-xs md:text-sm text-gray-800 space-y-1">
+            <div class="text-xs md:text-sm text-slate-700 space-y-1">
                 ${detailsHtml}
             </div>
-            <button class="copy-btn absolute top-0 right-0 p-1.5 text-cyan-600 hover:bg-cyan-100 rounded-lg" data-copy="${sanitizedCopyText}">
+            <button class="copy-btn absolute top-0 right-0 p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg text-xs font-semibold" data-copy="${sanitizedCopyText}">
                 Copiar
             </button>
-            <div class="copy-feedback absolute top-0 right-12 -translate-y-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 transition-all duration-200 pointer-events-none">
+            <div class="copy-feedback absolute top-0 right-12 -translate-y-1/2 bg-slate-900 text-white text-xs px-2 py-1 rounded opacity-0 transition-all duration-200 pointer-events-none">
                 Copiado!
             </div>
         </div>
@@ -456,23 +456,23 @@ function buildDetailsSection(title, details, { enableCopy = false } = {}) {
     if (!cleanDetails.length) return '';
     const listItems = cleanDetails.map(detail => `
         <div class="flex items-start justify-between gap-2">
-            <span class="text-gray-500">${escapeHtml(detail.label)}:</span>
-            <span class="font-semibold text-gray-800 text-right break-words break-all max-w-full">${escapeHtml(detail.value)}</span>
+            <span class="text-slate-500">${escapeHtml(detail.label)}:</span>
+            <span class="font-semibold text-slate-900 text-right break-words break-all max-w-full">${escapeHtml(detail.value)}</span>
         </div>
     `).join('');
     const sanitizedCopyText = enableCopy ? sanitizeCopyText(cleanDetails) : null;
     const copyMarkup = enableCopy ? `
         <span class="relative inline-flex">
-            <button class="copy-btn relative inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-cyan-700 border border-cyan-200 rounded-md bg-white hover:bg-cyan-50 transition focus:outline-none focus:ring-2 focus:ring-cyan-300" data-copy="${sanitizedCopyText}">
+            <button class="copy-btn relative inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-amber-700 border border-amber-200 rounded-md bg-white hover:bg-amber-50 transition focus:outline-none focus:ring-2 focus:ring-amber-300" data-copy="${sanitizedCopyText}">
                 Copiar datos
-                <span class="copy-feedback opacity-0 absolute inset-x-0 -top-6 mx-auto text-xs text-white bg-gray-900 px-2 py-1 rounded transition-all duration-200 pointer-events-none">Copiado!</span>
+                <span class="copy-feedback opacity-0 absolute inset-x-0 -top-6 mx-auto text-xs text-white bg-slate-900 px-2 py-1 rounded transition-all duration-200 pointer-events-none">Copiado!</span>
             </button>
         </span>
     ` : '';
     return `
-        <div class="destination-details-block bg-white border border-cyan-100 rounded-lg p-3 space-y-2">
+        <div class="destination-details-block bg-white border border-slate-200 rounded-xl p-3 space-y-2">
             <div class="flex items-start justify-between gap-2">
-                <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide sm:text-sm">${escapeHtml(title)}</span>
+                <span class="text-xs font-semibold text-slate-700 uppercase tracking-wide sm:text-sm">${escapeHtml(title)}</span>
                 ${copyMarkup}
             </div>
             <div class="space-y-1 text-xs sm:text-sm">
@@ -554,7 +554,7 @@ function handleViewReceiptButton(button) {
     if (!button) return;
     const url = button.getAttribute('data-url');
     if (!url) {
-        alert('El comprobante no está disponible.');
+        showToast('El comprobante no está disponible.', 'error');
         return;
     }
     const title = button.getAttribute('data-title') || 'Comprobante';
@@ -1259,6 +1259,7 @@ function setupTransactionListener() {
     if (!isAuthReady || !db || !userId) return;
     if (transactionListenerUnsubscribe) transactionListenerUnsubscribe();
     if (loadingHistory) loadingHistory.textContent = 'Cargando historial...';
+    renderSkeletonList(historyContainer, 3);
     const userTransactionsRef = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
     const q = query(userTransactionsRef);
     transactionListenerUnsubscribe = onSnapshot(q, (snapshot) => {
@@ -1267,22 +1268,22 @@ function setupTransactionListener() {
         renderTransactionHistory(transactions);
     }, (error) => {
         console.error("Error al escuchar transacciones:", error);
-        loadingHistory.textContent = "Error al cargar el historial.";
+        if (historyContainer) historyContainer.innerHTML = '<p class="text-sm text-red-600 p-2">Error al cargar el historial.</p>';
     });
 }
 
 function getStatusBadgeClasses(status) {
     switch (status) {
         case 'Pendiente':
-            return 'bg-orange-100 text-orange-800';
+            return 'bg-amber-100 text-amber-800';
         case 'Completado':
-            return 'bg-green-100 text-green-800';
+            return 'bg-emerald-100 text-emerald-800';
         case 'Cancelada':
-            return 'bg-gray-200 text-gray-700';
+            return 'bg-slate-200 text-slate-600';
         case 'Sin comprobante':
-            return 'bg-blue-100 text-blue-800';
+            return 'bg-sky-100 text-sky-800';
         default:
-            return 'bg-gray-100 text-gray-700';
+            return 'bg-slate-100 text-slate-600';
     }
 }
 
@@ -1335,7 +1336,7 @@ function renderTransactionHistory(transactions) {
                     <p class="m3-money-line text-sm sm:text-base">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
                     <p class="text-xs text-slate-400 mt-1">${date} ${time}</p>
                 </div>
-                <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${badgeClasses}">${escapeHtml(tx.status || 'N/A')}</span>
+                <span class="inline-flex items-center self-start px-2 py-0.5 text-xs font-semibold rounded-full ${badgeClasses}">${escapeHtml(tx.status || 'N/A')}</span>
             </div>
             <p class="m3-muted-chip">Tasa ${tx.rateApplied ? formatRounded(tx.rateApplied, 4) : 'N/A'}</p>
             ${destinationDetailsMarkup ? `<div class="pt-2 border-t border-gray-200 space-y-2">${destinationDetailsMarkup}</div>` : ''}
@@ -1438,7 +1439,7 @@ async function handleHistoryContainerClick(event) {
     if (!cancelButton) return;
     const transactionId = cancelButton.dataset.transactionId;
     if (!transactionId) return;
-    const confirmed = window.confirm('Deseas cancelar esta orden? Esta accin no se puede deshacer.');
+    const confirmed = await showConfirm('¿Deseas cancelar esta orden? Esta acción no se puede deshacer.', { title: 'Cancelar orden', acceptText: 'Sí, cancelar' });
     if (!confirmed) return;
     const originalText = cancelButton.textContent;
     cancelButton.disabled = true;
@@ -1452,7 +1453,7 @@ async function handleHistoryContainerClick(event) {
         cancelButton.classList.add('bg-gray-100', 'border-gray-200', 'text-gray-500', 'cursor-not-allowed');
     } catch (error) {
         console.error('Error al cancelar la orden:', error);
-        alert(`No se pudo cancelar la orden: ${error.message}`);
+        showToast(`No se pudo cancelar la orden: ${error.message}`, 'error');
         cancelButton.disabled = false;
         cancelButton.textContent = originalText;
         cancelButton.style.opacity = previousOpacity || '';
@@ -1646,8 +1647,8 @@ async function setupAdminTransactionsListener({ append = false } = {}) {
     if (!append) {
         adminTransactionsCursor = null;
         adminTransactionsHasMore = false;
-        adminPendingTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Cargando órdenes...</p>';
-        adminCompletedTransactionsList.innerHTML = '<p class="text-sm text-gray-500">Cargando órdenes...</p>';
+        renderSkeletonList(adminPendingTransactionsList, 2);
+        renderSkeletonList(adminCompletedTransactionsList, 2);
         setAdminOrdersStatus('Cargando órdenes recientes...');
     } else {
         setAdminOrdersStatus('Cargando más órdenes...');
@@ -1747,8 +1748,8 @@ function renderAdminTransactions(transactions, { append = false } = {}) {
     pendingTransactions.forEach(tx => adminPendingTransactionsList.appendChild(createAdminTransactionCard(tx)));
     completedTransactions.forEach(tx => adminCompletedTransactionsList.appendChild(createAdminTransactionCard(tx)));
 
-    if (!adminPendingTransactionsList.children.length) adminPendingTransactionsList.innerHTML = '<p class="text-sm text-slate-400 p-3">No hay solicitudes pendientes.</p>';
-    if (!adminCompletedTransactionsList.children.length) adminCompletedTransactionsList.innerHTML = '<p class="text-sm text-slate-400 p-3">No hay solicitudes completadas.</p>';
+    if (!adminPendingTransactionsList.children.length) adminPendingTransactionsList.innerHTML = '<p class="text-sm text-slate-500 p-3">No hay solicitudes pendientes.</p>';
+    if (!adminCompletedTransactionsList.children.length) adminCompletedTransactionsList.innerHTML = '<p class="text-sm text-slate-500 p-3">No hay solicitudes completadas.</p>';
     adminTransactionsSection.classList.remove('hidden');
 }
 
@@ -1795,43 +1796,43 @@ function createAdminTransactionCard(tx) {
     card.innerHTML = `
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
             <div class="space-y-1">
-                <p class="text-sm sm:text-base font-black text-slate-100">Solicitud ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}</p>
+                <p class="text-sm sm:text-base font-bold text-slate-900">Solicitud ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}</p>
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 font-semibold uppercase tracking-wide bg-cyan-100 text-cyan-700 rounded-full" style="font-size:0.7rem;">Cliente</span>
-                    <span class="text-xs text-slate-300 break-words" title="${escapeHtml(ownerLabel)}">${escapeHtml(ownerLabel)}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 font-semibold uppercase tracking-wide bg-amber-100 text-amber-800 rounded-full" style="font-size:0.7rem;">Cliente</span>
+                    <span class="text-xs text-slate-500 break-words" title="${escapeHtml(ownerLabel)}">${escapeHtml(ownerLabel)}</span>
                 </div>
             </div>
-            <span class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
+            <span class="inline-flex items-center self-start px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
         </div>
         <div class="space-y-2">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div class="rounded-2xl bg-slate-900/50 border border-slate-700/50 p-3"><p class="text-[11px] font-bold uppercase tracking-wide text-slate-400">Enviado</p><p class="m3-money-line mt-1">${formatCurrency(tx.amountSend || 0, tx.currencySend || 'CLP')}</p></div>
-                <div class="rounded-2xl bg-cyan-950/40 border border-cyan-800/40 p-3"><p class="text-[11px] font-bold uppercase tracking-wide text-cyan-300">Destino</p><p class="m3-money-line mt-1">${formatCurrency(tx.amountReceive || 0, tx.currencyReceive || 'CLP')}</p></div>
+                <div class="rounded-2xl bg-slate-50 border border-slate-200 p-3"><p class="text-[11px] font-bold uppercase tracking-wide text-slate-500">Enviado</p><p class="m3-money-line mt-1">${formatCurrency(tx.amountSend || 0, tx.currencySend || 'CLP')}</p></div>
+                <div class="rounded-2xl bg-amber-50 border border-amber-200/70 p-3"><p class="text-[11px] font-bold uppercase tracking-wide text-amber-700">Destino</p><p class="m3-money-line mt-1">${formatCurrency(tx.amountReceive || 0, tx.currencyReceive || 'CLP')}</p></div>
             </div>
             ${tx.rateApplied ? createCopyRow('Tasa aplicada', formatRounded(tx.rateApplied, 4)) : ''}
         </div>
-        ${destinationDetailsMarkup ? `<div class="border-t border-dashed border-gray-200 pt-3 space-y-2">${destinationDetailsMarkup}</div>` : ''}
-        <div class="space-y-2 text-xs text-gray-600">
+        ${destinationDetailsMarkup ? `<div class="border-t border-dashed border-slate-200 pt-3 space-y-2">${destinationDetailsMarkup}</div>` : ''}
+        <div class="space-y-2 text-xs text-slate-600">
             ${userReceiptSection}
             ${adminReceiptSection}
         </div>
-        <div class="mt-2 border-t border-gray-200 pt-3">
-            <label class="block text-xs font-semibold text-gray-700 mb-2">Subir comprobante de destino</label>
+        <div class="mt-2 border-t border-slate-200 pt-3">
+            <label class="block text-xs font-semibold text-slate-700 mb-2">Subir comprobante de destino</label>
             <div class="flex flex-col md:flex-row gap-3">
                 <input type="file" class="admin-receipt-input field-control field-control-sm flex-1 text-sm" accept="image/*,.pdf" ${completionButtonDisabled ? 'disabled' : ''}>
                 <button class="admin-upload-btn btn btn-primary btn-sm" ${completionButtonDisabled ? 'disabled' : ''} style="white-space:normal;">${completionButtonText}</button>
             </div>
             <p class="admin-upload-status text-xs mt-2 hidden"></p>
-            ${awaitingClientReceipt ? '<p class="text-xs text-orange-600 mt-2">Esperando comprobante del cliente para habilitar esta accion.</p>' : ''}
+            ${awaitingClientReceipt ? '<p class="text-xs text-amber-700 mt-2">Esperando comprobante del cliente para habilitar esta acción.</p>' : ''}
         </div>
-        ${cancelButtonMarkup ? `<div class="pt-2 border-t border-dashed border-gray-200 space-y-2">
-            <p class="text-xs text-gray-600">Acciones administrativas</p>
+        ${cancelButtonMarkup ? `<div class="pt-2 border-t border-dashed border-slate-200 space-y-2">
+            <p class="text-xs text-slate-600">Acciones administrativas</p>
             <div class="flex flex-wrap gap-2">${cancelButtonMarkup}</div>
         </div>` : ''}
     `;
     return card;
 }
-function handleAdminTransactionsListClick(event) {
+async function handleAdminTransactionsListClick(event) {
     if (!isCurrentUserAdmin) return;
     const copyButton = event.target.closest('.copy-btn');
     if (copyButton) {
@@ -1848,7 +1849,7 @@ function handleAdminTransactionsListClick(event) {
     if (cancelButton) {
         const transactionPath = cancelButton.getAttribute('data-transaction-path');
         if (!transactionPath) return;
-        const confirmed = window.confirm('Deseas cancelar esta orden? Esta accin no se puede deshacer.');
+        const confirmed = await showConfirm('¿Deseas cancelar esta orden? Esta acción no se puede deshacer.', { title: 'Cancelar orden', acceptText: 'Sí, cancelar' });
         if (!confirmed) return;
         const originalText = cancelButton.textContent;
         cancelButton.disabled = true;
@@ -1865,7 +1866,7 @@ function handleAdminTransactionsListClick(event) {
             })
             .catch(error => {
                 console.error('Error al cancelar orden (admin):', error);
-                alert(`No se pudo cancelar la orden: ${error.message}`);
+                showToast(`No se pudo cancelar la orden: ${error.message}`, 'error');
                 cancelButton.disabled = false;
                 cancelButton.textContent = originalText;
                 cancelButton.classList.remove('opacity-60');
@@ -1965,6 +1966,61 @@ function escapeHtml(value) {
     return String(value ??  '').replace(/[&<>'"/]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','/':'&#x2F;'})[s]);
 }
 
+// --- Feedback visual propio (reemplaza alert/confirm nativos) ---
+
+function showToast(message, type = 'info', duration = 3500) {
+    const stack = document.getElementById('toast-stack');
+    if (!stack || !message) return;
+    const safeType = ['success', 'error', 'info'].includes(type) ? type : 'info';
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${safeType}`;
+    toast.textContent = message;
+    stack.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    window.setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        window.setTimeout(() => toast.remove(), 260);
+    }, duration);
+}
+
+function showConfirm(message, { title = 'Confirmar acción', acceptText = 'Confirmar' } = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const titleElement = document.getElementById('confirm-title');
+        const messageElement = document.getElementById('confirm-message');
+        const acceptButton = document.getElementById('confirm-accept-button');
+        const cancelButton = document.getElementById('confirm-cancel-button');
+        if (!modal || !titleElement || !messageElement || !acceptButton || !cancelButton) {
+            resolve(window.confirm(message));
+            return;
+        }
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+        acceptButton.textContent = acceptText;
+        modal.classList.remove('hidden');
+        let settled = false;
+        const finish = (result) => {
+            if (settled) return;
+            settled = true;
+            modal.classList.add('hidden');
+            resolve(result);
+        };
+        acceptButton.onclick = () => finish(true);
+        cancelButton.onclick = () => finish(false);
+    });
+}
+
+function renderSkeletonList(container, count = 3) {
+    if (!container) return;
+    container.innerHTML = Array.from({ length: Math.max(1, count) }, () => `
+        <div class="skeleton space-y-2" aria-hidden="true">
+            <div class="skeleton-line w-2-3"></div>
+            <div class="skeleton-line w-1-2"></div>
+            <div class="skeleton-line w-1-3"></div>
+        </div>
+    `).join('');
+}
+
 function createCopyRow(label, value) {
     return `
         <div class="relative py-0.5">
@@ -1992,10 +2048,21 @@ function registerStaticEventListeners() {
     });
     if (menuCloseButton) menuCloseButton.addEventListener('click', closeAppMenu);
     if (menuBackdrop) menuBackdrop.addEventListener('click', closeAppMenu);
+    const bottomNavMenuButton = document.getElementById('bottom-nav-menu-button');
+    if (bottomNavMenuButton) bottomNavMenuButton.addEventListener('click', openAppMenu);
+    const closeModalXButton = document.getElementById('close-modal-x-button');
+    if (closeModalXButton && paymentModal) closeModalXButton.addEventListener('click', () => paymentModal.classList.add('hidden'));
+    const confirmModal = document.getElementById('confirm-modal');
+    if (confirmModal) confirmModal.addEventListener('click', (event) => {
+        if (event.target === confirmModal) {
+            const confirmCancelButton = document.getElementById('confirm-cancel-button');
+            if (confirmCancelButton) confirmCancelButton.click();
+        }
+    });
     document.addEventListener('click', (event) => {
         if (!appNavMenu || appNavMenu.classList.contains('hidden')) return;
         const target = event.target;
-        if (appNavMenu.contains(target) || menuToggleButton?.contains(target)) return;
+        if (appNavMenu.contains(target) || menuToggleButton?.contains(target) || bottomNavMenuButton?.contains(target)) return;
         closeAppMenu();
     });
     document.querySelectorAll('[data-view]').forEach((button) => {

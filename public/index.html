@@ -5,1639 +5,1306 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
-    <title>Calculadora de Intercambio y Remesas (CLP/VES/WLD)</title>
+    <title>My Remesas — Casa de cambio CLP / VES / USDT / WLD</title>
+
+    <meta name="description" content="Calculadora de intercambio y seguimiento de órdenes de remesas entre CLP, VES, USDT y WLD con tasas consultadas en vivo.">
+
+    <meta property="og:title" content="My Remesas — Casa de cambio digital">
+
+    <meta property="og:description" content="Consulta tasas en vivo, calcula tu envío y sigue tus órdenes en un solo lugar.">
+
+    <meta property="og:type" content="website">
+
+    <meta name="theme-color" content="#0b0f1a">
+
+    <link rel="icon" href="/favicon.ico">
 
     <!-- Carga de Tailwind CSS compilado -->
 
     <link href="/styles/output.css" rel="stylesheet">
 
     <style>
-
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
 
-        body {
-
-            font-family: 'Outfit', sans-serif;
-
-            color: #e2e8f0;
-
-            background:
-                radial-gradient(circle at top left, rgba(245, 158, 11, 0.12), transparent 24%),
-                radial-gradient(circle at top right, rgba(14, 165, 233, 0.11), transparent 20%),
-                linear-gradient(180deg, #060913 0%, #0a1020 34%, #0d1323 100%);
-
+        /* ============================================================
+           TOKENS
+           z-index: bottom-nav 40 · menu-backdrop 55 · menu-sheet 60 ·
+           modal-overlay 1000 · toast-stack 1200
+           ============================================================ */
+        :root {
+            --accent: #d97706;
+            --accent-strong: #b45309;
+            --accent-bright: #f59e0b;
+            --accent-soft: rgba(217, 119, 6, 0.10);
+            --ink: #0f172a;
+            --ink-soft: #475569;
+            --ink-muted: #64748b;
+            --paper: #f7f6f3;
+            --surface: #ffffff;
+            --line: rgba(15, 23, 42, 0.08);
+            --line-strong: rgba(15, 23, 42, 0.14);
+            --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px -18px rgba(15, 23, 42, 0.16);
+            --shadow-float: 0 24px 60px -28px rgba(15, 23, 42, 0.28);
+            --radius-lg: 1.35rem;
+            --radius-md: 1rem;
+            --radius-sm: 0.75rem;
+            --dark-bg-0: #070b14;
+            --dark-bg-1: #0d1322;
+            --dark-surface: rgba(17, 24, 39, 0.72);
+            --dark-line: rgba(148, 163, 184, 0.14);
+            --dark-text: #e2e8f0;
+            --dark-text-soft: #94a3b8;
         }
 
-        body::before {
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
 
-            content: '';
+        html {
+            scroll-behavior: smooth;
+        }
 
-            position: fixed;
+        body {
+            font-family: 'Outfit', sans-serif;
+            color: var(--ink);
+            background: var(--paper);
+        }
 
-            inset: 0;
-
-            pointer-events: none;
-
-            background-image:
-                linear-gradient(rgba(148, 163, 184, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
-
-            background-size: 24px 24px;
-
-            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent);
-
+        ::selection {
+            background: rgba(245, 158, 11, 0.25);
         }
 
         h1, h2, h3, h4 {
-
             text-wrap: balance;
-
         }
 
-        .display-title {
-
-            font-family: 'Fraunces', serif;
-
-            letter-spacing: -0.04em;
-
-            line-height: 1;
-
-        }
-
+        .display-title,
         .section-title {
-
             font-family: 'Fraunces', serif;
-
-            letter-spacing: -0.025em;
-
-            line-height: 1;
-
+            letter-spacing: -0.03em;
+            line-height: 1.05;
         }
 
-        .currency-chip {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            padding: 0.5rem 0.85rem;
-
-            border-radius: 999px;
-
-            border: 1px solid rgba(245, 158, 11, 0.18);
-
-            background: rgba(148, 163, 184, 0.08);
-
-            color: #f8fafc;
-
-            font-size: 0.76rem;
-
-            font-weight: 700;
-
-            letter-spacing: 0.08em;
-
-            text-transform: uppercase;
-
+        .money {
+            font-variant-numeric: tabular-nums;
         }
 
-        .card-shadow {
+        /* ---------- Escena oscura (login / registro) ---------- */
 
-            box-shadow: 0 28px 80px -46px rgba(15, 23, 42, 0.34), 0 10px 24px -18px rgba(14, 116, 144, 0.22);
-
-        }
-
-        .shell-card {
-
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.86));
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            border-radius: 1.65rem;
-
-            box-shadow: 0 40px 90px -56px rgba(2, 6, 23, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-
-            backdrop-filter: blur(16px);
-
-        }
-
-        .soft-panel {
-
-            background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(15, 23, 42, 0.92));
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            border-radius: 1.35rem;
-
-        }
-
-        .field-control {
-
-            width: 100%;
-
-            min-height: 3.2rem;
-
-            padding: 0.85rem 1rem;
-
-            border: 1px solid rgba(148, 163, 184, 0.16);
-
-            border-radius: 1rem;
-
-            background: rgba(15, 23, 42, 0.94);
-
-            color: #f8fafc;
-
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
-
-            transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease, transform 180ms ease;
-
-        }
-
-        .field-control::placeholder {
-
-            color: #64748b;
-
-        }
-
-        .field-control:focus {
-
-            outline: none;
-
-            border-color: rgba(245, 158, 11, 0.48);
-
-            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
-
-            background: rgba(17, 24, 39, 0.98);
-
-        }
-
-        .field-control-sm {
-
-            min-height: 2.8rem;
-
-            padding: 0.68rem 0.9rem;
-
-            border-radius: 0.9rem;
-
-            font-size: 0.92rem;
-
-        }
-
-        .field-label {
-
-            display: block;
-
-            margin-bottom: 0.45rem;
-
-            font-size: 0.84rem;
-
-            font-weight: 700;
-
-            color: #cbd5e1;
-
-            letter-spacing: 0.01em;
-
-        }
-
-        .list-card {
-
-            background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.95));
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            border-radius: 1.2rem;
-
-            box-shadow: 0 20px 42px -34px rgba(2, 6, 23, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-
-        }
-
-        .market-strip {
-
-            display: grid;
-
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-
-            gap: 0.9rem;
-
-        }
-
-        @media (min-width: 768px) {
-
-            .market-strip {
-
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-
-            }
-
-        }
-
-        .market-tile {
-
+        #auth-container {
             position: relative;
-
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            padding: 2.5rem 1.25rem calc(2.5rem + env(safe-area-inset-bottom));
             overflow: hidden;
-
-            padding: 1rem;
-
-            border-radius: 1.25rem;
-
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(9, 14, 27, 0.96));
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-
+            background:
+                radial-gradient(52rem 30rem at 12% -6%, rgba(245, 158, 11, 0.14), transparent 60%),
+                radial-gradient(40rem 26rem at 96% 4%, rgba(56, 189, 248, 0.08), transparent 55%),
+                linear-gradient(180deg, var(--dark-bg-0) 0%, var(--dark-bg-1) 62%, #111a2e 100%);
+            color: var(--dark-text);
         }
 
-        .market-tile::after {
-
+        #auth-container::before {
             content: '';
-
             position: absolute;
-
-            inset: auto -20% -55% auto;
-
-            width: 9rem;
-
-            height: 9rem;
-
-            border-radius: 999px;
-
-            background: radial-gradient(circle, rgba(245, 158, 11, 0.18), transparent 68%);
-
+            inset: 0;
             pointer-events: none;
-
+            background-image:
+                linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+            background-size: 28px 28px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8), transparent 78%);
         }
 
-        .market-kicker {
-
-            font-size: 0.68rem;
-
-            text-transform: uppercase;
-
-            letter-spacing: 0.22em;
-
-            color: #64748b;
-
-            font-weight: 700;
-
+        .auth-brand {
+            position: relative;
+            max-width: 26rem;
+            text-align: center;
         }
 
-        .market-label {
+        .auth-brand .eyebrow {
+            justify-content: center;
+        }
 
-            font-size: 1rem;
+        #auth-container .eyebrow {
+            color: var(--accent-bright);
+        }
 
+        .auth-title {
+            font-family: 'Fraunces', serif;
+            font-size: clamp(2.1rem, 6vw, 2.8rem);
             font-weight: 700;
-
+            letter-spacing: -0.035em;
+            line-height: 1.02;
             color: #f8fafc;
-
-            margin-top: 0.45rem;
-
+            margin-top: 0.7rem;
         }
 
-        .market-subline {
+        .auth-tagline {
+            margin-top: 0.75rem;
+            font-size: 0.95rem;
+            line-height: 1.55;
+            color: var(--dark-text-soft);
+            text-wrap: pretty;
+        }
 
-            margin-top: 0.6rem;
+        .auth-card {
+            position: relative;
+            width: min(100%, 25rem);
+            padding: 1.9rem 1.6rem;
+            border-radius: 1.5rem;
+            background: var(--dark-surface);
+            border: 1px solid var(--dark-line);
+            box-shadow: 0 40px 90px -48px rgba(2, 6, 23, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(18px);
+        }
 
-            font-size: 0.78rem;
+        .auth-card h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            text-align: center;
+            color: #f8fafc;
+            margin-bottom: 1.35rem;
+        }
 
-            color: #94a3b8;
+        #auth-container .field-control {
+            background: rgba(2, 6, 23, 0.55);
+            border-color: var(--dark-line);
+            color: #f8fafc;
+        }
 
+        #auth-container .field-control:focus {
+            background: rgba(2, 6, 23, 0.75);
+        }
+
+        #auth-container .field-label {
+            color: #cbd5e1;
+        }
+
+        .auth-switch {
+            margin-top: 1.1rem;
+            text-align: center;
+            font-size: 0.86rem;
+            color: var(--dark-text-soft);
+        }
+
+        .auth-footer-note {
+            position: relative;
+            max-width: 26rem;
+            text-align: center;
+            font-size: 0.76rem;
             line-height: 1.5;
-
+            color: rgba(148, 163, 184, 0.75);
         }
 
-        .ticket-shell {
-
-            display: grid;
-
-            gap: 1rem;
-
+        .auth-status-error {
+            margin-top: 0.9rem;
+            text-align: center;
+            font-size: 0.84rem;
+            line-height: 1.45;
         }
 
-        .ticket-meta-grid {
+        /* ---------- Iconografía de marca ---------- */
 
-            display: grid;
-
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-
-            gap: 0.85rem;
-
-        }
-
-        @media (min-width: 768px) {
-
-            .ticket-meta-grid {
-
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-
-            }
-
-        }
-
-        .ticket-meta-card {
-
-            padding: 0.95rem 1rem;
-
-            border-radius: 1.1rem;
-
-            background: linear-gradient(180deg, rgba(8, 145, 178, 0.08), rgba(15, 23, 42, 0.58));
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-        }
-
-        .ticket-meta-card strong {
-
-            display: block;
-
-            margin-top: 0.35rem;
-
-            font-size: 1rem;
-
-            color: #f8fafc;
-
-        }
-
-        .order-ticket-board {
-
-            border-radius: 1.45rem;
-
-            padding: 1rem;
-
-            background: linear-gradient(180deg, rgba(2, 6, 23, 0.82), rgba(15, 23, 42, 0.72));
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-
-        }
-
-        .exchange-topbar {
-
-            display: flex;
-
+        .brand-mark {
+            display: inline-flex;
             align-items: center;
-
-            justify-content: space-between;
-
-            gap: 0.75rem;
-
-            padding: 0.55rem 0.75rem;
-
-            border-radius: 1rem;
-
-            background: rgba(2, 6, 23, 0.62);
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            margin-bottom: 0.8rem;
-
-        }
-
-        .exchange-topbar-group {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 0.5rem;
-
-            min-width: 0;
-
-        }
-
-        .exchange-dot {
-
-            width: 0.48rem;
-
-            height: 0.48rem;
-
-            border-radius: 999px;
-
-            background: #22c55e;
-
-            box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.14);
-
+            justify-content: center;
+            width: 2.4rem;
+            height: 2.4rem;
+            border-radius: 0.85rem;
             flex-shrink: 0;
-
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
+            color: #1c1917;
+            box-shadow: 0 10px 24px -12px rgba(234, 88, 12, 0.55);
         }
 
-        .exchange-topbar-label {
-
-            font-size: 0.68rem;
-
-            text-transform: uppercase;
-
-            letter-spacing: 0.16em;
-
-            color: #64748b;
-
-            font-weight: 700;
-
-        }
-
-        .exchange-topbar-value {
-
-            font-size: 0.82rem;
-
-            color: #f8fafc;
-
-            font-weight: 700;
-
-            white-space: nowrap;
-
-            overflow: hidden;
-
-            text-overflow: ellipsis;
-
-        }
-
-        .menu-session-card {
-
-            display: none;
-
-            border-radius: 1rem;
-
-            padding: 0.78rem 0.85rem;
-
-            background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(17, 24, 39, 0.94));
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            margin-bottom: 0.6rem;
-
-        }
-
-        .menu-session-label {
-
-            font-size: 0.62rem;
-
-            letter-spacing: 0.14em;
-
-            text-transform: uppercase;
-
-            color: #64748b;
-
-            font-weight: 700;
-
-        }
-
-        .menu-session-value {
-
-            margin-top: 0.28rem;
-
-            font-size: 0.8rem;
-
-            color: #f8fafc;
-
-            font-weight: 600;
-
-            word-break: break-word;
-
-        }
-
-        @media (max-width: 767px) {
-
-            body {
-
-                background:
-                    radial-gradient(circle at top left, rgba(245, 158, 11, 0.11), transparent 22%),
-                    linear-gradient(180deg, #060913 0%, #0a1020 45%, #0d1323 100%);
-
-            }
-
-            .shell-card {
-
-                border-radius: 1.25rem;
-
-            }
-
-            .soft-panel,
-            .list-card,
-            .market-tile,
-            .order-ticket-board {
-
-                border-radius: 1rem;
-
-            }
-
-            .btn-sm {
-
-                min-height: 2rem;
-
-                padding: 0.34rem 0.72rem;
-
-                font-size: 0.72rem;
-
-            }
-
-            .btn-md {
-
-                min-height: 2.35rem;
-
-                padding: 0.48rem 0.82rem;
-
-                font-size: 0.78rem;
-
-            }
-
-            .btn-lg {
-
-                min-height: 3rem;
-
-                padding: 0.78rem 1rem;
-
-                font-size: 0.92rem;
-
-            }
-
-            .field-control {
-
-                min-height: 2.9rem;
-
-                padding: 0.72rem 0.85rem;
-
-                font-size: 0.95rem;
-
-            }
-
-            .field-control-sm {
-
-                min-height: 2.55rem;
-
-                padding: 0.62rem 0.78rem;
-
-                font-size: 0.86rem;
-
-            }
-
-            .display-title {
-
-                font-size: 1.72rem;
-
-                line-height: 0.95;
-
-            }
-
-            .currency-chip {
-
-                padding: 0.34rem 0.58rem;
-
-                font-size: 0.62rem;
-
-            }
-
-            .market-strip {
-
-                gap: 0.65rem;
-
-            }
-
-            .market-tile {
-
-                padding: 0.82rem 0.9rem;
-
-            }
-
-            .market-label {
-
-                font-size: 0.92rem;
-
-            }
-
-            .market-subline {
-
-                font-size: 0.73rem;
-
-                line-height: 1.38;
-
-            }
-
-            .ticket-shell {
-
-                gap: 0.75rem;
-
-            }
-
-            .ticket-meta-grid {
-
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-
-                gap: 0.55rem;
-
-            }
-
-            .ticket-meta-card {
-
-                padding: 0.72rem 0.75rem;
-
-            }
-
-            .ticket-meta-card strong {
-
-                font-size: 0.83rem;
-
-                line-height: 1.15;
-
-            }
-
-            .order-ticket-board {
-
-                padding: 0.82rem;
-
-            }
-
-            .modal-content {
-
-                width: calc(100vw - 1rem);
-
-                max-width: calc(100vw - 1rem);
-
-                padding: 1rem;
-
-                border-radius: 1rem;
-
-            }
-
-            #app {
-
-                padding: 0.6rem;
-
-            }
-
-            #app header {
-
-                padding: 0.62rem;
-
-                margin-bottom: 0.55rem;
-
-            }
-
-            .exchange-topbar {
-
-                padding: 0.34rem 0.52rem;
-
-                margin-bottom: 0.48rem;
-
-                border-radius: 0.9rem;
-
-            }
-
-            .exchange-topbar-group:last-child {
-
-                display: none;
-
-            }
-
-            .exchange-topbar-label {
-
-                font-size: 0.54rem;
-
-                letter-spacing: 0.14em;
-
-            }
-
-            .exchange-topbar-value {
-
-                font-size: 0.66rem;
-
-            }
-
-            #app header .eyebrow {
-
-                font-size: 0.52rem;
-
-                letter-spacing: 0.14em;
-
-            }
-
-            #app header .eyebrow::before {
-
-                width: 0.85rem;
-
-            }
-
-            #app header .text-left p:last-child {
-
-                display: none;
-
-            }
-
-            #app header > p.text-slate-300 {
-
-                display: none;
-
-            }
-
-            #app header > div.mt-5.p-3.bg-cyan-50 {
-
-                display: none !important;
-
-            }
-
-            #app header > .flex.flex-wrap.items-center.justify-center.gap-2.mb-4 {
-
-                display: none;
-
-            }
-
-            #app header .flex.flex-wrap.items-center.justify-center.gap-2.mb-4 {
-
-                gap: 0.35rem;
-
-                margin-bottom: 0.55rem;
-
-            }
-
-            #app header .flex.items-start.justify-between,
-            #app header .flex.flex-col.sm\:flex-row.sm\:items-center.sm\:justify-between {
-
-                gap: 0.4rem;
-
-            }
-
-            #app header .mb-4 {
-
-                margin-bottom: 0.45rem;
-
-            }
-
-            #app-nav-menu {
-
-                padding: 0.62rem;
-
-                margin-top: 0.45rem;
-
-                width: min(20rem, calc(100vw - 0.45rem));
-
-                border-radius: 1rem 0 0 1rem;
-
-            }
-
-            .menu-session-card {
-
-                display: block;
-
-            }
-
-            .menu-nav-button {
-
-                padding: 0.78rem 0.85rem;
-
-                gap: 0.7rem;
-
-            }
-
-            #admin-panel,
-            #admin-transactions-section,
-            #order-creation-section > div > .shell-card,
-            #history-section > .shell-card {
-
-                padding: 1rem;
-
-            }
-
-            #user-id-display {
-
-                display: flex;
-
-                align-items: center;
-
-                justify-content: space-between;
-
-                gap: 0.75rem;
-
-                width: min(100%, 26rem);
-
-                margin-left: auto;
-
-                padding: 0.78rem 0.9rem;
-
-                border: 1px solid rgba(148, 163, 184, 0.18);
-
-                border-radius: 1rem;
-
-                background: linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.92));
-
-                box-shadow: 0 18px 45px rgba(2, 8, 23, 0.32);
-
-                font-size: 0.78rem;
-
-            }
-
-            #user-id-display > div {
-
-                min-width: 0;
-
-                line-height: 1.2;
-
-                text-align: left;
-
-            }
-
-            .session-pill-label {
-
-                margin: 0;
-
-                font-size: 0.62rem;
-
-                letter-spacing: 0.22em;
-
-                text-transform: uppercase;
-
-                color: rgba(148, 163, 184, 0.92);
-
-            }
-
-            #user-id {
-
-                display: block;
-
-                max-width: 14rem;
-
-                overflow: hidden;
-
-                text-overflow: ellipsis;
-
-                white-space: nowrap;
-
-                color: #f8fafc;
-
-                font-weight: 700;
-
-                margin-top: 0.18rem;
-
-            }
-
-            .session-pill-action {
-
-                white-space: nowrap;
-
-                flex-shrink: 0;
-
-            }
-
-            #auth-status {
-
-                margin-top: 0.2rem;
-
-                font-size: 0.66rem;
-
-            }
-
-            #payment-button,
-            #close-modal-button,
-            #save-margins-button,
-            #save-accounts-button {
-
-                margin-top: 0.85rem;
-
-            }
-
+        .brand-mark svg {
+            width: 1.25rem;
+            height: 1.25rem;
         }
 
         .eyebrow {
-
             display: inline-flex;
-
             align-items: center;
-
-            gap: 0.45rem;
-
-            font-size: 0.72rem;
-
+            gap: 0.5rem;
+            font-size: 0.7rem;
             font-weight: 700;
-
             text-transform: uppercase;
-
-            letter-spacing: 0.24em;
-
-            color: #f59e0b;
-
+            letter-spacing: 0.22em;
+            color: var(--accent-strong);
         }
 
         .eyebrow::before {
-
             content: '';
-
-            width: 1.8rem;
-
+            width: 1.6rem;
             height: 1px;
-
-            background: rgba(245, 158, 11, 0.42);
-
+            background: currentColor;
+            opacity: 0.45;
         }
 
-        /* Estilos del Modal */
+        /* ---------- Superficies del panel claro ---------- */
 
-        .modal-overlay {
+        .shell-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-card);
+        }
 
-            position: fixed;
+        .soft-panel {
+            background: #fbfaf8;
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+        }
 
-            top: 0;
+        .list-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-card);
+        }
 
-            left: 0;
+        /* ---------- Formularios ---------- */
 
+        .field-control {
             width: 100%;
-
-            height: 100%;
-
-            background-color: rgba(0, 0, 0, 0.7);
-
-            display: flex;
-
-            justify-content: center;
-
-            align-items: center;
-
-            z-index: 1000;
-
+            min-height: 3rem;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius-md);
+            background: var(--surface);
+            color: var(--ink);
+            transition: border-color 180ms ease, box-shadow 180ms ease;
         }
 
-        .modal-content {
-
-            background-color: white;
-
-            padding: 1.5rem;
-
-            border-radius: 12px;
-
-            max-width: 90%;
-
-            width: 500px;
-
-            max-height: 90%;
-
-            overflow-y: auto;
-
-            transform: translateY(0);
-
-            transition: transform 0.3s ease-out;
-
+        .field-control::placeholder {
+            color: #94a3b8;
         }
 
-        .account-detail {
-
-            display: flex;
-
-            justify-content: space-between;
-
-            align-items: center;
-
-            padding: 8px 0;
-
-            border-bottom: 1px dashed #e5e7eb;
-
+        .field-control:focus {
+            outline: none;
+            border-color: rgba(217, 119, 6, 0.55);
+            box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.12);
         }
 
-        .account-detail:last-child {
-
-            border-bottom: none;
-
+        .field-control-sm {
+            min-height: 2.7rem;
+            padding: 0.6rem 0.85rem;
+            border-radius: 0.85rem;
+            font-size: 0.92rem;
         }
 
-         /* Animación para el botón de copiado */
-
-        .copy-feedback {
-
-            position: absolute;
-
-            bottom: 100%;
-
-            left: 50%;
-
-            transform: translateX(-50%);
-
-            background-color: #2dd4bf;
-
-            color: white;
-
-            padding: 4px 8px;
-
-            border-radius: 6px;
-
-            font-size: 12px;
-
-            white-space: nowrap;
-
-            opacity: 0;
-
-            transition: opacity 0.3s ease, transform 0.3s ease;
-
+        .field-label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--ink-soft);
         }
 
-        /* Fallback para mantener elementos ocultos si Tailwind no carga */
-
-        .hidden {
-
-            display: none !important;
-
+        select.field-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.9rem center;
+            padding-right: 2.4rem;
         }
 
-        :root {
-
-            --btn-radius: 0.75rem;
-
-            --btn-shadow: 0 10px 25px -10px rgba(14, 116, 144, 0.35);
-
-        }
+        /* ---------- Botones (misma API de clases) ---------- */
 
         .btn {
-
             display: inline-flex;
-
             align-items: center;
-
             justify-content: center;
-
             gap: 0.5rem;
-
-            border-radius: var(--btn-radius);
-
-            font-weight: 700;
-
+            border-radius: var(--radius-sm);
+            font-weight: 600;
             letter-spacing: 0.01em;
-
-            transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-
-            border-width: 1px;
-
-            border-style: solid;
-
+            transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+            border: 1px solid transparent;
             cursor: pointer;
-
-            box-shadow: none;
-
         }
 
-        .btn-sm { min-height: 2.35rem; padding: 0.4rem 0.95rem; font-size: 0.78rem; border-radius: 0.85rem; }
+        .btn:active {
+            transform: scale(0.98);
+        }
 
-        .btn-md { min-height: 2.8rem; padding: 0.65rem 1.15rem; font-size: 0.88rem; border-radius: 0.95rem; }
-
-        .btn-lg { min-height: 3.35rem; padding: 0.9rem 1.45rem; font-size: 1rem; border-radius: 1.05rem; }
+        .btn-sm { min-height: 2.25rem; padding: 0.35rem 0.85rem; font-size: 0.78rem; border-radius: 0.7rem; }
+        .btn-md { min-height: 2.7rem; padding: 0.55rem 1.05rem; font-size: 0.88rem; border-radius: 0.85rem; }
+        .btn-lg { min-height: 3.25rem; padding: 0.85rem 1.4rem; font-size: 1rem; border-radius: 0.95rem; }
 
         .btn-primary {
-
-            background: linear-gradient(135deg, #f59e0b, #f97316);
-
-            color: #111827;
-
-            border-color: rgba(251, 146, 60, 0.72);
-
-            box-shadow: 0 22px 40px -24px rgba(249, 115, 22, 0.52);
-
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
+            color: #1c1917;
+            border-color: rgba(234, 88, 12, 0.4);
+            box-shadow: 0 16px 34px -18px rgba(234, 88, 12, 0.6);
         }
 
         .btn-primary:hover {
-
             background: linear-gradient(135deg, #fbbf24, #f97316);
-
             transform: translateY(-1px);
-
         }
 
         .btn-secondary {
-
-            background: linear-gradient(135deg, #111827, #1f2937);
-
+            background: #0f172a;
             color: #ffffff;
-
-            border-color: rgba(148, 163, 184, 0.18);
-
-            box-shadow: 0 18px 35px -26px rgba(15, 23, 42, 0.64);
-
+            border-color: #0f172a;
+            box-shadow: 0 14px 30px -20px rgba(15, 23, 42, 0.7);
         }
 
         .btn-secondary:hover {
-
-            background: linear-gradient(135deg, #1f2937, #334155);
-
+            background: #1e293b;
             transform: translateY(-1px);
-
         }
 
         .btn-danger {
-
-            background: #fff7ed;
-
-            color: #c2410c;
-
-            border-color: rgba(249, 115, 22, 0.28);
-
-            box-shadow: none;
-
+            background: #fef2f2;
+            color: #b91c1c;
+            border-color: rgba(185, 28, 28, 0.22);
         }
 
         .btn-danger:hover {
-
-            background: #ffedd5;
-
-            transform: translateY(-1px);
-
+            background: #fee2e2;
         }
 
         .btn-outline {
-
-            background: rgba(148, 163, 184, 0.08);
-
-            color: #f8fafc;
-
-            border-color: rgba(148, 163, 184, 0.16);
-
+            background: var(--surface);
+            color: var(--ink-soft);
+            border-color: var(--line-strong);
         }
 
         .btn-outline:hover {
-
-            border-color: rgba(245, 158, 11, 0.24);
-
-            color: #f8fafc;
-
-            background: rgba(245, 158, 11, 0.08);
-
+            border-color: rgba(217, 119, 6, 0.45);
+            color: var(--accent-strong);
+            background: var(--accent-soft);
         }
 
         .btn-ghost {
-
             background: transparent;
-
-            color: #0e7490;
-
+            color: var(--accent-strong);
             border-color: transparent;
-
         }
 
         .btn-ghost:hover {
-
-            background: rgba(14, 116, 144, 0.08);
-
-            color: #334155;
-
-        }
-
-        .btn:focus-visible {
-
-            outline: 3px solid rgba(14, 116, 144, 0.25);
-
-            outline-offset: 2px;
-
-        }
-
-        .btn:disabled,
-
-        .btn[disabled] {
-
-            opacity: 0.55;
-
-            cursor: not-allowed;
-
-            box-shadow: none;
-
-            transform: none;
-
-        }
-
-        .btn-icon {
-
-            width: 2.25rem;
-
-            height: 2.25rem;
-
-            padding: 0;
-
-            border-radius: 999px;
-
+            background: var(--accent-soft);
         }
 
         .btn-link {
-
             background: transparent;
-
             border-color: transparent;
-
-            color: #0ea5e9;
-
+            color: var(--accent-bright);
             padding: 0;
-
+            font-weight: 600;
         }
 
         .btn-link:hover {
-
-            color: #0284c7;
-
             text-decoration: underline;
+        }
 
+        .btn-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            padding: 0;
+            border-radius: 999px;
+        }
+
+        .btn:focus-visible,
+        .field-control:focus-visible,
+        .bottom-nav-button:focus-visible,
+        .menu-nav-button:focus-visible {
+            outline: 3px solid rgba(217, 119, 6, 0.35);
+            outline-offset: 2px;
+        }
+
+        .btn:disabled,
+        .btn[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
         }
 
         button.btn svg {
-
             width: 1.1rem;
-
             height: 1.1rem;
-
+            flex-shrink: 0;
         }
+
+        /* ---------- Chips y etiquetas ---------- */
+
+        .currency-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.4rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid var(--line-strong);
+            background: var(--surface);
+            color: var(--ink-soft);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        #auth-container .currency-chip {
+            background: rgba(148, 163, 184, 0.08);
+            border-color: rgba(245, 158, 11, 0.2);
+            color: #f8fafc;
+        }
+
+        .market-kicker {
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--ink-muted);
+            font-weight: 700;
+        }
+
+        .market-label {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--ink);
+            margin-top: 0.4rem;
+        }
+
+        .market-subline {
+            margin-top: 0.55rem;
+            font-size: 0.78rem;
+            color: var(--ink-muted);
+            line-height: 1.5;
+        }
+
+        .market-strip {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+            gap: 0.9rem;
+        }
+
+        @media (min-width: 768px) {
+            .market-strip {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+
+        .market-tile {
+            position: relative;
+            overflow: hidden;
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow-card);
+        }
+
+        .market-tile::after {
+            content: '';
+            position: absolute;
+            inset: auto -20% -55% auto;
+            width: 9rem;
+            height: 9rem;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.12), transparent 68%);
+            pointer-events: none;
+        }
+
+        /* ---------- Topbar y tarjetas de ticket ---------- */
+
+        .exchange-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.55rem 0.8rem;
+            border-radius: 0.9rem;
+            background: #fbfaf8;
+            border: 1px solid var(--line);
+            margin-bottom: 0.9rem;
+        }
+
+        .exchange-topbar-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .exchange-dot {
+            width: 0.48rem;
+            height: 0.48rem;
+            border-radius: 999px;
+            background: #10b981;
+            box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.14);
+            flex-shrink: 0;
+        }
+
+        .exchange-topbar-label {
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--ink-muted);
+            font-weight: 700;
+        }
+
+        .exchange-topbar-value {
+            font-size: 0.8rem;
+            color: var(--ink);
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-shell {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .ticket-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.6rem;
+        }
+
+        .ticket-meta-card {
+            padding: 0.8rem 0.9rem;
+            border-radius: 0.9rem;
+            background: #fbfaf8;
+            border: 1px solid var(--line);
+        }
+
+        .ticket-meta-card strong {
+            display: block;
+            margin-top: 0.3rem;
+            font-size: 0.86rem;
+            color: var(--ink);
+            line-height: 1.2;
+        }
+
+        .order-ticket-board {
+            border-radius: var(--radius-md);
+            padding: 1.1rem;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow-card);
+        }
+
+        /* ---------- Hero de sección (light) ---------- */
+
+        .m3-hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 1.5rem;
+            padding: 1.35rem 1.25rem;
+            background:
+                radial-gradient(26rem 14rem at 8% 0%, rgba(245, 158, 11, 0.14), transparent 60%),
+                linear-gradient(135deg, #fffdfa, #fdf6ec);
+            border: 1px solid rgba(217, 119, 6, 0.16);
+            box-shadow: var(--shadow-card);
+        }
+
+        .m3-hero-kicker {
+            font-size: 0.66rem;
+            font-weight: 800;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--accent-strong);
+        }
+
+        .m3-hero .section-title {
+            color: var(--ink);
+        }
+
+        .m3-hero p {
+            color: var(--ink-soft);
+        }
+
+        .m3-icon-surface {
+            display: inline-grid;
+            place-items: center;
+            width: 2.75rem;
+            height: 2.75rem;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #fef3c7, #ffedd5);
+            color: var(--accent-strong);
+            border: 1px solid rgba(217, 119, 6, 0.18);
+            flex-shrink: 0;
+        }
+
+        .m3-column {
+            border-radius: var(--radius-lg);
+            padding: 1.1rem;
+            background: #fbfaf8;
+            border: 1px solid var(--line);
+        }
+
+        .m3-column-title {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .m3-status-dot {
+            width: 0.7rem;
+            height: 0.7rem;
+            border-radius: 999px;
+            box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.05);
+            flex-shrink: 0;
+        }
+
+        .m3-result-card {
+            margin-top: 1.4rem;
+            padding: 1.3rem 1.25rem;
+            border-radius: 1.4rem;
+            position: relative;
+            overflow: hidden;
+            background:
+                radial-gradient(20rem 12rem at 92% -10%, rgba(251, 191, 36, 0.28), transparent 60%),
+                linear-gradient(135deg, #101828, #1c2941 70%, #26324b);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: #f8fafc;
+            box-shadow: 0 26px 60px -30px rgba(16, 24, 40, 0.75);
+        }
+
+        .m3-transaction-card {
+            border-radius: 1.15rem;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            box-shadow: var(--shadow-card);
+        }
+
+        .m3-money-line {
+            font-variant-numeric: tabular-nums;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: var(--ink);
+        }
+
+        .m3-muted-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-radius: 999px;
+            padding: 0.26rem 0.6rem;
+            background: #f1f5f9;
+            color: var(--ink-soft);
+            font-size: 0.72rem;
+            font-weight: 600;
+            width: fit-content;
+        }
+
+        /* ---------- Menú lateral (drawer) ---------- */
 
         .menu-sheet {
-
             position: fixed;
-
             top: 0;
-
             right: 0;
-
             bottom: 0;
-
-            width: min(24rem, calc(100vw - 1rem));
-
+            width: min(22rem, calc(100vw - 1.5rem));
             height: 100dvh;
-
             z-index: 60;
-
             display: flex;
-
             flex-direction: column;
-
-            padding: 1rem;
-
-            backdrop-filter: blur(14px);
-
-            background: rgba(10, 15, 29, 0.96);
-
-            border: 1px solid rgba(148, 163, 184, 0.12);
-
-            border-radius: 1.5rem 0 0 1.5rem;
-
-            box-shadow: -20px 0 60px -36px rgba(2, 6, 23, 0.95);
-
-        }
-
-        .menu-backdrop {
-
-            position: fixed;
-
-            inset: 0;
-
-            z-index: 55;
-
-            background: rgba(2, 6, 23, 0.56);
-
-            backdrop-filter: blur(4px);
-
-            opacity: 1;
-
-            transition: opacity 220ms ease;
-
-        }
-
-        .menu-backdrop.hidden {
-
-            opacity: 0;
-
-            pointer-events: none;
-
-        }
-
-        .menu-sheet-header {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: space-between;
-
-            gap: 1rem;
-
-            margin-bottom: 0.9rem;
-
-        }
-
-        .menu-sheet-title {
-
-            font-size: 0.82rem;
-
-            text-transform: uppercase;
-
-            letter-spacing: 0.18em;
-
-            color: #94a3b8;
-
-            font-weight: 700;
-
-        }
-
-        .menu-sheet-body {
-
-            overflow-y: auto;
-
-            padding-right: 0.15rem;
-
-        }
-
-        .menu-nav-button {
-
-            width: 100%;
-
-            justify-content: flex-start;
-
-            padding: 0.9rem 1rem;
-
-            border-radius: 1rem;
-
-            border: 1px solid rgba(148, 163, 184, 0.1);
-
-            background: rgba(15, 23, 42, 0.92);
-
-            color: #f8fafc;
-
-            position: relative;
-
-        }
-
-        .menu-nav-button:hover {
-
-            background: rgba(30, 41, 59, 0.95);
-
-            transform: translateY(-1px);
-
-        }
-
-        .menu-nav-button.active {
-
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(249, 115, 22, 0.18));
-
-            color: #f8fafc;
-
-            border-color: rgba(245, 158, 11, 0.36);
-
-            box-shadow: 0 16px 32px -26px rgba(245, 158, 11, 0.35);
-
-        }
-
-        .menu-nav-button.active::before {
-
-            content: '';
-
-            position: absolute;
-
-            left: -0.45rem;
-
-            top: 50%;
-
-            width: 0.2rem;
-
-            height: 58%;
-
-            border-radius: 999px;
-
-            transform: translateY(-50%);
-
-            background: linear-gradient(180deg, #f59e0b, #f97316);
-
-            box-shadow: 0 0 18px rgba(245, 158, 11, 0.45);
-
-        }
-
-        .menu-nav-icon {
-
-            width: 2rem;
-
-            height: 2rem;
-
-            border-radius: 0.8rem;
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            background: rgba(148, 163, 184, 0.08);
-
-            border: 1px solid rgba(148, 163, 184, 0.1);
-
-            color: #f8fafc;
-
-            flex-shrink: 0;
-
-            font-size: 0.88rem;
-
-        }
-
-        .menu-footer-note {
-
-            margin-top: 0.85rem;
-
-            padding-top: 0.85rem;
-
-            border-top: 1px solid rgba(148, 163, 184, 0.08);
-
-            font-size: 0.74rem;
-
-            line-height: 1.45;
-
-            color: #94a3b8;
-
+            padding: 1.1rem;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 1.4rem 0 0 1.4rem;
+            box-shadow: -24px 0 70px -40px rgba(15, 23, 42, 0.5);
+            transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease;
         }
 
         .menu-sheet.menu-enter {
-
             transform: translateX(0);
-
             opacity: 1;
-
         }
 
         .menu-sheet.menu-exit {
-
             transform: translateX(105%);
-
             opacity: 0;
-
             pointer-events: none;
-
         }
 
-        .menu-sheet {
-
-            transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease;
-
+        .menu-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 55;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(3px);
+            opacity: 1;
+            transition: opacity 220ms ease;
         }
 
-        #app p,
-        #app label,
-        #app span,
-        #app strong,
-        #app h2,
-        #app h3,
-        #app h4 {
-
-            color: inherit;
-
+        .menu-backdrop.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
 
-        #app .text-slate-500,
-        #app .text-gray-500,
-        #app .text-gray-600,
-        #app .text-gray-700 {
-
-            color: #94a3b8 !important;
-
+        .menu-sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
 
-        #app .text-gray-800,
-        #app .text-slate-900,
-        #app .text-gray-900 {
-
-            color: #f8fafc !important;
-
+        .menu-sheet-title {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--ink-muted);
+            font-weight: 700;
         }
 
-        #app .text-yellow-900,
-        #app .text-yellow-800,
-        #app .text-yellow-700 {
-
-            color: #f8fafc !important;
-
+        .menu-sheet-body {
+            overflow-y: auto;
+            padding-right: 0.15rem;
         }
 
-        #app .text-cyan-700,
-        #app .text-cyan-900 {
-
-            color: #f8fafc !important;
-
+        .menu-session-card {
+            display: none;
+            border-radius: var(--radius-md);
+            padding: 0.8rem 0.9rem;
+            background: #fbfaf8;
+            border: 1px solid var(--line);
+            margin-bottom: 0.7rem;
         }
 
-        #app .bg-cyan-50 {
-
-            background: rgba(8, 145, 178, 0.08) !important;
-
+        .menu-session-label {
+            font-size: 0.6rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+            font-weight: 700;
         }
 
-        #app .border-cyan-100,
-        #app .border-yellow-200,
-        #app .border-yellow-300,
-        #app .border-gray-200,
-        #app .border-gray-300 {
-
-            border-color: rgba(148, 163, 184, 0.12) !important;
-
+        .menu-session-value {
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+            color: var(--ink);
+            font-weight: 600;
+            word-break: break-word;
         }
+
+        .menu-nav-button {
+            width: 100%;
+            justify-content: flex-start;
+            padding: 0.85rem 0.95rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--ink);
+            position: relative;
+            text-align: left;
+        }
+
+        .menu-nav-button:hover {
+            background: #fbfaf8;
+        }
+
+        .menu-nav-button.active {
+            background: var(--accent-soft);
+            color: var(--ink);
+            border-color: rgba(217, 119, 6, 0.32);
+            box-shadow: inset 0 0 0 1px rgba(217, 119, 6, 0.08);
+        }
+
+        .menu-nav-button.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            width: 0.22rem;
+            height: 56%;
+            border-radius: 999px;
+            transform: translateY(-50%);
+            background: linear-gradient(180deg, #f59e0b, #ea580c);
+        }
+
+        .menu-nav-icon {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            color: var(--ink-soft);
+            flex-shrink: 0;
+            font-size: 0.88rem;
+        }
+
+        .menu-nav-button.active .menu-nav-icon {
+            background: rgba(217, 119, 6, 0.14);
+            color: var(--accent-strong);
+        }
+
+        .menu-footer-note {
+            margin-top: 0.9rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid var(--line);
+            font-size: 0.74rem;
+            line-height: 1.5;
+            color: var(--ink-muted);
+        }
+
+        /* ---------- Píldora de sesión ---------- */
+
+        #user-id-display {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            padding: 0.5rem 0.7rem;
+            border: 1px solid var(--line);
+            border-radius: 0.9rem;
+            background: #fbfaf8;
+        }
+
+        .session-pill-label {
+            font-size: 0.6rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--ink-muted);
+            font-weight: 700;
+        }
+
+        @media (max-width: 639px) {
+            #user-id-display .session-pill-label {
+                display: none;
+            }
+        }
+
+        /* ---------- Bottom nav (móvil) ---------- */
+
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            left: 0.75rem;
+            right: 0.75rem;
+            bottom: calc(0.6rem + env(safe-area-inset-bottom));
+            z-index: 40;
+            border-radius: 1.3rem;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--line-strong);
+            box-shadow: 0 20px 48px -20px rgba(15, 23, 42, 0.4);
+            padding: 0.4rem;
+            grid-auto-flow: column;
+            grid-auto-columns: 1fr;
+        }
+
+        .bottom-nav-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.15rem;
+            padding: 0.45rem 0.2rem 0.4rem;
+            border-radius: 0.95rem;
+            border: none;
+            background: transparent;
+            color: var(--ink-muted);
+            font-family: inherit;
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            transition: color 180ms ease, background-color 180ms ease;
+        }
+
+        .bottom-nav-button svg {
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+
+        .bottom-nav-button.active {
+            color: var(--accent-strong);
+            background: var(--accent-soft);
+        }
+
+        @media (max-width: 767px) {
+            .bottom-nav {
+                display: grid;
+            }
+
+            body:has(#app:not(.hidden)) {
+                padding-bottom: 4.8rem;
+            }
+
+            #app {
+                padding-bottom: 5.2rem;
+            }
+
+            #app .header-menu-button {
+                display: none;
+            }
+
+            .menu-session-card {
+                display: block;
+            }
+        }
+
+        /* ---------- Modales ---------- */
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(8, 12, 24, 0.55);
+            backdrop-filter: blur(6px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background-color: var(--surface);
+            color: var(--ink);
+            padding: 1.5rem;
+            border-radius: 1.4rem;
+            max-width: 90%;
+            width: 520px;
+            max-height: calc(100dvh - 2rem);
+            overflow-y: auto;
+            border: 1px solid var(--line);
+            box-shadow: var(--shadow-float);
+        }
+
+        .account-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--line-strong);
+        }
+
+        .account-detail:last-child {
+            border-bottom: none;
+        }
+
+        .confirm-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 1.3rem;
+            box-shadow: var(--shadow-float);
+            padding: 1.5rem;
+            width: min(100%, 24rem);
+        }
+
+        .confirm-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--ink);
+        }
+
+        .confirm-card p {
+            margin-top: 0.55rem;
+            font-size: 0.9rem;
+            line-height: 1.55;
+            color: var(--ink-soft);
+        }
+
+        .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.6rem;
+            margin-top: 1.4rem;
+        }
+
+        /* ---------- Copiado ---------- */
+
+        .copy-feedback {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #0f172a;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* ---------- Feedback: toasts ---------- */
+
+        .toast-stack {
+            position: fixed;
+            top: max(0.9rem, env(safe-area-inset-top));
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            width: min(92vw, 26rem);
+            pointer-events: none;
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.75rem 0.95rem;
+            border-radius: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--line-strong);
+            box-shadow: var(--shadow-float);
+            color: var(--ink);
+            font-size: 0.85rem;
+            line-height: 1.45;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity 220ms ease, transform 220ms ease;
+            pointer-events: auto;
+        }
+
+        .toast.toast-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast::before {
+            content: '';
+            width: 0.4rem;
+            align-self: stretch;
+            border-radius: 999px;
+            flex-shrink: 0;
+            background: var(--ink-muted);
+        }
+
+        .toast-success::before { background: #10b981; }
+        .toast-error::before { background: #ef4444; }
+        .toast-info::before { background: #f59e0b; }
+
+        /* ---------- Skeletons ---------- */
+
+        .skeleton {
+            border-radius: 1.15rem;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            padding: 1rem;
+        }
+
+        .skeleton-line {
+            height: 0.7rem;
+            border-radius: 999px;
+            background: linear-gradient(90deg, #eceae6 25%, #f6f5f2 45%, #eceae6 65%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.3s ease-in-out infinite;
+        }
+
+        .skeleton-line.w-2-3 { width: 66%; }
+        .skeleton-line.w-1-2 { width: 50%; }
+        .skeleton-line.w-1-3 { width: 33%; }
+
+        @keyframes skeleton-shimmer {
+            to { background-position: -200% 0; }
+        }
+
+        /* ---------- Spinners y utilidades ---------- */
 
         .inline-spinner {
-
             width: 1rem;
-
             height: 1rem;
-
             border-radius: 9999px;
-
-            border: 2px solid rgba(255, 255, 255, 0.35);
-
-            border-top-color: rgba(255, 255, 255, 0.95);
-
+            border: 2px solid rgba(28, 25, 23, 0.25);
+            border-top-color: rgba(28, 25, 23, 0.9);
             display: inline-block;
-
             animation: spin 0.75s linear infinite;
-
         }
 
         .inline-spinner-dark {
-
-            border-color: rgba(14, 116, 144, 0.18);
-
-            border-top-color: rgba(14, 116, 144, 0.95);
-
+            border-color: rgba(224, 242, 254, 0.3);
+            border-top-color: rgba(224, 242, 254, 0.95);
         }
 
         @keyframes spin {
-
-            to {
-
-                transform: rotate(360deg);
-
-            }
-
+            to { transform: rotate(360deg); }
         }
 
-    
+        /* Fallback para mantener elementos ocultos si Tailwind no carga */
+        .hidden {
+            display: none !important;
+        }
 
-        /* Material 3 premium operational surfaces */
-        .m3-hero { position: relative; overflow: hidden; border-radius: 2rem; padding: 1.25rem; background: radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.20), transparent 34%), linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.94)); border: 1px solid rgba(148, 163, 184, 0.18); box-shadow: 0 30px 80px -50px rgba(2, 6, 23, 0.95); }
-        .m3-hero-kicker { font-size: 0.68rem; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: #67e8f9; }
-        .m3-icon-surface { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 1.05rem; background: rgba(255, 255, 255, 0.10); color: #e0f2fe; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
-        .m3-column { border-radius: 1.6rem; padding: 1rem; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(148, 163, 184, 0.12); }
-        .m3-column-title { display: flex; align-items: center; gap: 0.55rem; font-size: 0.92rem; font-weight: 900; color: #f8fafc; letter-spacing: -0.01em; }
-        .m3-status-dot { width: 0.72rem; height: 0.72rem; border-radius: 999px; box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.05); }
-        .m3-result-card { margin-top: 1.5rem; padding: 1.25rem; border-radius: 1.5rem; background: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.18), transparent 34%), linear-gradient(135deg, #0891b2, #2563eb 58%, #4338ca); color: #fff; box-shadow: 0 28px 80px -42px rgba(37, 99, 235, 0.95); }
-        .m3-transaction-card { border-radius: 1.35rem; border: 1px solid rgba(148, 163, 184, 0.14); background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.72)); box-shadow: 0 18px 44px -34px rgba(2, 6, 23, 0.95); }
-        .m3-money-line { font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -0.02em; color: #f8fafc; }
-        .m3-muted-chip { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 999px; padding: 0.28rem 0.55rem; background: rgba(148, 163, 184, 0.10); color: #cbd5e1; font-size: 0.72rem; font-weight: 800; }
-</style>
+        /* ---------- Ajustes móviles ---------- */
+
+        @media (max-width: 767px) {
+            .auth-card {
+                padding: 1.5rem 1.25rem;
+            }
+
+            .brand-eyebrow {
+                display: none;
+            }
+
+            .shell-card,
+            .soft-panel,
+            .order-ticket-board {
+                border-radius: 1.05rem;
+            }
+
+            .modal-content {
+                width: 100%;
+                max-width: 100%;
+                padding: 1.1rem;
+                border-radius: 1.1rem;
+            }
+
+            .btn-sm {
+                min-height: 2.1rem;
+                padding: 0.3rem 0.7rem;
+                font-size: 0.74rem;
+            }
+
+            .btn-md {
+                min-height: 2.5rem;
+                padding: 0.5rem 0.9rem;
+                font-size: 0.84rem;
+            }
+
+            .btn-lg {
+                min-height: 3rem;
+                padding: 0.75rem 1rem;
+                font-size: 0.94rem;
+            }
+
+            .field-control {
+                min-height: 2.85rem;
+                padding: 0.7rem 0.85rem;
+                font-size: 0.95rem;
+            }
+
+            .field-control-sm {
+                min-height: 2.6rem;
+                padding: 0.6rem 0.75rem;
+                font-size: 0.88rem;
+            }
+
+            .m3-result-card {
+                padding: 1.1rem 1rem;
+            }
+
+            .ticket-meta-card {
+                padding: 0.65rem 0.7rem;
+            }
+
+            .ticket-meta-card strong {
+                font-size: 0.8rem;
+            }
+
+            .market-tile {
+                padding: 0.85rem 0.9rem;
+            }
+
+            .exchange-topbar-group:last-child {
+                display: none;
+            }
+
+            .app-header-subtitle {
+                display: none;
+            }
+
+            .header-title {
+                font-size: 1.55rem;
+            }
+
+            .header-chips {
+                display: none;
+            }
+        }
+    </style>
 
 </head>
 
-<body class="min-h-screen bg-gray-100">
+<body>
 
-    <!-- Contenedor de Autenticación -->
-    <div id="auth-container" class="min-h-screen flex flex-col items-center justify-center p-4">
-        <div class="w-full max-w-md">
+    <!-- Toasts (feedback global) -->
+    <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+    <!-- Contenedor de Autenticación (escena oscura) -->
+    <div id="auth-container">
+        <div class="auth-brand">
+            <p class="eyebrow">My Remesas</p>
+            <h1 class="auth-title">Casa de cambio digital</h1>
+            <p class="auth-tagline">Consultá tasas en vivo entre CLP, VES, USDT y WLD, prepará tu orden y seguí cada transferencia hasta el pago final.</p>
+            <div class="flex flex-wrap items-center justify-center gap-2 mt-5">
+                <span class="currency-chip">CLP</span>
+                <span class="currency-chip">VES</span>
+                <span class="currency-chip">USDT</span>
+                <span class="currency-chip">WLD</span>
+            </div>
+        </div>
+
+        <div class="w-full flex flex-col items-center gap-5">
             <!-- Formulario de Inicio de Sesión -->
-            <div id="login-form" class="shell-card p-8 shadow-lg">
-                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
+            <div id="login-form" class="auth-card">
+                <h2>Iniciar sesión</h2>
                 <form>
                     <div class="mb-4">
-                        <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-                        <input type="email" id="login-email" class="field-control" required>
+                        <label for="login-email" class="field-label">Correo electrónico</label>
+                        <input type="email" id="login-email" class="field-control" autocomplete="email" required>
                     </div>
-                    <div class="mb-4">
-                        <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                        <input type="password" id="login-password" class="field-control" required>
+                    <div class="mb-5">
+                        <label for="login-password" class="field-label">Contraseña</label>
+                        <input type="password" id="login-password" class="field-control" autocomplete="current-password" required>
                     </div>
                     <button type="submit" class="btn btn-primary btn-lg w-full">Entrar</button>
                 </form>
-                <p class="text-center text-sm text-gray-600 mt-4">
+                <p class="auth-switch">
                     ¿No tienes cuenta? <button id="show-register-form" class="btn btn-link btn-sm">Regístrate</button>
                 </p>
-                 <p id="login-status" class="text-red-500 text-sm mt-4 text-center hidden"></p>
+                <p id="login-status" class="auth-status-error text-red-400 hidden"></p>
             </div>
 
             <!-- Formulario de Registro -->
-            <div id="register-form" class="shell-card p-8 shadow-lg hidden">
-                <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Crear Cuenta</h2>
+            <div id="register-form" class="auth-card hidden">
+                <h2>Crear cuenta</h2>
                 <form>
                     <div class="mb-4">
-                        <label for="register-email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-                        <input type="email" id="register-email" class="field-control" required>
+                        <label for="register-email" class="field-label">Correo electrónico</label>
+                        <input type="email" id="register-email" class="field-control" autocomplete="email" required>
                     </div>
                     <div class="mb-4">
-                        <label for="register-password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-                        <input type="password" id="register-password" class="field-control" required>
+                        <label for="register-password" class="field-label">Contraseña</label>
+                        <input type="password" id="register-password" class="field-control" autocomplete="new-password" required>
                     </div>
-                    <div class="mb-4">
-                        <label for="register-password-confirm" class="block text-sm font-medium text-gray-700 mb-1">Confirmar Contraseña</label>
-                        <input type="password" id="register-password-confirm" class="field-control" required>
+                    <div class="mb-5">
+                        <label for="register-password-confirm" class="field-label">Confirmar contraseña</label>
+                        <input type="password" id="register-password-confirm" class="field-control" autocomplete="new-password" required>
                     </div>
                     <button type="submit" class="btn btn-primary btn-lg w-full">Registrar</button>
                 </form>
-                <p class="text-center text-sm text-gray-600 mt-4">
-                    ¿Ya tienes cuenta? <button id="show-login-form" class="btn btn-link btn-sm">Inicia Sesión</button>
+                <p class="auth-switch">
+                    ¿Ya tienes cuenta? <button id="show-login-form" class="btn btn-link btn-sm">Inicia sesión</button>
                 </p>
-                <p id="register-status" class="text-red-500 text-sm mt-4 text-center hidden"></p>
+                <p id="register-status" class="auth-status-error text-red-400 hidden"></p>
             </div>
         </div>
+
+        <p class="auth-footer-note">Operación sujeta a verificación de comprobante de transferencia. Soporte por WhatsApp al +56 9 3007 2631.</p>
     </div>
-
-
 
     <div id="app" class="max-w-6xl mx-auto p-4 md:p-8 hidden">
 
-        <!-- Encabezado y ID de Usuario -->
-
-        <header class="shell-card text-center mb-8 p-5 md:p-7">
-
+        <!-- Encabezado -->
+        <header class="shell-card mb-7 p-5 md:p-6">
             <div class="exchange-topbar">
                 <div class="exchange-topbar-group">
                     <span class="exchange-dot"></span>
@@ -1654,45 +1321,41 @@
                 </div>
             </div>
 
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-
-                <div class="text-left">
-
-                    <p class="eyebrow">My Remesas</p>
-
-                    <p class="text-sm text-slate-400">Panel operativo y calculadora</p>
-
+            <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="brand-mark" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16V6m0 0-3 3m3-3 3 3m7 2v10m0 0 3-3m-3 3-3-3"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <p class="brand-eyebrow eyebrow">My Remesas</p>
+                        <h1 class="header-title display-title text-3xl md:text-4xl font-bold text-gray-900 mt-1">Remesas</h1>
+                    </div>
                 </div>
-
-                <div class="flex w-full sm:w-auto items-start sm:items-center justify-end gap-2">
+                <div class="flex items-center gap-2 flex-shrink-0">
                     <div id="user-id-display" class="hidden">
                         <div>
                             <p class="session-pill-label">Sesión activa</p>
-                            <span id="user-id"></span>
+                            <span id="user-id" class="block max-w-[10rem] md:max-w-[14rem] overflow-hidden text-ellipsis whitespace-nowrap font-bold text-gray-900 text-sm"></span>
                         </div>
-                        <button id="logout-button" class="btn btn-outline btn-sm session-pill-action">Salir</button>
+                        <button id="logout-button" class="btn btn-outline btn-sm session-pill-action flex-shrink-0">Salir</button>
                     </div>
-                    <button id="menu-toggle-button" class="btn btn-outline btn-md text-slate-700 self-start sm:self-auto" aria-expanded="false" aria-controls="app-nav-menu">
+                    <button id="menu-toggle-button" class="btn btn-outline btn-md header-menu-button" aria-expanded="false" aria-controls="app-nav-menu">
                         <span>Menú</span>
-                        <span class="text-lg leading-none">☰</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
                     </button>
                 </div>
-
             </div>
 
-            <h1 class="display-title text-4xl md:text-5xl font-bold text-gray-900 mb-3">Remesas</h1>
-
-            <div class="flex flex-wrap items-center justify-center gap-2 mb-4">
+            <div class="header-chips flex flex-wrap items-center gap-2 mt-4">
                 <span class="currency-chip">CLP</span>
                 <span class="currency-chip">VES</span>
                 <span class="currency-chip">WLD</span>
                 <span class="currency-chip">USDT</span>
             </div>
 
-            <p class="text-slate-300 max-w-2xl mx-auto text-sm md:text-base">Calculadora, seguimiento de órdenes y operación administrativa con un lenguaje más cercano a una mesa de exchange.</p>
+            <p class="app-header-subtitle text-sm text-slate-500 mt-3 max-w-2xl">Calculadora, seguimiento de órdenes y operación administrativa en una sola mesa de cambio.</p>
 
-            <p id="auth-status" class="text-sm text-red-500 mt-2">Inicializando...</p>
-
+            <p id="auth-status" class="text-xs text-slate-500 mt-2">Inicializando...</p>
         </header>
 
         <div id="menu-backdrop" class="menu-backdrop hidden"></div>
@@ -1702,7 +1365,7 @@
             <div class="menu-sheet-header">
                 <div>
                     <p class="menu-sheet-title">Navegación</p>
-                    <p class="text-sm text-slate-400 mt-1">Cambia de módulo sin tocar el flujo principal.</p>
+                    <p class="text-sm text-slate-500 mt-1">Cambia de módulo sin perder contexto.</p>
                 </div>
                 <button id="menu-close-button" class="btn btn-outline btn-sm" type="button" aria-label="Cerrar menú">Cerrar</button>
             </div>
@@ -1711,70 +1374,96 @@
                 <div class="menu-session-card">
                     <p class="menu-session-label">Sesión</p>
                     <p class="menu-session-value" id="menu-user-email">No autenticado</p>
-                    <button id="menu-logout-button" class="btn btn-outline btn-sm w-full mt-3">Cerrar Sesión</button>
+                    <button id="menu-logout-button" class="btn btn-outline btn-sm w-full mt-3">Cerrar sesión</button>
                 </div>
 
-                <div class="grid grid-cols-1 gap-2 md:gap-3">
-
+                <div class="grid grid-cols-1 gap-2">
                     <button type="button" class="btn menu-nav-button active" data-view="calculator">
-                        <span class="menu-nav-icon">∿</span>
+                        <span class="menu-nav-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5h13.5m0 0-3-3m3 3-3 3M21 10.5H7.5m0 0 3-3m-3 3 3 3"/></svg>
+                        </span>
                         <span>
                             <strong class="block text-sm">Calculadora</strong>
-                            <span class="text-xs text-slate-300">Consulta montos y prepara la orden</span>
+                            <span class="text-xs text-slate-500">Consulta montos y prepara la orden</span>
                         </span>
                     </button>
 
                     <button type="button" class="btn menu-nav-button" data-view="history">
-                        <span class="menu-nav-icon">◷</span>
+                        <span class="menu-nav-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                        </span>
                         <span>
                             <strong class="block text-sm">Historial</strong>
-                            <span class="text-xs text-slate-300">Carga tus órdenes solo cuando lo abras</span>
+                            <span class="text-xs text-slate-500">Tus órdenes, de la más reciente a la más antigua</span>
                         </span>
                     </button>
 
                     <button type="button" class="btn menu-nav-button hidden" data-view="admin-orders" data-admin-only="true">
-                        <span class="menu-nav-icon">◎</span>
+                        <span class="menu-nav-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+                        </span>
                         <span>
-                            <strong class="block text-sm">Órdenes Admin</strong>
-                            <span class="text-xs text-slate-300">Carga órdenes globales solo en esta vista</span>
+                            <strong class="block text-sm">Órdenes admin</strong>
+                            <span class="text-xs text-slate-500">Solicitudes globales pendientes y completadas</span>
                         </span>
                     </button>
 
                     <button type="button" class="btn menu-nav-button hidden" data-view="admin-config" data-admin-only="true">
-                        <span class="menu-nav-icon">⋯</span>
+                        <span class="menu-nav-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                        </span>
                         <span>
                             <strong class="block text-sm">Configuración</strong>
-                            <span class="text-xs text-slate-300">Márgenes, cuentas y saldo de Binance</span>
+                            <span class="text-xs text-slate-500">Márgenes, cuentas y saldo de Binance</span>
                         </span>
                     </button>
-
                 </div>
 
                 <div class="menu-footer-note">
-                    Navega por módulos sin recargar la experiencia principal. El panel mantiene el contexto operativo mientras cambias de vista.
+                    El panel mantiene el contexto operativo mientras cambias de vista. Los datos se cargan solo en la vista activa.
                 </div>
             </div>
 
         </aside>
 
-
+        <!-- Bottom nav (solo móvil) -->
+        <nav class="bottom-nav" aria-label="Navegación principal">
+            <button type="button" class="bottom-nav-button active" data-view="calculator">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5h13.5m0 0-3-3m3 3-3 3M21 10.5H7.5m0 0 3-3m-3 3 3 3"/></svg>
+                <span>Cambiar</span>
+            </button>
+            <button type="button" class="bottom-nav-button" data-view="history">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                <span>Historial</span>
+            </button>
+            <button type="button" class="bottom-nav-button hidden" data-view="admin-orders" data-admin-only="true">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
+                <span>Órdenes</span>
+            </button>
+            <button type="button" class="bottom-nav-button hidden" data-view="admin-config" data-admin-only="true">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 0 1 1.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 0 1-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 0 1-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 0 1 .12-1.45l.773-.773a1.125 1.125 0 0 1 1.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                <span>Config</span>
+            </button>
+            <button type="button" class="bottom-nav-button" id="bottom-nav-menu-button">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>
+                <span>Menú</span>
+            </button>
+        </nav>
 
         <!-- Panel de Administración de Tasas y Cuentas -->
 
         <div id="admin-toggle-container" class="hidden"></div>
 
+        <div id="admin-panel" data-view-panel="admin-config" class="shell-card p-5 md:p-7 mb-8 hidden">
 
-
-        <div id="admin-panel" data-view-panel="admin-config" class="shell-card p-6 md:p-7 mb-8 hidden">
-
-            <h2 class="section-title text-2xl mb-4 text-slate-900">Panel de Configuración</h2>
+            <h2 class="section-title text-2xl mb-5 text-gray-900">Panel de configuración</h2>
 
             <div id="binance-balance-card" class="hidden mb-6">
                 <div class="soft-panel p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <p class="text-sm font-semibold text-gray-700">Saldo disponible Binance (USDT)</p>
-                        <p id="usdt-balance-display" class="text-2xl font-bold text-gray-900 mt-1">--</p>
-                        <p id="usdt-balance-status" class="text-xs text-gray-500 mt-1 hidden"></p>
+                        <p class="text-sm font-semibold text-slate-600">Saldo disponible Binance (USDT)</p>
+                        <p id="usdt-balance-display" class="text-2xl font-bold text-gray-900 mt-1 money">--</p>
+                        <p id="usdt-balance-status" class="text-xs text-slate-500 mt-1 hidden"></p>
                     </div>
                     <button id="refresh-usdt-balance" class="btn btn-outline btn-sm self-start sm:self-center">
                         Actualizar
@@ -1782,31 +1471,22 @@
                 </div>
             </div>
 
-
-            
-
             <!-- SECCIÓN 1: TASAS DE MERCADO (SOLO LECTURA) -->
 
-            <section class="mb-6 border-b border-yellow-200 pb-4">
-
+            <section class="mb-7 border-b border-slate-200 pb-5">
                 <div class="flex flex-col gap-2 mb-3">
-                    <h3 class="text-lg font-bold text-yellow-900">Tasas de Referencia de Mercado</h3>
+                    <h3 class="text-lg font-bold text-gray-900">Tasas de referencia de mercado</h3>
                     <p id="rate-last-updated" class="text-xs text-slate-500">Aún no hay una consulta viva registrada.</p>
                 </div>
 
-                <p id="rate-fetch-status" class="text-sm text-yellow-700 mb-4 font-semibold">
-
+                <p id="rate-fetch-status" class="text-sm text-amber-700 mb-4 font-semibold">
                     Conectando con APIs públicas...
-
                 </p>
 
-                
-
                 <div class="market-strip">
-
                     <article class="market-tile">
                         <p class="market-kicker">Spot + Bridge</p>
-                        <h4 class="market-label">WLD/CLP <span class="text-amber-400">Desc. <span id="margin-wld-clp-label">14</span>%</span></h4>
+                        <h4 class="market-label">WLD/CLP <span class="text-amber-600">Desc. <span id="margin-wld-clp-label">14</span>%</span></h4>
                         <div class="market-subline">
                             <p id="wld-usdt-display">WLD/USDT (Spot): Cargando...</p>
                             <p id="usdt-clp-p2p-wld-display">USDT/CLP (Referencia): Cargando...</p>
@@ -1815,7 +1495,7 @@
 
                     <article class="market-tile">
                         <p class="market-kicker">Fiat Flow</p>
-                        <h4 class="market-label">CLP/VES <span class="text-amber-400">Desc. <span id="margin-clp-ves-label">6</span>%</span></h4>
+                        <h4 class="market-label">CLP/VES <span class="text-amber-600">Desc. <span id="margin-clp-ves-label">6</span>%</span></h4>
                         <div class="market-subline">
                             <p id="clp-usdt-p2p-display">USDT/CLP (CoinGecko): Cargando...</p>
                             <p id="ves-usdt-p2p-display">USDT/VES (CoinGecko): Cargando...</p>
@@ -1824,185 +1504,111 @@
 
                     <article class="market-tile">
                         <p class="market-kicker">Desk Spread</p>
-                        <h4 class="market-label">USDT/CLP <span class="text-amber-400">Margen +<span id="margin-usdt-clp-label">0.4</span>%</span></h4>
+                        <h4 class="market-label">USDT/CLP <span class="text-amber-600">Margen +<span id="margin-usdt-clp-label">0.4</span>%</span></h4>
                         <div class="market-subline">
                             <p id="usdt-clp-margin-display">USDT/CLP Tasa: Calculando...</p>
                         </div>
                     </article>
-
                 </div>
-
             </section>
-
-            
 
             <!-- SECCIÓN 1B: CONFIGURACIÓN DE MÁRGENES -->
 
-            <section class="mb-6 border-b border-yellow-200 pb-4">
-
-                <h3 class="text-lg font-bold text-yellow-900 mb-3">Configuración de Márgenes</h3>
-
-                <p class="text-sm text-yellow-700 mb-4">Ajusta descuentos y márgenes en porcentaje. Los cambios se aplican inmediatamente en la calculadora.</p>
-
-                
+            <section class="mb-7 border-b border-slate-200 pb-5">
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Configuración de márgenes</h3>
+                <p class="text-sm text-slate-500 mb-4">Ajusta descuentos y márgenes en porcentaje. Los cambios se aplican inmediatamente en la calculadora.</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-
                     <div>
-
-                        <label for="margin-wld-clp" class="field-label text-yellow-900">Descuento WLD → CLP (%)</label>
-
+                        <label for="margin-wld-clp" class="field-label">Descuento WLD → CLP (%)</label>
                         <input type="number" id="margin-wld-clp" min="0" max="100" step="0.1" class="field-control field-control-sm" placeholder="Ej: 14">
-
                     </div>
-
                     <div>
-
-                        <label for="margin-clp-ves" class="field-label text-yellow-900">Descuento CLP → VES (%)</label>
-
+                        <label for="margin-clp-ves" class="field-label">Descuento CLP → VES (%)</label>
                         <input type="number" id="margin-clp-ves" min="0" max="100" step="0.1" class="field-control field-control-sm" placeholder="Ej: 6">
-
                     </div>
-
                     <div>
-
-                        <label for="margin-usdt-clp" class="field-label text-yellow-900">Margen USDT → CLP (%)</label>
-
+                        <label for="margin-usdt-clp" class="field-label">Margen USDT → CLP (%)</label>
                         <input type="number" id="margin-usdt-clp" min="0" max="100" step="0.1" class="field-control field-control-sm" placeholder="Ej: 0.4">
-
                     </div>
-
                 </div>
 
-
-
                 <button id="save-margins-button" class="btn btn-secondary btn-md w-full mt-4">
-
-                    Guardar Márgenes
-
+                    Guardar márgenes
                 </button>
-
-                <p id="margin-status" class="text-sm text-center mt-2 text-yellow-800 font-medium hidden">Márgenes guardados correctamente.</p>
-
+                <p id="margin-status" class="text-sm text-center mt-2 text-emerald-700 font-medium hidden">Márgenes guardados correctamente.</p>
             </section>
-
-            
 
             <!-- SECCIÓN 2: GESTIÓN DE CUENTAS BANCARIAS DEL ADMINISTRADOR -->
 
-            <section class="border-b border-yellow-200 pb-4">
-
-                <h3 class="text-lg font-bold text-yellow-900 mb-3">Añadir Nueva Cuenta (CLP)</h3>
-
-                <p class="text-sm text-yellow-700 mb-4">Ingrese una cuenta de destino donde el usuario transferir CLP.</p>
-
-                
+            <section class="border-b border-slate-200 pb-5">
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Añadir nueva cuenta (CLP)</h3>
+                <p class="text-sm text-slate-500 mb-4">Ingresa una cuenta de destino donde el usuario transferirá CLP.</p>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
                     <input type="text" id="admin-account-holder" class="field-control field-control-sm" placeholder="Titular de la Cuenta" value="Ender Javier Piña Rojas">
-
                     <input type="text" id="admin-rut" class="field-control field-control-sm" placeholder="RUT/Cédula" value="26728535-7">
-
                     <select id="admin-bank-name" class="field-control field-control-sm">
-
                         <option value="">-- Seleccione Banco --</option>
-
                         <option value="Banco Estado">Banco Estado</option>
-
                         <option value="Banco de Chile">Banco de Chile</option>
-
                         <option value="Santander">Santander</option>
-
                         <option value="Scotiabank">Scotiabank</option>
-
                         <option value="Mercado Pago">Mercado Pago</option>
-
                         <option value="Global66">Global66</option>
-
                         <option value="Otro">Otro</option>
-
                     </select>
-
                     <select id="admin-account-type" class="field-control field-control-sm">
-
                         <option value="">-- Seleccione Tipo --</option>
-
                         <option value="Cuenta Corriente">Cuenta Corriente</option>
-
                         <option value="Cuenta Vista">Cuenta Vista</option>
-
                     </select>
-
                     <input type="text" id="admin-account-number" class="field-control field-control-sm md:col-span-2" placeholder="Número de Cuenta">
-
                     <input type="email" id="admin-email" class="field-control field-control-sm md:col-span-2" placeholder="Email (Opcional)">
-
                 </div>
 
-                
-
                 <button id="save-accounts-button" class="btn btn-secondary btn-md w-full mt-4">
-
-                    Guardar Nueva Cuenta
-
+                    Guardar nueva cuenta
                 </button>
-
-                <p id="account-status" class="text-sm text-center mt-2 text-yellow-800 font-medium">Cuentas cargadas.</p>
-
+                <p id="account-status" class="text-sm text-center mt-2 text-slate-500 font-medium">Cuentas cargadas.</p>
             </section>
-
-
 
             <!-- LISTADO DE CUENTAS GUARDADAS -->
 
-            <section class="pt-4">
-
-                <h3 class="text-lg font-bold text-yellow-900 mb-3">Cuentas Guardadas (<span id="account-count">0</span>)</h3>
-
+            <section class="pt-5">
+                <h3 class="text-lg font-bold text-gray-900 mb-3">Cuentas guardadas (<span id="account-count">0</span>)</h3>
                 <div id="saved-accounts-list" class="space-y-3 max-h-60 overflow-y-auto pr-2 soft-panel p-3">
-
-                    <p class="text-sm text-gray-500">No hay cuentas configuradas.</p>
-
+                    <p class="text-sm text-slate-500">No hay cuentas configuradas.</p>
                 </div>
-
             </section>
-
-
 
         </div>
 
         <!-- Panel de Gestión de Órdenes del Administrador -->
-        <div id="admin-transactions-section" data-view-panel="admin-orders" class="shell-card p-6 md:p-7 hidden">
+        <div id="admin-transactions-section" data-view-panel="admin-orders" class="shell-card p-5 md:p-7 hidden">
             <div class="m3-hero mb-6">
                 <div class="flex items-start gap-4">
                     <span class="m3-icon-surface" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg></span>
-                    <div class="min-w-0"><p class="m3-hero-kicker">Panel operativo</p><h2 class="section-title text-3xl text-white mt-1">Solicitudes activas</h2><p id="admin-orders-status" class="text-sm text-slate-300 mt-2">Abre esta vista para cargar solicitudes.</p></div>
+                    <div class="min-w-0"><p class="m3-hero-kicker">Panel operativo</p><h2 class="section-title text-3xl mt-1">Solicitudes activas</h2><p id="admin-orders-status" class="text-sm text-slate-500 mt-2">Abre esta vista para cargar solicitudes.</p></div>
                 </div>
-                <div class="mt-4 flex justify-end"><button id="admin-load-more-button" class="btn btn-outline btn-sm hidden">Cargar mas</button></div>
+                <div class="mt-4 flex justify-end"><button id="admin-load-more-button" class="btn btn-outline btn-sm hidden">Cargar más</button></div>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <section class="m3-column"><h3 class="m3-column-title mb-4"><span class="m3-status-dot bg-orange-400"></span>Pendientes por antiguedad</h3><div id="admin-pending-transactions" class="space-y-4"></div></section>
+                <section class="m3-column"><h3 class="m3-column-title mb-4"><span class="m3-status-dot bg-amber-400"></span>Pendientes por antigüedad</h3><div id="admin-pending-transactions" class="space-y-4"></div></section>
                 <section class="m3-column"><h3 class="m3-column-title mb-4"><span class="m3-status-dot bg-emerald-400"></span>Completadas recientes</h3><div id="admin-completed-transactions" class="space-y-4"></div></section>
             </div>
         </div>
 
-
-        <!-- Contenedor Principal: Calculadora y Historial -->
+        <!-- Contenedor Principal: Calculadora e Historial -->
 
         <div id="order-creation-section" data-view-panel="calculator">
             <div class="grid grid-cols-1 gap-8">
 
-                <!-- Columna 1 & 2: Calculadora de Intercambio -->
-
-                <div class="shell-card p-6 md:p-7">
-
-                    <div class="m3-hero mb-6"><div class="flex items-start gap-4"><span class="m3-icon-surface" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10M7 17h6"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 17l3 3m0 0 3-3m-3 3V4"/></svg></span><div><p class="m3-hero-kicker">Mesa FX</p><h2 class="section-title text-3xl text-white mt-1">Tasas de intercambio</h2><p class="text-sm text-slate-300 mt-2">Consulta una tasa, revisa spread y continua solo cuando la operacion tenga sentido.</p></div></div></div>
-
-
+                <!-- Calculadora de Intercambio -->
+                <div class="shell-card p-5 md:p-7">
+                    <div class="m3-hero mb-6"><div class="flex items-start gap-4"><span class="m3-icon-surface" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10M7 17h6"/><path stroke-linecap="round" stroke-linejoin="round" d="M17 17l3 3m0 0 3-3m-3 3V4"/></svg></span><div><p class="m3-hero-kicker">Mesa FX</p><h2 class="section-title text-3xl mt-1">Tasas de intercambio</h2><p class="text-sm text-slate-500 mt-2">Consulta una tasa, revisa el spread y continúa solo cuando la operación tenga sentido.</p></div></div></div>
 
                     <div class="ticket-shell">
-
                         <div class="ticket-meta-grid">
                             <div class="ticket-meta-card">
                                 <span class="market-kicker">Modo</span>
@@ -2021,197 +1627,121 @@
                         <div class="order-ticket-board space-y-4">
 
                         <!-- MONTO A ENVIAR -->
-
                         <div>
-
-                            <label for="amount-send" class="field-label">Monto a Enviar</label>
-
-                            <input type="number" id="amount-send" min="1" class="field-control text-lg" placeholder="Ej: 100000">
-
+                            <label for="amount-send" class="field-label">Monto a enviar</label>
+                            <input type="number" id="amount-send" min="1" inputmode="decimal" class="field-control text-lg money" placeholder="Ej: 100000">
                         </div>
-
-
 
                         <!-- MONEDA DE ORIGEN -->
-
                         <div>
-
-                            <label for="currency-send" class="field-label">Moneda de Origen</label>
-
+                            <label for="currency-send" class="field-label">Moneda de origen</label>
                             <select id="currency-send" class="field-control text-lg">
-
                                 <option value="CLP">CLP (Peso Chileno)</option>
-
                                 <option value="WLD">WLD (Worldcoin)</option>
-
                                 <option value="USDT">USDT (Tether)</option>
-
                                 <option value="VES">VES (Bolívar Soberano)</option>
-
                             </select>
-
                         </div>
-
-
 
                         <!-- Ícono de Intercambio -->
-
-                        <div class="text-center py-2">
-
-                            <button id="swap-button" class="btn btn-outline btn-icon text-gray-600 mx-auto">
-
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-
+                        <div class="text-center py-1">
+                            <button id="swap-button" class="btn btn-outline btn-icon mx-auto" aria-label="Intercambiar monedas">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transform rotate-90 md:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-
                                 </svg>
-
                             </button>
-
                         </div>
-
-
 
                         <!-- MONEDA DE DESTINO -->
-
                         <div>
-
-                            <label for="currency-receive" class="field-label">Moneda de Destino</label>
-
+                            <label for="currency-receive" class="field-label">Moneda de destino</label>
                             <select id="currency-receive" class="field-control text-lg">
-
                                 <option value="VES">VES (Bolívar Soberano)</option>
-
                                 <option value="CLP">CLP (Peso Chileno)</option>
-
                                 <option value="USDT">USDT (Tether)</option>
-
                                 <option value="WLD">WLD (Worldcoin)</option>
-
                             </select>
-
                         </div>
-
-
 
                         <!-- Resultado y Tasa -->
-
                         <div class="m3-result-card">
-
-                            <p class="text-sm font-bold opacity-90">Resultado estimado</p>
-
+                            <p class="text-sm font-semibold opacity-90">Resultado estimado</p>
                             <p id="amount-receive-display" class="text-4xl font-black mt-1 tabular-nums">0.00 VES</p>
-
                             <p id="rate-display" class="text-xs mt-2 opacity-90"></p>
-                            <p id="suggested-rate-display" class="text-xs mt-1 opacity-90"></p>
-                            <div id="amount-loading-indicator" class="hidden mt-3 inline-flex items-center gap-2 text-xs font-semibold text-cyan-50/90">
-                                <span class="inline-spinner"></span>
+                            <p id="suggested-rate-display" class="text-xs mt-1 opacity-75"></p>
+                            <div id="amount-loading-indicator" class="hidden mt-3 inline-flex items-center gap-2 text-xs font-semibold text-amber-100">
+                                <span class="inline-spinner inline-spinner-dark"></span>
                                 <span>Consultando tasa en vivo...</span>
                             </div>
-
                         </div>
 
-
-
-                        <!-- Botn de Simulacin de Transaccin (Ahora Botn de Pago) -->
-
-                        <button id="payment-button" class="btn btn-primary btn-lg w-full mt-6 transition-transform duration-200">
-
-                            Pagar y Ver Detalles de Transferencia
-
+                        <!-- Botón de Pago -->
+                        <button id="payment-button" class="btn btn-primary btn-lg w-full mt-5">
+                            Pagar y ver detalles de transferencia
                         </button>
-
-                        <p id="error-message" class="text-red-500 mt-2 text-center text-sm hidden">Error: Las monedas no son válidas para el intercambio.</p>
-
+                        <p id="error-message" class="text-red-600 mt-2 text-center text-sm hidden">Error: Las monedas no son válidas para el intercambio.</p>
                     </div>
-
+                    </div>
                 </div>
+            </div>
+        </div>
 
-
-
+        <div id="history-section" data-view-panel="history" class="hidden">
+            <div class="shell-card p-5 md:p-7">
+                <div class="flex items-start gap-4 mb-6">
+                    <span class="m3-icon-surface" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-3-6.7"/></svg></span>
+                    <div class="min-w-0">
+                        <h2 class="section-title text-3xl text-gray-900">Historial por usuario</h2>
+                        <p class="text-sm text-slate-500 mt-1">Tus solicitudes aparecen ordenadas de la más reciente a la más antigua.</p>
+                    </div>
+                </div>
+                <div id="transaction-history" class="space-y-3 md:max-h-[32rem] md:overflow-y-auto md:pr-2">
+                    <p class="text-slate-500 text-sm" id="loading-history">Abre esta vista para cargar el historial.</p>
+                </div>
+            </div>
         </div>
 
     </div>
 
-        <div id="history-section" data-view-panel="history" class="hidden">
-
-            <div class="shell-card p-6 md:p-7">
-
-                <div class="flex items-start justify-between gap-4 mb-6">
-
-                    <div>
-
-                        <span class="m3-icon-surface mb-3" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 1 1-3-6.7"/></svg></span>
-                        <h2 class="section-title text-3xl text-slate-900">Historial por usuario</h2>
-
-                        <p class="text-sm text-slate-500 mt-1">Tus solicitudes aparecen ordenadas de la mas reciente a la mas antigua.</p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div id="transaction-history" class="space-y-3 h-96 lg:h-[32rem] overflow-y-auto pr-2">
-
-                    <p class="text-gray-500 text-sm" id="loading-history">Abre esta vista para cargar el historial.</p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    
-
     <!-- MODAL DE PAGO (OCULTO POR DEFECTO) -->
-
     <div id="payment-details-modal" class="modal-overlay hidden">
-
-        <div class="modal-content shell-card">
-
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">Detalles de la Transferencia</h2>
-
-
+        <div class="modal-content">
+            <div class="flex items-start justify-between gap-3 mb-5">
+                <h2 class="section-title text-2xl text-gray-900">Detalles de la transferencia</h2>
+                <button id="close-modal-x-button" type="button" class="btn btn-outline btn-icon flex-shrink-0 md:hidden" aria-label="Cerrar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
 
             <!-- Monto a Transferir (Resumen) -->
-
-            <div class="p-4 mb-4 bg-red-50 border border-red-200 rounded-2xl">
-
-                <p class="text-sm font-medium text-red-700">Monto EXACTO a Transferir (Origen):</p>
-
-                <p id="modal-amount-send" class="text-3xl font-extrabold text-red-600 mt-1">CLP 0.00</p>
-
-                <p class="text-xs text-red-500 mt-2">Usted va a recibir: <span id="modal-amount-receive">VES 0.00</span></p>
-
+            <div class="p-4 mb-5 rounded-2xl bg-amber-50 border border-amber-200">
+                <p class="text-xs font-bold uppercase tracking-wide text-amber-700">Monto exacto a transferir (origen)</p>
+                <p id="modal-amount-send" class="text-3xl font-extrabold text-gray-900 mt-1 money">CLP 0.00</p>
+                <p class="text-xs text-amber-700 mt-2">Usted va a recibir: <span id="modal-amount-receive" class="font-semibold">VES 0.00</span></p>
             </div>
 
-
-
-            
-
-<!-- Datos de la Cuenta de Destino (Admin) -->
+            <!-- Datos de la Cuenta de Destino (Admin) -->
             <div class="soft-panel p-4 space-y-4">
                 <div>
-                    <h3 class="text-lg font-bold text-gray-700 mb-3">Cuentas Disponibles para Transferencia (<span id="modal-transfer-currency">CLP</span>)</h3>
+                    <h3 class="text-base font-bold text-gray-900 mb-3">Cuentas disponibles para transferencia (<span id="modal-transfer-currency">CLP</span>)</h3>
                     <div class="space-y-3 text-sm">
                         <select id="admin-account-select" class="field-control field-control-sm">
                             <option value="">-- Selecciona una cuenta --</option>
                         </select>
-                        <p class="text-gray-500 text-sm hidden" id="no-accounts-message">El administrador no ha configurado cuentas CLP.</p>
-                        <div id="selected-admin-account-details" class="mt-3 p-3 bg-white border border-cyan-200 rounded-lg shadow-sm space-y-2 text-sm hidden">
+                        <p class="text-slate-500 text-sm hidden" id="no-accounts-message">El administrador no ha configurado cuentas CLP.</p>
+                        <div id="selected-admin-account-details" class="mt-3 p-3 bg-white border border-slate-200 rounded-xl shadow-sm space-y-2 text-sm hidden">
                             <!-- Los detalles de la cuenta seleccionada se mostrarán aquí -->
                         </div>
                     </div>
-                    <p id="modal-crypto-warning" class="text-red-500 text-xs mt-3 hidden">
-                        Advertencia: si envias criptomonedas, el administrador compartira la direccion de la wallet una vez que confirmes la transferencia.
+                    <p id="modal-crypto-warning" class="text-amber-700 text-xs mt-3 hidden">
+                        Advertencia: si envías criptomonedas, el administrador compartirá la dirección de la wallet una vez que confirmes la transferencia.
                     </p>
                 </div>
 
-                <div class="border-t border-gray-200 pt-4 space-y-4">
-                    <div id="ves-destination-form" class="hidden space-y-2 bg-white/90 border border-cyan-100 rounded-2xl p-3">
-                        <h4 class="text-sm font-semibold text-gray-700">Datos para recibir transferencia en VES</h4>
-                        <p class="text-xs text-gray-500">Completa los datos de la cuenta destino en Venezuela para que podamos procesar tu pago.</p>
+                <div class="border-t border-slate-200 pt-4 space-y-4">
+                    <div id="ves-destination-form" class="hidden space-y-2 bg-white border border-slate-200 rounded-2xl p-3">
+                        <h4 class="text-sm font-semibold text-gray-900">Datos para recibir transferencia en VES</h4>
+                        <p class="text-xs text-slate-500">Completa los datos de la cuenta destino en Venezuela para que podamos procesar tu pago.</p>
                         <label class="field-label" for="ves-beneficiary-input">Nombre del beneficiario</label>
                         <input id="ves-beneficiary-input" type="text" class="field-control field-control-sm" placeholder="Ej: Maria Perez">
                         <label class="field-label mt-2" for="ves-id-input">Documento de identidad</label>
@@ -2220,14 +1750,14 @@
                         <input id="ves-bank-input" type="text" class="field-control field-control-sm" placeholder="Ej: Banco de Venezuela">
                         <label class="field-label mt-2" for="ves-account-type-input">Tipo de cuenta</label>
                         <input id="ves-account-type-input" type="text" class="field-control field-control-sm" placeholder="Ej: Cuenta Corriente o Ahorro">
-                        <label class="field-label mt-2" for="ves-account-number-input">Numero de cuenta</label>
+                        <label class="field-label mt-2" for="ves-account-number-input">Número de cuenta</label>
                         <input id="ves-account-number-input" type="text" class="field-control field-control-sm" placeholder="Ej: 0102-0123-45-1234567890">
                         <label class="field-label mt-2" for="ves-notes-input">Notas adicionales (opcional)</label>
-                        <input id="ves-notes-input" type="text" class="field-control field-control-sm" placeholder="Informacion extra para el pago (opcional)">
+                        <input id="ves-notes-input" type="text" class="field-control field-control-sm" placeholder="Información extra para el pago (opcional)">
                     </div>
-                    <div id="usdt-destination-form" class="hidden space-y-2 bg-white/90 border border-cyan-100 rounded-2xl p-3">
-                        <h4 class="text-sm font-semibold text-gray-700">Datos para recibir USDT</h4>
-                        <p class="text-xs text-gray-500">Ingresa los datos exactos de tu cuenta o wallet para recibir el pago en USDT.</p>
+                    <div id="usdt-destination-form" class="hidden space-y-2 bg-white border border-slate-200 rounded-2xl p-3">
+                        <h4 class="text-sm font-semibold text-gray-900">Datos para recibir USDT</h4>
+                        <p class="text-xs text-slate-500">Ingresa los datos exactos de tu cuenta o wallet para recibir el pago en USDT.</p>
                         <label class="field-label" for="usdt-wallet-input">Binance ID / Binance Pay / Wallet USDT</label>
                         <input id="usdt-wallet-input" type="text" class="field-control field-control-sm" placeholder="Ej: Binance Pay ID 123456789 o Wallet TRC20">
                         <label class="field-label mt-2" for="usdt-network-select">Red preferida</label>
@@ -2241,21 +1771,21 @@
                             <option value="Otro">Otro (especificar en notas)</option>
                         </select>
                         <label class="field-label mt-2" for="usdt-notes-input">Notas adicionales (opcional)</label>
-                        <input id="usdt-notes-input" type="text" class="field-control field-control-sm" placeholder="Informacion extra, si aplica">
+                        <input id="usdt-notes-input" type="text" class="field-control field-control-sm" placeholder="Información extra, si aplica">
                     </div>
 
-                    <div class="space-y-2 bg-white/92 border border-cyan-100 rounded-2xl p-3">
-                        <h4 class="text-sm font-semibold text-gray-700">Subir comprobante y confirmar orden</h4>
-                        <p class="text-xs text-gray-500">Sube el comprobante de tu transferencia para validar la operacion y continuar con el pago.</p>
+                    <div class="space-y-2 bg-white border border-slate-200 rounded-2xl p-3">
+                        <h4 class="text-sm font-semibold text-gray-900">Subir comprobante y confirmar orden</h4>
+                        <p class="text-xs text-slate-500">Sube el comprobante de tu transferencia para validar la operación y continuar con el pago.</p>
                         <div class="flex flex-col md:flex-row gap-3">
                             <input id="receipt-upload" type="file" class="field-control field-control-sm flex-1" accept="image/*,.pdf">
                             <button type="button" id="upload-receipt-button" class="btn btn-primary btn-sm">
                                 Subir comprobante y confirmar orden
                             </button>
                         </div>
-                        <p id="receipt-upload-status" class="text-xs text-gray-500 hidden"></p>
-                        <p class="text-xs text-gray-500">Si necesitas asistencia adicional, tambien puedes compartirlo por WhatsApp.</p>
-                        <a href="https://wa.me/56930072631?text=Hola%2C%20adjunto%20el%20comprobante%20de%20mi%20transferencia.%20Nombre:%20[tu%20nombre]%20Monto:%20[monto]" target="_blank" rel="noopener" class="btn btn-primary btn-md gap-2">
+                        <p id="receipt-upload-status" class="text-xs text-slate-500 hidden"></p>
+                        <p class="text-xs text-slate-500">Si necesitas asistencia adicional, también puedes compartirlo por WhatsApp.</p>
+                        <a href="https://wa.me/56930072631?text=Hola%2C%20adjunto%20el%20comprobante%20de%20mi%20transferencia.%20Nombre:%20[tu%20nombre]%20Monto:%20[monto]" target="_blank" rel="noopener" class="btn btn-secondary btn-md gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.57 2 2.04 6.54 2.04 12c0 2.1.55 4.05 1.6 5.77L2 22l4.35-1.61c1.63 1.12 3.55 1.71 5.7 1.71 5.46 0 10-4.54 10-10s-4.53-10-9.99-10Zm5.87 14.52c-.25.7-1.47 1.34-2.02 1.43-.52.1-1.19.18-1.92-.12-.44-.17-1-.32-1.73-.63-3.05-1.32-5.03-4.41-5.18-4.62-.15-.21-1.24-1.65-1.24-3.15s.79-2.25 1.08-2.56c.25-.28.67-.4 1.08-.4.13 0 .25.01.36.01.32.01.48.03.69.54.25.6.85 2.07.92 2.22.07.15.11.32.02.5-.08.17-.12.28-.24.44-.12.15-.26.33-.37.45-.12.12-.24.26-.1.5.14.25.63 1.04 1.35 1.69.93.83 1.71 1.09 1.96 1.21.25.13.4.11.55-.06.14-.17.63-.73.8-.98.17-.24.34-.2.57-.12.23.08 1.49.7 1.74.83.26.13.43.19.49.3.06.12.06.7-.2 1.4Z"/></svg>
                             Enviar por WhatsApp
                         </a>
@@ -2263,42 +1793,45 @@
                 </div>
             </div>
 
-<p class="text-xs text-gray-500 mt-4 text-center">Una vez realizada la transferencia, sube tu comprobante para confirmar la orden. Si lo prefieres, tambien puedes compartirlo por WhatsApp (+56 9 3007 2631).</p>
+            <p class="text-xs text-slate-500 mt-4 text-center">Una vez realizada la transferencia, sube tu comprobante para confirmar la orden. Si lo prefieres, también puedes compartirlo por WhatsApp (+56 9 3007 2631).</p>
 
-<button id="close-modal-button" class="btn btn-secondary btn-lg w-full mt-6">
-
+            <button id="close-modal-button" class="btn btn-secondary btn-lg w-full mt-5">
                 Entendido / Cerrar
-
             </button>
 
         </div>
-
     </div>
 
     <!-- VISOR DE IMÁGENES MODAL (OCULTO POR DEFECTO) -->
     <div id="image-viewer-modal" class="modal-overlay hidden">
         <div class="modal-content relative max-w-3xl w-full">
-            <button id="close-image-viewer-button" class="btn btn-outline btn-icon absolute -top-3 -right-3 z-10 bg-white/90">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <button id="close-image-viewer-button" class="btn btn-outline btn-icon absolute -top-3 -right-3 z-10" aria-label="Cerrar visor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-            <h3 id="image-viewer-title" class="text-lg font-semibold text-gray-800 mb-4">Comprobante</h3>
-            <div class="bg-gray-200 rounded-lg">
-                <img id="image-viewer-img" src="" alt="Comprobante de pago" class="max-h-[80vh] w-full object-contain rounded-lg">
+            <h3 id="image-viewer-title" class="text-lg font-semibold text-gray-900 mb-4">Comprobante</h3>
+            <div class="bg-slate-100 rounded-xl">
+                <img id="image-viewer-img" src="" alt="Comprobante de pago" class="max-h-[80vh] w-full object-contain rounded-xl">
             </div>
         </div>
     </div>
 
-
-
+    <!-- MODAL DE CONFIRMACIÓN PROPIO -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title">
+            <h3 id="confirm-title">Confirmar acción</h3>
+            <p id="confirm-message"></p>
+            <div class="confirm-actions">
+                <button id="confirm-cancel-button" type="button" class="btn btn-outline btn-md">Cancelar</button>
+                <button id="confirm-accept-button" type="button" class="btn btn-danger btn-md">Confirmar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Firebase SDKs -->
-
     <script type="module" src="main.js" defer></script>
 
 </body>
-
-<!-- Test para forzar la detección de cambios -->
 
 </html>
