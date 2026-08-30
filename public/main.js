@@ -1177,6 +1177,21 @@ function calculateFullRatesInternal() {
     return fullRates;
 }
 
+function fitAmountDisplay() {
+    if (!amountReceiveDisplay) return;
+    amountReceiveDisplay.style.whiteSpace = 'nowrap';
+    amountReceiveDisplay.style.fontSize = '';
+    const baseSize = parseFloat(window.getComputedStyle(amountReceiveDisplay).fontSize);
+    let currentSize = baseSize;
+    amountReceiveDisplay.style.fontSize = currentSize + 'px';
+    let guard = 0;
+    while (amountReceiveDisplay.scrollWidth > amountReceiveDisplay.clientWidth && currentSize > 18 && guard < 12) {
+        currentSize -= 2;
+        amountReceiveDisplay.style.fontSize = currentSize + 'px';
+        guard++;
+    }
+}
+
 function calculateExchange(enablePaymentButton = true) {
     const amountSend = parseFloat(amountSendInput.value);
     const currencySend = currencySendSelect.value;
@@ -1184,6 +1199,7 @@ function calculateExchange(enablePaymentButton = true) {
     const rates = calculateFullRatesInternal();
     if (isNaN(amountSend) || amountSend <= 0) {
         amountReceiveDisplay.textContent = formatCurrency(0, currencyReceive);
+        fitAmountDisplay();
         rateDisplay.textContent = "Ingrese un monto vélido.";
         if (suggestedRateDisplay) suggestedRateDisplay.textContent = '';
         paymentButton.disabled = true;
@@ -1194,6 +1210,7 @@ function calculateExchange(enablePaymentButton = true) {
     const rate = rates[rateKey];
     if (rate == null) {
         amountReceiveDisplay.textContent = "N/A";
+        fitAmountDisplay();
         rateDisplay.textContent = `Intercambio ${currencySend} a ${currencyReceive} no disponible.`;
         if (suggestedRateDisplay) suggestedRateDisplay.textContent = '';
         paymentButton.disabled = true;
@@ -1215,6 +1232,7 @@ function calculateExchange(enablePaymentButton = true) {
         suggestedRateText = `Tasa Manzano App sugerida: 1 USDT = ${formatRounded(1 / suggestedRate, 2)} CLP`;
     }
     amountReceiveDisplay.textContent = formatCurrency(amountReceive, currencyReceive);
+    fitAmountDisplay();
     rateDisplay.textContent = rateText;
     if (suggestedRateDisplay) suggestedRateDisplay.textContent = suggestedRateText;
 }
@@ -1331,12 +1349,10 @@ function renderTransactionHistory(transactions) {
             </div>`
             : '';
         item.innerHTML = `
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                <div>
-                    <p class="m3-money-line text-sm sm:text-base">${formatCurrency(tx.amountSend, tx.currencySend)} -> ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
-                    <p class="text-xs text-slate-400 mt-1">${date} ${time}</p>
-                </div>
-                <span class="inline-flex items-center self-start px-2 py-0.5 text-xs font-semibold rounded-full ${badgeClasses}">${escapeHtml(tx.status || 'N/A')}</span>
+            <p class="m3-money-line text-sm sm:text-base">${formatCurrency(tx.amountSend, tx.currencySend)} → ${formatCurrency(tx.amountReceive, tx.currencyReceive)}</p>
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-xs text-slate-400">${date} ${time}</p>
+                <span class="inline-flex items-center flex-shrink-0 whitespace-nowrap px-2 py-0.5 text-xs font-semibold rounded-full ${badgeClasses}">${escapeHtml(tx.status || 'N/A')}</span>
             </div>
             <p class="m3-muted-chip">Tasa ${tx.rateApplied ? formatRounded(tx.rateApplied, 4) : 'N/A'}</p>
             ${destinationDetailsMarkup ? `<div class="pt-2 border-t border-gray-200 space-y-2">${destinationDetailsMarkup}</div>` : ''}
@@ -1794,15 +1810,15 @@ function createAdminTransactionCard(tx) {
             </div>`
         : '<span class="text-xs text-gray-500">Comprobante destino no cargado</span>';
     card.innerHTML = `
-        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-            <div class="space-y-1">
+        <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 space-y-1">
                 <p class="text-sm sm:text-base font-bold text-slate-900">Solicitud ${escapeHtml((tx.id || '').slice(0, 8).toUpperCase())}</p>
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="inline-flex items-center px-2 py-0.5 font-semibold uppercase tracking-wide bg-amber-100 text-amber-800 rounded-full" style="font-size:0.7rem;">Cliente</span>
-                    <span class="text-xs text-slate-500 break-words" title="${escapeHtml(ownerLabel)}">${escapeHtml(ownerLabel)}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 font-semibold uppercase tracking-wide bg-amber-100 text-amber-800 rounded-full whitespace-nowrap" style="font-size:0.7rem;">Cliente</span>
+                    <span class="text-xs text-slate-500 break-words min-w-0" title="${escapeHtml(ownerLabel)}">${escapeHtml(ownerLabel)}</span>
                 </div>
             </div>
-            <span class="inline-flex items-center self-start px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
+            <span class="inline-flex items-center flex-shrink-0 whitespace-nowrap px-2 py-0.5 text-xs font-semibold rounded-full ${statusBadgeClass}">${escapeHtml(tx.status || 'N/A')}</span>
         </div>
         <div class="space-y-2">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -2079,26 +2095,24 @@ async function buildQuoteCanvas() {
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(248, 250, 252, 0.9)';
     ctx.font = '600 15px Outfit, sans-serif';
-    ctx.fillText('Resultado estimado', 36, 110);
+    ctx.fillText('Resultado estimado', 36, 118);
 
     // Monto con ajuste automático de tamaño
     const amountText = (amountReceiveDisplay?.textContent || '').trim() || '—';
-    let amountSize = 56;
+    let amountSize = 58;
     ctx.font = `800 ${amountSize}px Outfit, sans-serif`;
     while (ctx.measureText(amountText).width > width - 72 && amountSize > 24) {
         amountSize -= 2;
         ctx.font = `800 ${amountSize}px Outfit, sans-serif`;
     }
     ctx.fillStyle = '#f8fafc';
-    ctx.fillText(amountText, 36, 172);
+    ctx.fillText(amountText, 36, 184);
 
-    // Tasas
+    // Tasa aplicada (única línea de tasa en la imagen compartida)
     ctx.fillStyle = '#94a3b8';
-    ctx.font = '500 14px Outfit, sans-serif';
+    ctx.font = '500 15px Outfit, sans-serif';
     const rateText = (rateDisplay?.textContent || '').trim();
-    const suggestedText = (suggestedRateDisplay?.textContent || '').trim();
-    ctx.fillText(rateText, 36, 226);
-    if (suggestedText) ctx.fillText(suggestedText, 36, 252);
+    ctx.fillText(rateText, 36, 246);
 
     // Pie
     ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
